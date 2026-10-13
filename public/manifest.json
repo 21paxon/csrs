@@ -1,0 +1,9 @@
+{
+  "name": "Campus Security and Reporting System",
+  "short_name": "CSRS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f3d5e",
+  "theme_color": "#0f3d5e",
+  "icons": []
+}
