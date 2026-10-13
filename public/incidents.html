@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incident Monitoring | CSRS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    header {
+      background: #102a43;
+      color: white;
+      padding: 20px 5%;
+    }
+    header h1 { margin: 0 0 8px; }
+    header p { margin: 0; color: #d9e6f2; }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      padding: 14px 5%;
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    nav a { color: #174ea6; text-decoration: none; }
+    main { max-width: 1100px; margin: 25px auto; padding: 0 18px; }
+    .panel {
+      background: white;
+      padding: 22px;
+      margin-bottom: 22px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #102a4310;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    label { display: block; font-weight: 600; margin-bottom: 7px; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .full { grid-column: 1 / -1; }
+    .check { display: flex; align-items: center; gap: 9px; }
+    .check input { width: auto; }
+    button {
+      cursor: pointer;
+      background: #174ea6;
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .message { margin: 12px 0; white-space: pre-wrap; }
+    .error { color: #b42318; }
+    .success { color: #027a48; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+    @media (max-width: 650px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+      .panel { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Incident Monitoring</h1>
+    <p>Campus Security and Reporting System</p>
+  </header>
+
+  <nav>
+    <a href="/dashboard.html">Dashboard</a>
+    <a href="/incidents.html">Incident Monitoring</a>
+    <a href="/index.html" id="signInLink">Sign in</a>
+    <a href="#" id="logoutLink" hidden>Sign out</a>
+  </nav>
+
+  <main>
+    <section class="panel">
+      <h2>Report an Incident</h2>
+      <p class="muted">
+        Complete the form with accurate information. You may submit
+        anonymously, but keep the reference number and access code provided.
+      </p>
+
+      <form id="incidentForm">
+        <div class="form-grid">
+          <div>
+            <label for="category">Category</label>
+            <select id="category" required>
+              <option value="">Loading categories...</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="location">Location</label>
+            <select id="location" required>
+              <option value="">Loading locations...</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="incidentDate">When did it happen?</label>
+            <input id="incidentDate" type="datetime-local" required>
+          </div>
+
+          <div>
+            <label for="severity">Severity</label>
+            <select id="severity" required>
+              <option>Low</option>
+              <option selected>Medium</option>
+              <option>High</option>
+              <option>Critical</option>
+            </select>
+          </div>
+
+          <div class="full">
+            <label for="description">Description</label>
+            <textarea id="description" required maxlength="10000"
+              placeholder="Describe what happened, where, and any relevant details."></textarea>
+          </div>
+
+          <div class="full check">
+            <input id="anonymous" type="checkbox">
+            <label for="anonymous" style="margin:0">Submit anonymously</label>
+          </div>
+
+          <div class="full">
+            <button id="submitButton" type="submit">Submit Incident</button>
+          </div>
+        </div>
+      </form>
+      <div id="formMessage" class="message" role="status"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Incident Records</h2>
+      <p class="muted">Records are loaded from the CSRS backend according to your permissions.</p>
+      <button id="refreshButton" type="button">Refresh Records</button>
+      <div id="listMessage" class="message" role="status"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Severity</th>
+              <th>Status</th>
+              <th>Reported</th>
+            </tr>
+          </thead>
+          <tbody id="incidentRows">
+            <tr><td colspan="6">Loading incidents...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+<script src="/incidents.js" defer></script>
+</body>
+</html>

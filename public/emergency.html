@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSRS | Emergency Alerts</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      color: #1f2937;
+    }
+    header {
+      background: #172554;
+      color: white;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { margin: 0; font-size: 22px; }
+    nav { display: flex; gap: 14px; flex-wrap: wrap; }
+    nav a { color: white; text-decoration: none; }
+    main { max-width: 1100px; margin: 28px auto; padding: 0 16px; }
+    .card {
+      background: white;
+      padding: 22px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #0000000d;
+    }
+    h2 { margin-top: 0; font-size: 19px; }
+    label { display: block; margin: 12px 0 6px; font-weight: 600; }
+    input, textarea, select {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font: inherit;
+    }
+    textarea { resize: vertical; min-height: 85px; }
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      background: #1d4ed8;
+      color: white;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .danger { background: #b91c1c; }
+    .success { background: #15803d; }
+    .secondary { background: #475569; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .message { margin-top: 12px; white-space: pre-wrap; }
+    .error { color: #b91c1c; }
+    .ok { color: #15803d; }
+    .muted { color: #64748b; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    th { background: #f8fafc; }
+    .status { font-weight: 700; }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .toolbar > div { min-width: 180px; flex: 1; }
+    .hidden { display: none; }
+    @media (max-width: 600px) {
+      header { padding: 16px; }
+      main { margin-top: 18px; }
+      .card { padding: 16px; }
+    }
+  </style>
+  <script src="/emergency.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>CSRS Emergency Alerts</h1>
+    <nav>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/incidents.html">Incidents</a>
+      <a href="/emergency.html">Emergency</a>
+      <a href="#" id="logoutBtn">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Request Emergency Assistance</h2>
+      <p class="muted">Submit an emergency alert to notify the security response team.</p>
+
+      <form id="alertForm">
+        <label for="alertMessage">Emergency details</label>
+        <textarea id="alertMessage" maxlength="1000"
+          placeholder="Briefly describe the emergency..." required></textarea>
+
+        <label for="latitude">Latitude (optional)</label>
+        <input id="latitude" type="number" step="any"
+          min="-90" max="90" placeholder="e.g. -1.949">
+
+        <label for="longitude">Longitude (optional)</label>
+        <input id="longitude" type="number" step="any"
+          min="-180" max="180" placeholder="e.g. 30.060">
+
+        <p class="muted">Only provide coordinates if you know the correct location.</p>
+        <button type="submit" class="danger" id="triggerBtn">Trigger Emergency Alert</button>
+        <div id="formMessage" class="message" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section class="card" id="responderSection">
+      <h2>Emergency Alert Management</h2>
+      <div class="toolbar">
+        <div>
+          <label for="statusFilter">Filter by status</label>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="Triggered">Triggered</option>
+            <option value="Acknowledged">Acknowledged</option>
+            <option value="Arrived">Arrived</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+        </div>
+        <button type="button" id="refreshBtn" class="secondary">Refresh Alerts</button>
+      </div>
+
+      <div id="listMessage" class="message" role="status" aria-live="polite"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Reporter</th>
+              <th>Message</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Triggered</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="alertsBody">
+            <tr><td colspan="7">Loading alerts...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,455 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSRS | Security Dashboard</title>
+
+  <style>
+    :root {
+      --navy: #14243a;
+      --blue: #2457d6;
+      --bg: #f3f6fb;
+      --white: #ffffff;
+      --text: #1d2939;
+      --muted: #667085;
+      --border: #e4e9f2;
+      --red: #d92d20;
+      --orange: #dc6803;
+      --green: #16803c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: flex;
+    }
+
+    aside {
+      width: 245px;
+      background: var(--navy);
+      color: white;
+      padding: 26px 18px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .brand-sub {
+      color: #b8c7df;
+      font-size: 12px;
+      margin-bottom: 38px;
+      line-height: 1.5;
+    }
+
+    .nav-label {
+      color: #9aacc7;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 25px 10px 10px;
+    }
+
+    .nav-item {
+      display: block;
+      padding: 12px;
+      margin: 5px 0;
+      border-radius: 7px;
+      color: #e4ebf7;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .nav-item.active,
+    .nav-item:hover {
+      background: #293e5d;
+      color: white;
+    }
+
+    main {
+      min-width: 0;
+      flex: 1;
+      padding: 28px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      margin: 0 0 7px;
+      font-size: 27px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button, select {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 13px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .65;
+      cursor: wait;
+    }
+
+    .primary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    .error, .notice {
+      padding: 13px 15px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .error {
+      background: #fef3f2;
+      color: #b42318;
+      border: 1px solid #fecdca;
+    }
+
+    .notice {
+      background: #eff8ff;
+      color: #175cd3;
+      border: 1px solid #b2ddff;
+    }
+
+    [hidden] { display: none !important; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 17px;
+      margin-bottom: 22px;
+    }
+
+    .card, .panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(16, 24, 40, .025);
+    }
+
+    .metric-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 13px;
+    }
+
+    .metric-value {
+      font-size: 30px;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+
+    .metric-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 9px;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .panel h2 {
+      font-size: 16px;
+      margin: 0 0 18px;
+    }
+
+    .panel-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: -11px;
+      margin-bottom: 17px;
+    }
+
+    .bar-row { margin: 16px 0; }
+
+    .bar-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
+    .bar-track {
+      height: 9px;
+      background: #edf0f5;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 0;
+      background: var(--blue);
+      border-radius: 20px;
+    }
+
+    .bar-fill.red { background: var(--red); }
+    .bar-fill.orange { background: var(--orange); }
+    .bar-fill.green { background: var(--green); }
+
+    .trend {
+      height: 190px;
+      display: flex;
+      align-items: end;
+      gap: 8px;
+      padding-top: 15px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .trend-column {
+      flex: 1;
+      min-width: 22px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .trend-value {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .trend-bar {
+      width: min(75%, 34px);
+      min-height: 3px;
+      background: #5483ef;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .trend-date {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      transform: rotate(-35deg);
+      transform-origin: center top;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 12px 0;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      background: #ecfdf3;
+      color: #027a48;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 10px 0 25px;
+    }
+
+    @media (max-width: 1100px) {
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .layout { display: block; }
+      aside { width: 100%; padding: 17px; }
+      .brand-sub { margin-bottom: 15px; }
+      .nav-label { margin-top: 15px; }
+      main { padding: 18px 13px; }
+      .content-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 23px; }
+    }
+
+    @media (max-width: 400px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">CSRS</div>
+      <div class="brand-sub">Campus Security &amp; Reporting System</div>
+
+      <div class="nav-label">Workspace</div>
+      <a class="nav-item active" href="/dashboard.html">Security Dashboard</a>
+      <a class="nav-item" href="/index.html">Sign-in Page</a>
+
+      <div class="nav-label">Overview</div>
+      <a class="nav-item" href="/incidents.html">Incident Monitoring</a>
+      <a class="nav-item" href="/emergency.html">Emergency Alerts</a>
+      <a class="nav-item" href="/gate.html">Campus Visitors</a>
+
+      <div class="nav-label">Account</div>
+      <a class="nav-item" href="#" id="logoutLink">Sign out</a>
+    </aside>
+
+    <main>
+      <header>
+        <div>
+          <h1>Security Dashboard</h1>
+          <div class="subtitle" id="welcome">Campus security overview</div>
+        </div>
+
+        <div class="header-actions">
+          <select id="period" aria-label="Dashboard reporting period">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <button class="primary" id="refreshButton" type="button">
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <div id="errorBox" class="error" role="alert" hidden></div>
+      <div id="noticeBox" class="notice" role="status" hidden></div>
+
+      <section class="cards">
+        <article class="card">
+          <div class="metric-label">Total Incidents</div>
+          <div class="metric-value" id="totalIncidents">—</div>
+          <div class="metric-note">For selected period</div>
+        </article>
+
+        <article class="card">
+          <div class="metric-label">Pending Emergency Alerts</div>
+          <div class="metric-value" id="pendingAlerts">—</div>
+          <div class="metric-note">Awaiting attention</div>
+        </article>
+
+        <article class="card">
+          <div class="metric-label">Visitors on Campus</div>
+          <div class="metric-value" id="visitors">—</div>
+          <div class="metric-note">Currently on campus</div>
+        </article>
+
+        <article class="card">
+          <div class="metric-label">Open Critical Incidents</div>
+          <div class="metric-value" id="highSeverity">—</div>
+          <div class="metric-note">Critical incidents not yet closed</div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel">
+          <h2>Incidents by Severity</h2>
+          <div id="severityChart"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Incidents by Status</h2>
+          <div id="statusChart"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Incidents by Category</h2>
+          <div id="categoryChart"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Daily Incident Trend</h2>
+          <div class="panel-subtitle">Incident counts by day</div>
+          <div class="trend" id="trendChart"></div>
+        </article>
+      </section>
+
+      <section class="panel" style="margin-bottom:20px">
+        <h2>Incident Hotspots</h2>
+        <div class="panel-subtitle">Locations with reported incidents</div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Incidents</th>
+              </tr>
+            </thead>
+            <tbody id="hotspotsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        CSRS · Campus Security and Reporting System
+        <span id="lastUpdated"></span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>
