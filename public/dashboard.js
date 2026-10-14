@@ -1,4 +1,3 @@
-
 const token = sessionStorage.getItem("csrs_token");
 let currentUser = {};
 
@@ -22,6 +21,61 @@ $("logoutLink").addEventListener("click", event => {
   event.preventDefault();
   clearSession();
 });
+
+/* ---------- View switching (hash-based) ---------- */
+
+const VIEW_TITLES = {
+  overview: "Security Dashboard",
+  incidents: "Incident Monitoring",
+  emergency: "Emergency Centre",
+  visitors: "Campus Visitors"
+};
+
+function showView(name) {
+  if (!Object.prototype.hasOwnProperty.call(VIEW_TITLES, name)) {
+    name = "overview";
+  }
+
+  document.querySelectorAll("[data-view-panel]").forEach(panel => {
+    panel.hidden = panel.dataset.viewPanel !== name;
+  });
+
+  document.querySelectorAll(".nav-item[data-view]").forEach(link => {
+    const active = link.dataset.view === name;
+    link.classList.toggle("active", active);
+
+    if (active) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
+
+  // Load an embedded page only the first time its view is opened.
+  if (name !== "overview") {
+    const frame = document.querySelector(
+      "#view-" + name + " iframe[data-page]"
+    );
+
+    if (frame && !frame.getAttribute("src")) {
+      frame.setAttribute("src", frame.dataset.page);
+    }
+  }
+
+  // Period selector and Refresh only apply to the overview.
+  const actions = document.querySelector(".header-actions");
+  if (actions) actions.hidden = name !== "overview";
+
+  document.title = "CSRS | " + VIEW_TITLES[name];
+}
+
+window.addEventListener("hashchange", () => {
+  showView(window.location.hash.slice(1));
+});
+
+showView(window.location.hash.slice(1));
+
+/* ---------- Auth + initial load ---------- */
 
 if (!token) {
   window.location.replace("/index.html");
@@ -56,9 +110,16 @@ function firstValue(object, keys, fallback = 0) {
   return fallback;
 }
 
+let requestId = 0;
+let noticeTimer;
+
 async function loadDashboard() {
   if (!token) return;
 
+  // Ignore responses from older requests if the period changes quickly.
+  const thisRequest = ++requestId;
+
+  clearTimeout(noticeTimer);
   $("errorBox").hidden = true;
   $("noticeBox").hidden = true;
 
@@ -80,6 +141,8 @@ async function loadDashboard() {
     );
 
     const data = await response.json().catch(() => ({}));
+
+    if (thisRequest !== requestId) return;
 
     if (response.status === 401) {
       clearSession();
@@ -109,15 +172,23 @@ async function loadDashboard() {
     $("noticeBox").textContent =
       "Dashboard data loaded from the server.";
     $("noticeBox").hidden = false;
+
+    noticeTimer = setTimeout(() => {
+      $("noticeBox").hidden = true;
+    }, 4000);
   } catch (error) {
+    if (thisRequest !== requestId) return;
+
     console.error("Dashboard loading failed:", error);
 
     $("errorBox").textContent =
       error.message || "Unable to load dashboard data.";
     $("errorBox").hidden = false;
   } finally {
-    button.disabled = false;
-    button.textContent = "Refresh";
+    if (thisRequest === requestId) {
+      button.disabled = false;
+      button.textContent = "Refresh";
+    }
   }
 }
 

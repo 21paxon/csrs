@@ -1,4 +1,3 @@
-
 /* =========================================================
    RWANDA POLYTECHNIC — CAMPUS SECURITY AND RESPONSE SYSTEM
    Homepage stylesheet
@@ -13,7 +12,7 @@
   --background: #f5f7fa;
   --surface: #ffffff;
   --text: #182b43;
-  --muted: #64748b;
+  --muted: #596579;
   --border: #dce4ed;
   --danger: #b42332;
   --success: #18794e;
@@ -22,18 +21,19 @@
   --container: 1180px;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 100px;
+  scroll-padding-top: 110px;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
   background: var(--white);
   color: var(--text);
   line-height: 1.65;
@@ -47,6 +47,7 @@ a {
 
 img {
   max-width: 100%;
+  height: auto;
 }
 
 button,
@@ -54,10 +55,43 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Blue ring on light backgrounds (gold on white fails contrast) */
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--rp-gold);
-  outline-offset: 4px;
+  outline: 3px solid var(--rp-blue);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.site-footer a:focus-visible {
+  outline-color: var(--rp-gold);
+}
+
+main:focus {
+  outline: none;
+}
+
+h1, h2 {
+  text-wrap: balance;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -60px;
+  left: 12px;
+  z-index: 200;
+  padding: 11px 16px;
+  border-radius: 4px;
+  background: var(--rp-blue);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  top: 12px;
+  outline-color: var(--rp-gold);
 }
 
 /* =========================================================
@@ -127,7 +161,7 @@ button:focus-visible {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 24px;
 }
 
 .nav-links > a {
@@ -137,7 +171,7 @@ button:focus-visible {
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .nav-links > a:hover,
@@ -155,6 +189,20 @@ button:focus-visible {
   content: "";
 }
 
+/* Sign In: quieter outlined button */
+.nav-links > a.nav-signin {
+  padding: 10px 18px;
+  border: 1px solid #b8cbe0;
+  border-radius: 4px;
+  color: var(--rp-blue);
+}
+
+.nav-links > a.nav-signin:hover {
+  border-color: var(--rp-blue);
+  background: var(--rp-blue-light);
+}
+
+/* Student Registration: main call to action */
 .nav-links > a.login-btn {
   padding: 11px 19px;
   border-radius: 4px;
@@ -167,7 +215,8 @@ button:focus-visible {
   color: var(--white);
 }
 
-.nav-links > a.login-btn::after {
+.nav-links > a.login-btn::after,
+.nav-links > a.nav-signin::after {
   display: none;
 }
 
@@ -178,13 +227,7 @@ button:focus-visible {
 .hero {
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(
-      115deg,
-      #f3f7fc 0%,
-      #ffffff 58%,
-      #edf3fa 100%
-    );
+  background: linear-gradient(115deg, #f3f7fc 0%, #ffffff 58%, #edf3fa 100%);
   border-bottom: 1px solid var(--border);
 }
 
@@ -236,7 +279,7 @@ button:focus-visible {
   border-left: 3px solid var(--rp-gold);
   background: rgba(18, 59, 112, 0.06);
   color: var(--rp-blue);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
 }
@@ -267,7 +310,7 @@ button:focus-visible {
 .hero-content > p {
   max-width: 570px;
   margin: 0;
-  color: #526276;
+  color: #475569;
   font-size: 15px;
   line-height: 1.9;
 }
@@ -283,7 +326,7 @@ button:focus-visible {
 .primary-btn,
 .secondary-btn {
   min-height: 47px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -292,15 +335,13 @@ button:focus-visible {
   border-radius: 4px;
   font-size: 13px;
   font-weight: 700;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .primary-btn {
   background: var(--rp-blue);
   color: var(--white);
+  box-shadow: 0 6px 16px rgba(18, 59, 112, 0.2);
 }
 
 .primary-btn:hover {
@@ -319,12 +360,23 @@ button:focus-visible {
   background: var(--rp-blue-light);
 }
 
+/* Emergency Centre button gets a red tint */
+.secondary-btn.danger-btn {
+  border-color: #efc4c8;
+  color: var(--danger);
+}
+
+.secondary-btn.danger-btn:hover {
+  border-color: var(--danger);
+  background: #fff1f1;
+}
+
 .hero-note {
   margin-top: 25px;
   display: flex;
   align-items: center;
   gap: 9px;
-  color: #536578;
+  color: #475569;
   font-size: 12px;
 }
 
@@ -367,7 +419,7 @@ button:focus-visible {
 
 .panel-label {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.4px;
 }
@@ -435,7 +487,7 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #536578;
+  color: #475569;
   font-size: 11px;
 }
 
@@ -489,23 +541,23 @@ button:focus-visible {
   line-height: 1.8;
 }
 
+/* Four cards: 4 across on desktop, 2x2 on tablet, stacked on mobile */
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 23px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
 }
 
 .module-card {
   min-width: 0;
-  padding: 27px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-top: 3px solid var(--rp-blue);
   border-radius: 4px;
   background: var(--surface);
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .module-card:hover {
@@ -519,7 +571,7 @@ button:focus-visible {
 }
 
 .module-card-header {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -548,28 +600,29 @@ button:focus-visible {
 
 .module-category {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
+  text-align: right;
 }
 
 .module-card h3 {
   margin: 0 0 12px;
   color: var(--rp-blue-dark);
-  font-size: 19px;
+  font-size: 18px;
   line-height: 1.4;
 }
 
 .module-card > p {
-  min-height: 94px;
-  margin: 0 0 23px;
+  flex: 1;
+  margin: 0 0 22px;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.85;
+  line-height: 1.8;
 }
 
 .module-link {
-  padding-top: 17px;
+  padding-top: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -624,7 +677,7 @@ button:focus-visible {
 .security-note-content > p {
   max-width: 560px;
   margin: 0;
-  color: #5c6b7d;
+  color: #475569;
   font-size: 14px;
   line-height: 1.9;
 }
@@ -741,6 +794,17 @@ button:focus-visible {
 }
 
 /* =========================================================
+   RESPONSIVE LARGE TABLET (cards go 2 x 2)
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+  }
+}
+
+/* =========================================================
    RESPONSIVE TABLET
    ========================================================= */
 
@@ -750,7 +814,7 @@ button:focus-visible {
   }
 
   .nav-links {
-    gap: 16px;
+    gap: 14px;
   }
 
   .brand-text strong {
@@ -824,7 +888,7 @@ button:focus-visible {
     display: flex;
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 9px 20px;
+    gap: 9px 18px;
     border-top: 1px solid var(--border);
   }
 
@@ -832,8 +896,12 @@ button:focus-visible {
     font-size: 12px;
   }
 
-  .nav-links > a.login-btn {
+  .nav-links > a.nav-signin {
     margin-left: auto;
+    padding: 8px 12px;
+  }
+
+  .nav-links > a.login-btn {
     padding: 9px 12px;
   }
 
@@ -872,7 +940,7 @@ button:focus-visible {
   }
 
   .module-card > p {
-    min-height: 0;
+    flex: none;
   }
 
   .security-note {
@@ -899,7 +967,7 @@ button:focus-visible {
 
 @media (max-width: 420px) {
   .brand-text strong {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .brand-text .brand-system {
@@ -907,11 +975,15 @@ button:focus-visible {
   }
 
   .nav-links {
-    gap: 8px 13px;
+    gap: 8px 12px;
   }
 
   .nav-links > a {
     font-size: 11px;
+  }
+
+  .nav-links > a.nav-signin {
+    margin-left: 0;
   }
 
   .hero-container {
@@ -919,7 +991,7 @@ button:focus-visible {
   }
 
   .institution-label {
-    font-size: 8px;
+    font-size: 10px;
     letter-spacing: 0.6px;
   }
 
@@ -975,7 +1047,35 @@ button:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+
+  .module-card:hover,
+  .primary-btn:hover {
+    transform: none;
+  }
 }
+
+/* =========================================================
+   PRINT
+   ========================================================= */
+
+@media print {
+  .topbar,
+  .skip-link,
+  .hero::before,
+  .hero::after {
+    display: none !important;
+  }
+
+  .module-card,
+  .security-panel {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
+
+/* =========================================================
+   REGISTER LINK (used on the sign-in / login page)
+   ========================================================= */
 
 .register-link {
   margin-top: 22px;
