@@ -1,164 +1,308 @@
-
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <meta
     name="description"
-    content="Campus Security and Reporting System for incident reporting and emergency response."
+    content="Campus Security and Response System for Rwanda Polytechnic, Musanze College. Report incidents and coordinate emergency response."
   >
-  <title>CSRS | Campus Security and Reporting System</title>
+
+  <meta name="theme-color" content="#123b70">
+
+  <title>CSRS | Rwanda Polytechnic - Musanze College</title>
+
   <link rel="stylesheet" href="/home.css">
   <script src="/home.js" defer></script>
 </head>
 
 <body>
-  <header class="topbar">
-    <a class="brand" href="/home.html" aria-label="CSRS Home">
-      <span class="brand-mark">C</span>
-      <span>
-        <strong>CSRS</strong>
-        <small>Campus Security System</small>
-      </span>
-    </a>
 
-    <nav class="nav-links" aria-label="Main navigation">
-      <a href="/home.html" class="active">Home</a>
-      <a href="#features">Features</a>
-      <a href="#about">About</a>
-      <a href="/index.html" class="login-btn">Admin Login</a>
-    </nav>
+  <!-- Institutional header -->
+  <header class="topbar">
+    <div class="header-container">
+
+      <a class="brand" href="/home.html" aria-label="CSRS Home">
+        <img
+          class="rp-logo"
+          src="/images/rp-logo.jpg"
+          alt="Rwanda Polytechnic logo"
+        >
+
+        <span class="brand-text">
+          <strong>RWANDA POLYTECHNIC</strong>
+          <small>Musanze College</small>
+          <small class="brand-system">
+            Campus Security and Response System
+          </small>
+        </span>
+      </a>
+
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="/home.html" class="active" aria-current="page">Home</a>
+        <a href="#services">Services</a>
+        <a href="#about">About CSRS</a>
+        <a href="/index.html" class="login-btn">Staff Login</a>
+      </nav>
+
+    </div>
   </header>
 
   <main>
+
+    <!-- Hero section -->
     <section class="hero">
-      <div class="hero-content">
-        <span class="eyebrow">CAMPUS SAFETY AND SECURITY</span>
+      <div class="hero-container">
 
-        <h1>Safer campus.<br>Stronger response.</h1>
+        <div class="hero-content">
 
-        <p>
-          A centralized Campus Security and Reporting System that supports
-          incident reporting, emergency alerts, and coordinated security
-          response across campus.
-        </p>
+          <div class="institution-label">
+            RWANDA POLYTECHNIC · MUSANZE COLLEGE
+          </div>
 
-        <div class="hero-actions">
-         <a href="/incidents.html" class="primary-btn">
-  Report an Incident
-</a>
+          <span class="eyebrow">CAMPUS SAFETY AND SECURITY</span>
 
-<a href="/emergency.html" class="secondary-btn">
-  Emergency Centre
-</a>
+          <h1>
+            A safer campus<br>
+            starts with a <span>timely response.</span>
+          </h1>
+
+          <p>
+            The Campus Security and Response System brings incident
+            reporting and emergency communication together to support
+            campus safety, improve coordination, and help authorized
+            personnel respond effectively.
+          </p>
+
+          <div class="hero-actions">
+            <a href="/incidents.html" class="primary-btn">
+              Report an Incident
+              <span aria-hidden="true">&#8594;</span>
+            </a>
+
+            <a href="/emergency.html" class="secondary-btn">
+              Emergency Centre
+            </a>
+          </div>
+
+          <div class="hero-note">
+            <span class="status-dot" aria-hidden="true"></span>
+            Supporting a safer learning and working environment
+          </div>
+
         </div>
 
-        <div class="hero-note">
-          <span class="status-dot"></span>
-          Supporting a safer and more responsive campus
+        <!-- Security overview -->
+        <div class="hero-visual" aria-label="CSRS service overview">
+
+          <div class="security-panel">
+
+            <div class="security-panel-header">
+              <div>
+                <span class="panel-label">CAMPUS OPERATIONS</span>
+                <h2>Security Services</h2>
+              </div>
+
+              <span class="panel-number">CSRS</span>
+            </div>
+
+            <div class="security-service">
+              <div class="service-number">01</div>
+              <div class="service-details">
+                <h3>Incident Management</h3>
+                <p>Report and follow up on campus incidents.</p>
+              </div>
+            </div>
+
+            <div class="security-service">
+              <div class="service-number emergency-number">02</div>
+              <div class="service-details">
+                <h3>Emergency Response</h3>
+                <p>Submit alerts for review by authorized responders.</p>
+              </div>
+            </div>
+
+            <div class="security-service">
+              <div class="service-number">03</div>
+              <div class="service-details">
+                <h3>Security Administration</h3>
+                <p>Access protected tools based on your assigned role.</p>
+              </div>
+            </div>
+
+            <div class="panel-footer">
+              <span class="panel-footer-mark" aria-hidden="true">&#10003;</span>
+              <span>One platform for campus security coordination</span>
+            </div>
+
+          </div>
+
         </div>
+
       </div>
+    </section>
 
-      <div class="hero-visual" aria-label="Campus security illustration">
-        <div class="shield">
-          <div class="shield-inner">
-            <span class="shield-check">✓</span>
+    <!-- Services section -->
+    <section class="features-section" id="services">
+
+      <div class="section-container">
+
+        <div class="section-heading">
+          <span class="eyebrow">CSRS SERVICES</span>
+          <h2>Campus security services</h2>
+          <p>
+            Select a service to access the relevant reporting or
+            administration function.
+          </p>
+        </div>
+
+        <div class="module-grid">
+
+          <article class="module-card">
+            <div class="module-card-header">
+              <span class="module-icon">01</span>
+              <span class="module-category">REPORTING</span>
+            </div>
+
+            <h3>Incident Management</h3>
+
+            <p>
+              Submit incident reports and support the review,
+              tracking, and follow-up of reported campus cases.
+            </p>
+
+            <a href="/incidents.html" class="module-link">
+              Report or view incidents
+              <span aria-hidden="true">&#8594;</span>
+            </a>
+          </article>
+
+          <article class="module-card emergency-card">
+            <div class="module-card-header">
+              <span class="module-icon">02</span>
+              <span class="module-category">EMERGENCY</span>
+            </div>
+
+            <h3>Emergency Response</h3>
+
+            <p>
+              Submit an emergency alert so authorized security
+              personnel can review and coordinate the response.
+            </p>
+
+            <a href="/emergency.html" class="module-link">
+              Open Emergency Centre
+              <span aria-hidden="true">&#8594;</span>
+            </a>
+          </article>
+
+          <article class="module-card">
+            <div class="module-card-header">
+              <span class="module-icon">03</span>
+              <span class="module-category">AUTHORISED ACCESS</span>
+            </div>
+
+            <h3>Staff Administration</h3>
+
+            <p>
+              Sign in to access the dashboard and security
+              management functions permitted by your account.
+            </p>
+
+            <a href="/index.html" class="module-link">
+              Sign in to CSRS
+              <span aria-hidden="true">&#8594;</span>
+            </a>
+          </article>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- About section -->
+    <section class="security-note" id="about">
+
+      <div class="security-note-container">
+
+        <div class="security-note-content">
+          <span class="eyebrow">ABOUT THE SYSTEM</span>
+
+          <h2>
+            Better reporting.<br>
+            More coordinated responses.
+          </h2>
+
+          <p>
+            CSRS is designed to support security management at
+            Rwanda Polytechnic, Musanze College by bringing incident
+            reporting and emergency alerts into one system.
+            It helps authorized personnel access relevant information
+            and coordinate follow-up actions.
+          </p>
+        </div>
+
+        <div class="security-note-aside">
+          <div class="note-item">
+            <span class="note-number">01</span>
+            <div>
+              <h3>Timely reporting</h3>
+              <p>Provide a structured way to report campus incidents.</p>
+            </div>
+          </div>
+
+          <div class="note-item">
+            <span class="note-number">02</span>
+            <div>
+              <h3>Clear coordination</h3>
+              <p>Support communication among authorized personnel.</p>
+            </div>
+          </div>
+
+          <div class="note-item">
+            <span class="note-number">03</span>
+            <div>
+              <h3>Controlled access</h3>
+              <p>Keep protected management functions behind sign-in.</p>
+            </div>
           </div>
         </div>
 
-        <div class="visual-card visual-card-top">
-          <span class="visual-icon">01</span>
-          <span>
-            <strong>Incident reporting</strong>
-            <small>Record and track incidents</small>
-          </span>
-        </div>
-
-        <div class="visual-card visual-card-bottom">
-          <span class="visual-icon emergency-icon">02</span>
-          <span>
-            <strong>Emergency response</strong>
-            <small>Notify authorized responders</small>
-          </span>
-        </div>
       </div>
     </section>
 
-    <section class="features-section" id="features">
-      <div class="section-heading">
-        <span class="eyebrow">SYSTEM FEATURES</span>
-        <h2>Security tools in one place</h2>
-        <p>
-          Access the relevant CSRS service using the links below.
-          Protected functions may require authentication and authorization.
-        </p>
-      </div>
-
-      <div class="module-grid">
-        <article class="module-card">
-          <div class="module-icon">01</div>
-          <h3>Incident Management</h3>
-          <p>
-            Submit incident reports and use the incident management tools
-            to search, review, and follow up on reported cases.
-          </p>
-          <a href="/incidents.html" class="module-link">
-            Open Incident Management →
-          </a>
-        </article>
-
-        <article class="module-card emergency-card">
-          <div class="module-icon">02</div>
-          <h3>Emergency Response</h3>
-          <p>
-            Submit an emergency alert and enable authorized security
-            responders to review and manage emergency cases.
-          </p>
-          <a href="/emergency.html" class="module-link">
-            Open Emergency Centre →
-          </a>
-        </article>
-
-        <article class="module-card">
-          <div class="module-icon">03</div>
-          <h3>Administration</h3>
-          <p>
-            Authorized administrators can access the protected dashboard
-            and its available security management functions.
-          </p>
-          <a href="/index.html" class="module-link">
-            Admin Login →
-          </a>
-        </article>
-      </div>
-    </section>
-
-    <section class="security-note" id="about">
-      <div>
-        <span class="eyebrow">OUR PURPOSE</span>
-        <h2>Improving campus security through timely reporting</h2>
-        <p>
-          CSRS brings incident reporting and emergency response functions
-          together to support better communication and security management.
-        </p>
-      </div>
-
-      <a href="/index.html" class="secondary-btn">
-        Access Administration
-      </a>
-    </section>
   </main>
 
-  <footer>
-    <div class="footer-brand">
-      <strong>CSRS</strong>
-      <span>Campus Security and Reporting System</span>
-    </div>
+  <!-- Institutional footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
 
-    <p>
-      © <span id="currentYear"></span> CSRS. All rights reserved.
-    </p>
+      <div class="footer-brand">
+        <strong>RWANDA POLYTECHNIC</strong>
+        <span>Musanze College</span>
+        <small>Campus Security and Response System</small>
+      </div>
+
+      <div class="footer-links">
+        <a href="/home.html">Home</a>
+        <a href="#services">Services</a>
+        <a href="#about">About CSRS</a>
+        <a href="/index.html">Staff Login</a>
+      </div>
+
+      <div class="footer-bottom">
+        <p>
+          &#169; <span id="currentYear"></span>
+          CSRS · Rwanda Polytechnic, Musanze College.
+        </p>
+        <p>Campus safety and security coordination.</p>
+      </div>
+
+    </div>
   </footer>
+
 </body>
 </html>
+```
