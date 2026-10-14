@@ -57,16 +57,14 @@
     }
 
     .brand-mark {
-      width: 48px;
-      height: 48px;
-      flex: 0 0 48px;
-      display: grid;
-      place-items: center;
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+      display: block;
+      object-fit: contain;
+      padding: 4px;
       background: #fff;
-      color: var(--navy);
-      border-radius: 10px;
-      font-size: 17px;
-      font-weight: 800;
+      border-radius: 8px;
       border: 2px solid var(--gold);
     }
 
@@ -307,10 +305,9 @@
       }
 
       .brand-mark {
-        width: 40px;
-        height: 40px;
-        flex-basis: 40px;
-        font-size: 14px;
+        width: 44px;
+        height: 44px;
+        flex-basis: 44px;
       }
 
       .brand h1 {
@@ -349,15 +346,15 @@
 <body>
   <header class="institution-header">
     <div class="header-inner">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">CSRS</div>
+      <a class="brand" href="/home.html" aria-label="Rwanda Polytechnic Musanze College CSRS home" style="text-decoration:none;color:inherit">
+        <img class="brand-mark" src="/images/rp-logo.jpg" alt="Rwanda Polytechnic logo">
         <div>
-          <h1>Campus Security &amp; Response System</h1>
-          <p>Rwanda Polytechnic · Musanze College</p>
+          <h1>RWANDA POLYTECHNIC</h1>
+          <p>Musanze College · Campus Security &amp; Response System</p>
         </div>
-      </div>
+      </a>
 
-      <a class="header-link" href="/">Sign in</a>
+      <a class="header-link" href="/index.html">Sign in</a>
     </div>
   </header>
 
@@ -502,7 +499,7 @@
 
       <p class="login-note">
         Already registered?
-        <a href="/">Sign in to your account</a>
+        <a href="/index.html">Sign in to your account</a>
       </p>
     </section>
   </main>
