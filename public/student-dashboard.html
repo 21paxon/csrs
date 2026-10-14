@@ -1,0 +1,268 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123b70">
+  <title>CSRS | Student Dashboard</title>
+  <style>
+    :root {
+      --navy: #123b70;
+      --blue: #2457d6;
+      --pale: #eff4ff;
+      --bg: #f4f7fb;
+      --text: #1d2939;
+      --muted: #667085;
+      --border: #e4e9f2;
+      --white: #fff;
+      --green: #16803c;
+      --orange: #b54708;
+      --red: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    a { color: inherit; }
+
+    .layout { min-height: 100vh; display: flex; }
+
+    aside {
+      width: 245px;
+      padding: 26px 18px;
+      flex-shrink: 0;
+      background: var(--navy);
+      color: white;
+    }
+
+    .brand { font-size: 22px; font-weight: 800; letter-spacing: .5px; }
+    .brand-sub { margin: 8px 0 32px; color: #d5e2f4; font-size: 12px; line-height: 1.7; }
+    .nav-label { margin: 24px 10px 10px; color: #b8c9e1; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+    .nav-item { display: block; padding: 12px; margin: 5px 0; border-radius: 7px; color: #edf3fc; text-decoration: none; font-size: 14px; }
+    .nav-item:hover, .nav-item.active { background: #294f80; }
+
+    main { min-width: 0; flex: 1; padding: 28px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 25px; }
+    h1 { margin: 0 0 8px; font-size: 27px; }
+    h2 { margin: 0 0 16px; font-size: 18px; }
+    .subtitle { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+    button, .button {
+      display: inline-block;
+      padding: 11px 15px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      color: var(--text);
+      font-size: 13px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .primary { background: var(--blue); border-color: var(--blue); color: white; }
+    button:disabled { opacity: .6; cursor: wait; }
+
+    .welcome-panel {
+      padding: 25px;
+      margin-bottom: 22px;
+      border-radius: 13px;
+      color: white;
+      background: linear-gradient(120deg, #123b70, #2457d6);
+    }
+
+    .welcome-panel h2 { margin-bottom: 8px; font-size: 23px; }
+    .welcome-panel p { margin: 0; line-height: 1.7; color: #e6eeff; }
+
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+    .card, .panel { padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 3px 12px rgba(16,24,40,.04); }
+    .metric-label { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+    .metric-value { font-size: 30px; font-weight: 750; }
+    .metric-note { margin-top: 8px; color: var(--muted); font-size: 12px; }
+
+    .quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .action-card { display: block; padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: white; text-decoration: none; }
+    .action-card:hover { border-color: #9bb8f8; background: var(--pale); }
+    .action-card strong { display: block; margin-bottom: 8px; color: var(--navy); }
+    .action-card span { color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    .panel { margin-bottom: 22px; overflow: hidden; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .panel-heading h2 { margin: 0; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 13px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    th { color: var(--muted); font-size: 12px; background: #f9fafb; }
+    td.description { white-space: normal; min-width: 160px; }
+
+    .status { display: inline-block; padding: 5px 9px; border-radius: 20px; background: #f2f4f7; color: #344054; font-size: 11px; font-weight: bold; }
+    .status.closed, .status.resolved, .status.returned { background: #ecfdf3; color: var(--green); }
+    .status.pending, .status.open, .status.triggered, .status.escalated { background: #fff4e5; color: var(--orange); }
+    .status.rejected, .status.critical { background: #fef3f2; color: var(--red); }
+
+    .message { padding: 13px 15px; margin-bottom: 18px; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+    .error { color: var(--red); background: #fef3f2; border: 1px solid #fecdca; }
+    .notice { color: #175cd3; background: #eff8ff; border: 1px solid #b2ddff; }
+    .empty { padding: 22px 10px; color: var(--muted); text-align: center; font-size: 14px; }
+    [hidden] { display: none !important; }
+
+    .profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+    .profile-field { padding: 14px; border: 1px solid var(--border); border-radius: 8px; }
+    .profile-field span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
+    .profile-field strong { overflow-wrap: anywhere; font-size: 14px; }
+
+    footer { padding: 15px 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+    @media (max-width: 1000px) {
+      .cards, .quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 720px) {
+      .layout { display: block; }
+      aside { width: 100%; padding: 18px; }
+      .brand-sub { margin-bottom: 15px; }
+      .nav-label { margin-top: 14px; }
+      main { padding: 18px; }
+      .cards, .quick-actions, .profile-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">CSRS</div>
+    <div class="brand-sub">
+      RWANDA POLYTECHNIC<br>
+      Musanze College<br>
+      Campus Security &amp; Response System
+    </div>
+
+    <div class="nav-label">Student menu</div>
+    <a class="nav-item active" href="#overview">Dashboard</a>
+    <a class="nav-item" href="/incidents.html">Report an Incident</a>
+    <a class="nav-item" href="#my-reports">My Reports</a>
+    <a class="nav-item" href="#found-items">Lost &amp; Found</a>
+    <a class="nav-item" href="#emergency">Emergency Centre</a>
+    <a class="nav-item" href="#profile">My Profile</a>
+
+    <div class="nav-label">Account</div>
+    <a class="nav-item" href="#" id="logoutLink">Log Out</a>
+  </aside>
+
+  <main id="overview">
+    <header>
+      <div>
+        <h1>Student Dashboard</h1>
+        <div class="subtitle" id="welcome">Welcome</div>
+      </div>
+      <button class="primary" id="refreshButton">Refresh Dashboard</button>
+    </header>
+
+    <div id="errorBox" class="message error" hidden></div>
+    <div id="noticeBox" class="message notice" hidden></div>
+
+    <section class="welcome-panel">
+      <h2>Welcome to your campus safety portal</h2>
+      <p>Report safety concerns, follow the status of your reports, find lost property, and request emergency assistance when necessary.</p>
+    </section>
+
+    <section class="cards">
+      <article class="card">
+        <div class="metric-label">My Incident Reports</div>
+        <div class="metric-value" id="totalReports">—</div>
+        <div class="metric-note">Reports submitted using your account</div>
+      </article>
+      <article class="card">
+        <div class="metric-label">Open Reports</div>
+        <div class="metric-value" id="openReports">—</div>
+        <div class="metric-note">Reports that are not closed</div>
+      </article>
+      <article class="card">
+        <div class="metric-label">My Lost Items</div>
+        <div class="metric-value" id="lostItems">—</div>
+        <div class="metric-note">Lost items reported by you</div>
+      </article>
+    </section>
+
+    <section class="quick-actions">
+      <a class="action-card" href="/incidents.html">
+        <strong>Report an Incident</strong>
+        <span>Report a security issue or suspicious activity on campus.</span>
+      </a>
+      <a class="action-card" href="#emergency">
+        <strong>Emergency Centre</strong>
+        <span>Request urgent assistance from campus security.</span>
+      </a>
+      <a class="action-card" href="#found-items">
+        <strong>Lost &amp; Found</strong>
+        <span>Review found items or check your lost-item reports.</span>
+      </a>
+    </section>
+
+    <section class="panel" id="my-reports">
+      <div class="panel-heading">
+        <h2>My Incident Reports</h2>
+        <a class="button primary" href="/incidents.html">New Report</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Reference</th><th>Category</th><th>Severity</th><th>Status</th><th>Reported</th></tr></thead>
+          <tbody id="reportsBody"><tr><td colspan="5" class="empty">Loading reports...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="found-items">
+      <div class="panel-heading">
+        <h2>Lost &amp; Found</h2>
+        <button id="refreshItemsButton">Refresh Items</button>
+      </div>
+      <h3>My Lost Items</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>Location</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody id="lostBody"><tr><td colspan="4" class="empty">Loading items...</td></tr></tbody>
+        </table>
+      </div>
+      <h3 style="margin-top:25px">Found Items Available</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>Description</th><th>Location</th><th>Date Found</th></tr></thead>
+          <tbody id="foundBody"><tr><td colspan="4" class="empty">Loading items...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="emergency">
+      <h2>Emergency Centre</h2>
+      <p class="subtitle">Use this only when urgent assistance is needed. Your alert will be sent to campus security.</p>
+      <label for="emergencyMessage">Briefly describe the emergency</label>
+      <textarea id="emergencyMessage" rows="3" maxlength="1000" style="display:block;width:100%;margin:10px 0 14px;padding:12px;border:1px solid var(--border);border-radius:7px;font:inherit" placeholder="Describe the situation and where help is needed"></textarea>
+      <button class="primary" id="emergencyButton">Request Emergency Assistance</button>
+      <p id="emergencyResult" class="subtitle" role="status"></p>
+    </section>
+
+    <section class="panel" id="profile">
+      <h2>My Profile</h2>
+      <div class="profile-grid">
+        <div class="profile-field"><span>Username</span><strong id="profileUsername">—</strong></div>
+        <div class="profile-field"><span>Email</span><strong id="profileEmail">—</strong></div>
+        <div class="profile-field"><span>Account Role</span><strong id="profileRole">—</strong></div>
+      </div>
+    </section>
+
+    <footer>Rwanda Polytechnic · Musanze College · Campus Security &amp; Response System</footer>
+  </main>
+</div>
+<script src="/student-dashboard.js"></script>
+</body>
+</html>

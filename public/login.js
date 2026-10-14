@@ -1,6 +1,4 @@
 
-"use strict";
-
 const loginForm = document.getElementById("login");
 const usernameInput = document.getElementById("u");
 const passwordInput = document.getElementById("p");
@@ -34,27 +32,44 @@ loginForm.addEventListener("submit", async (event) => {
 
     if (!response.ok) {
       showMessage(
-        data.error || "Sign-in failed. Check your credentials and try again.",
+        data.error ||
+          "Sign-in failed. Check your credentials and try again.",
         "err"
       );
       return;
     }
 
     if (!data.token || !data.user) {
-      showMessage("The server returned an invalid login response.", "err");
+      showMessage(
+        "The server returned an invalid login response.",
+        "err"
+      );
       return;
     }
 
-    // Store the token for authenticated API requests.
+    // Store authentication details for API requests.
     sessionStorage.setItem("csrs_token", data.token);
-    sessionStorage.setItem("csrs_user", JSON.stringify(data.user));
+    sessionStorage.setItem(
+      "csrs_user",
+      JSON.stringify(data.user)
+    );
 
-    showMessage("Sign-in successful. Opening your dashboard...", "success");
+    showMessage(
+      "Sign-in successful. Opening your dashboard...",
+      "success"
+    );
 
-    // Change this path if your dashboard uses a different URL.
-    window.location.assign("/dashboard.html");
+    // Redirect according to the account's role.
+    const role = String(data.user.role || "").toLowerCase();
+
+    if (role === "student") {
+      window.location.assign("/student-dashboard.html");
+    } else {
+      window.location.assign("/dashboard.html");
+    }
   } catch (error) {
     console.error("Login request failed:", error);
+
     showMessage(
       "Unable to connect to the server. Check that CSRS is running.",
       "err"
@@ -72,5 +87,8 @@ function showMessage(message, type = "") {
 function setLoading(loading) {
   submitButton.disabled = loading;
   submitButton.setAttribute("aria-busy", String(loading));
-  submitButton.textContent = loading ? "Signing in..." : "Sign in";
+
+  submitButton.textContent = loading
+    ? "Signing in..."
+    : "Sign in";
 }
