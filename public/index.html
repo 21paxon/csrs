@@ -27,6 +27,7 @@
       --focus: rgba(23, 105, 170, 0.18);
       --error: #b42318;
       --success: #15803d;
+      --gold: #e4ad36;
       --shadow: 0 24px 70px rgba(16, 43, 70, 0.12);
     }
 
@@ -78,7 +79,7 @@
 
     .login-card {
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       padding: 36px;
       background: var(--card);
       border: 1px solid var(--border);
@@ -102,6 +103,7 @@
       border-radius: 15px;
       background: var(--accent);
       color: #fff;
+      border-bottom: 3px solid var(--gold);
     }
 
     .brand-icon svg {
@@ -261,6 +263,47 @@
       color: var(--success);
     }
 
+    .register-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .register-section p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.87rem;
+    }
+
+    .register-link {
+      display: inline-flex;
+      width: 100%;
+      min-height: 46px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 15px;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 750;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .register-link:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .register-link svg {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+    }
+
     .security-note {
       display: flex;
       align-items: flex-start;
@@ -342,6 +385,7 @@
     <section>
       <p class="eyebrow">Secure access portal</p>
       <h1>Welcome back</h1>
+
       <p class="subtitle">
         Sign in to access the Campus Security and Reporting System.
       </p>
@@ -363,6 +407,7 @@
 
         <div class="field">
           <label for="p">Password</label>
+
           <div class="input-wrap">
             <input
               id="p"
@@ -387,6 +432,7 @@
 
         <button class="sign-in" id="submitBtn" type="submit">
           Sign in
+
           <svg
             width="18"
             height="18"
@@ -406,6 +452,28 @@
 
       <div id="msg" role="status" aria-live="polite"></div>
 
+      <div class="register-section">
+        <p>Are you a student without an account?</p>
+
+        <a class="register-link" href="/register.html">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="10" cy="7" r="4"/>
+            <path d="M20 8v6"/>
+            <path d="M23 11h-6"/>
+          </svg>
+          Create a student account
+        </a>
+      </div>
+
       <div class="security-note">
         <svg
           width="18"
@@ -422,6 +490,7 @@
           <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
           <path d="M12 14v3"/>
         </svg>
+
         <span>
           This portal is intended for authorized users.
           Keep your login credentials confidential.
@@ -436,7 +505,6 @@
   </main>
 
   <script>
-    // Password visibility control.
     const passwordInput = document.getElementById("p");
     const togglePassword = document.getElementById("togglePassword");
 
@@ -446,9 +514,12 @@
       passwordInput.type = isPassword ? "text" : "password";
       togglePassword.textContent = isPassword ? "Hide" : "Show";
       togglePassword.setAttribute("aria-pressed", String(isPassword));
+      togglePassword.setAttribute(
+        "aria-label",
+        isPassword ? "Hide password" : "Show password"
+      );
     });
 
-    // Automatically update the copyright year.
     document.getElementById("year").textContent =
       new Date().getFullYear();
   </script>

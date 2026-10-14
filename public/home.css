@@ -976,3 +976,27 @@ button:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+.register-link {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #dbe3ee;
+  text-align: center;
+}
+
+.register-link p {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.register-link a {
+  color: #174b87;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
+}
