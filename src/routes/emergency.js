@@ -1,9 +1,19 @@
 
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole, ROLES } = require('../middleware/auth');
-const { wrap, toNum, toInt, paging, HttpError } = require('../utils/helpers');
-const { notifyRoles, notify } = require('../utils/notify');
+const {
+  authenticate,
+  requireRole,
+  ROLES
+} = require('../middleware/auth');
+const {
+  wrap,
+  toNum,
+  toInt,
+  paging,
+  HttpError
+} = require('../utils/helpers');
+const { notifyRoles } = require('../utils/notify');
 const { audit } = require('../utils/audit');
 
 const router = express.Router();
@@ -15,84 +25,119 @@ const RESPONDERS = [
 ];
 
 // POST /api/emergency
-// Any authenticated user can trigger a panic alert.
-router.post('/', authenticate, wrap(async (req, res) => {
-  const lat = toNum(req.body?.latitude ?? req.body?.lat);
-  const lng = toNum(req.body?.longitude ?? req.body?.lng);
+// Any authenticated user can trigger an emergency alert.
+router.post(
+  '/',
+  authenticate,
+  wrap(async (req, res) => {
+    const lat = toNum(req.body?.latitude ?? req.body?.lat);
+    const lng = toNum(req.body?.longitude ?? req.body?.lng);
 
-  if (
-    (lat !== null && (lat < -90 || lat > 90)) ||
-    (lng !== null && (lng < -180 || lng > 180))
-  ) {
-    throw new HttpError(400, 'Invalid coordinates');
-  }
+    if (
+      (lat !== null && (lat < -90 || lat > 90)) ||
+      (lng !== null && (lng < -180 || lng > 180))
+    ) {
+      throw new HttpError(400, 'Invalid coordinates');
+    }
 
-  const { rows } = await db.query(
-    `INSERT INTO emergency_alerts (user_id, lat, lng, message, status)
-     VALUES ($1, $2, $3, $4, 'Triggered')
-     RETURNING id, user_id, lat, lng, message, status, triggered_at`,
-    [
-      req.user.id,
-      lat,
-      lng,
-      req.body?.message || 'Emergency assistance requested'
-    ]
-  );
+    const { rows } = await db.query(
+      `INSERT INTO emergency_alerts
+         (user_id, lat, lng, message, status)
+       VALUES ($1, $2, $3, $4, 'Triggered')
+       RETURNING id, user_id, lat, lng, message, status, triggered_at`,
+      [
+        req.user.id,
+        lat,
+        lng,
+        req.body?.message || 'Emergency assistance requested'
+      ]
+    );
 
-  const alert = rows[0];
-  const location = lat !== null && lng !== null
-    ? ` Location: ${lat}, ${lng}.`
-    : '';
+    const alert = rows[0];
 
-  await notifyRoles(
-    [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY, ROLES.SECURITY_OFFICER],
-    'EMERGENCY ALERT',
-    `Panic alert #${alert.id} from ${req.user.username}.${location}`,
-    'emergency',
-    `/emergency/${alert.id}`
-  );
+    const location =
+      lat !== null && lng !== null
+        ? ` Location: ${lat}, ${lng}.`
+        : '';
 
-  await audit(req, {
-    userId: req.user.id,
-    action: 'TRIGGER EMERGENCY ALERT',
-    targetTable: 'emergency_alerts',
-    recordId: alert.id
-  });
+    await notifyRoles(
+      [
+        ROLES.ADMIN,
+        ROLES.HEAD_OF_SECURITY,
+        ROLES.SECURITY_OFFICER
+      ],
+      'EMERGENCY ALERT',
+      `Panic alert #${alert.id} from ${req.user.username}.${location}`,
+      'emergency',
+      `/emergency/${alert.id}`
+    );
 
-  res.status(201).json(alert);
-}));
+    await audit(req, {
+      userId: req.user.id,
+      action: 'TRIGGER EMERGENCY ALERT',
+      targetTable: 'emergency_alerts',
+      recordId: alert.id
+    });
+
+    res.status(201).json(alert);
+  })
+);
 
 // GET /api/emergency
 // Only authorized responders can list alerts.
-router.get('/', authenticate, requireRole(...RESPONDERS), wrap(async (req, res) => {
-  const { limit, offset } = paging(req);
-  const params = [];
-  let clause = '';
+router.get(
+  '/',
+  authenticate,
+  requireRole(...RESPONDERS),
+  wrap(async (req, res) => {
+    const { limit, offset } = paging(req);
+    const params = [];
+    let clause = '';
 
-  if (req.query.status) {
-    params.push(req.query.status);
-    clause = 'WHERE a.status = $1';
-  }
+    if (req.query.status) {
+      params.push(req.query.status);
+      clause = 'WHERE a.status = $1';
+    }
 
-  params.push(limit, offset);
+    params.push(limit, offset);
 
-  const { rows } = await db.query(
-    `SELECT a.id, a.user_id, u.username, u.phone,
-            a.lat, a.lng, a.message, a.status,
-            a.triggered_at, a.acknowledged_at,
-            a.acknowledged_by, a.arrived_at, a.resolved_at
+    const { rows } = await db.query(
+      `SELECT
+          a.id,
+          a.user_id,
+          u.username,
+          u.phone,
+          a.lat,
+          a.lng,
+          a.message,
+          a.status,
+          a.triggered_at,
+          a.acknowledged_at,
+          a.acknowledged_by,
+          a.arrived_at,
+          a.resolved_at
        FROM emergency_alerts a
        JOIN users u ON u.id = a.user_id
        ${clause}
        ORDER BY a.triggered_at DESC
-       LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params
-  );
+       LIMIT $${params.length - 1}
+       OFFSET $${params.length}`,
+      params
+    );
 
-  res.json(rows);
-}));
+    res.json(rows);
+  })
+);
 
-async function advance(req, res, allowedStatuses, newStatus, timestampColumn, action) {
+// Advance an alert through its response lifecycle.
+async function advance(
+  req,
+  res,
+  allowedStatuses,
+  newStatus,
+  timestampColumn,
+  action
+) {
   const id = toInt(req.params.id);
 
   if (!id || id < 1) {
@@ -112,21 +157,31 @@ async function advance(req, res, allowedStatuses, newStatus, timestampColumn, ac
                 WHEN $1 = 'Acknowledged' THEN $2
                 ELSE acknowledged_by
               END
-        WHERE id = $3 AND status = ANY($4::text[])
-        RETURNING id, user_id, status, acknowledged_at,
-                  acknowledged_by, arrived_at, resolved_at`,
+        WHERE id = $3
+          AND status = ANY($4::text[])
+        RETURNING
+          id,
+          user_id,
+          status,
+          acknowledged_at,
+          acknowledged_by,
+          arrived_at,
+          resolved_at`,
       [newStatus, req.user.id, id, allowedStatuses]
     );
 
     if (!update.rows[0]) {
-      await client.query('ROLLBACK');
-      throw new HttpError(409, 'Alert not found or cannot change to this status');
+      throw new HttpError(
+        409,
+        'Alert not found or cannot change to this status'
+      );
     }
 
     const alert = update.rows[0];
 
     await client.query(
-      `INSERT INTO notifications (user_id, title, body, type, link)
+      `INSERT INTO notifications
+         (user_id, title, body, type, link)
        VALUES ($1, $2, $3, $4, $5)`,
       [
         alert.user_id,
@@ -153,48 +208,63 @@ async function advance(req, res, allowedStatuses, newStatus, timestampColumn, ac
     } catch (_) {
       // Transaction may already be closed.
     }
+
     throw err;
   } finally {
     client.release();
   }
 }
 
+// PATCH /api/emergency/:id/acknowledge
+// Acknowledge an alert that is still Triggered.
 router.patch(
-  '/:id/resolve',
+  '/:id/acknowledge',
   authenticate,
   requireRole(...RESPONDERS),
-  wrap((req, res) => advance(
-    req, res,
-    ['Triggered', 'Acknowledged', 'Arrived'],
-    'Resolved',
-    'resolved_at',
-    'RESOLVE ALERT'
-  ))
+  wrap((req, res) =>
+    advance(
+      req,
+      res,
+      ['Triggered'],
+      'Acknowledged',
+      'acknowledged_at',
+      'ACKNOWLEDGE ALERT'
+    )
+  )
 );
 
+// PATCH /api/emergency/:id/arrive
 router.patch(
   '/:id/arrive',
   authenticate,
   requireRole(...RESPONDERS),
-  wrap((req, res) => advance(
-    req, res,
-    ['Acknowledged'],
-    'Arrived',
-    'arrived_at',
-    'MARK ARRIVED'
-  ))
+  wrap((req, res) =>
+    advance(
+      req,
+      res,
+      ['Acknowledged'],
+      'Arrived',
+      'arrived_at',
+      'MARK ARRIVED'
+    )
+  )
 );
 
+// PATCH /api/emergency/:id/resolve
 router.patch(
   '/:id/resolve',
   authenticate,
   requireRole(...RESPONDERS),
-  wrap((req, res) => advance(
-    req, res,
-    ['Triggered', 'Acknowledged', 'Arrived'],
-    'Resolved',
-    'RESOLVE ALERT'
-  ))
+  wrap((req, res) =>
+    advance(
+      req,
+      res,
+      ['Triggered', 'Acknowledged', 'Arrived'],
+      'Resolved',
+      'resolved_at',
+      'RESOLVE ALERT'
+    )
+  )
 );
 
 module.exports = router;
