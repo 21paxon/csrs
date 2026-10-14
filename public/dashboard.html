@@ -4,20 +4,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#14243a">
   <title>CSRS | Security Dashboard</title>
 
   <style>
     :root {
       --navy: #14243a;
+      --navy-light: #203752;
       --blue: #2457d6;
+      --blue-light: #eff4ff;
       --bg: #f3f6fb;
-      --white: #ffffff;
+      --white: #fff;
       --text: #1d2939;
       --muted: #667085;
       --border: #e4e9f2;
       --red: #d92d20;
       --orange: #dc6803;
       --green: #16803c;
+      --shadow: 0 3px 12px rgba(16, 24, 40, .04);
     }
 
     * { box-sizing: border-box; }
@@ -28,6 +32,8 @@
       color: var(--text);
       font-family: Arial, Helvetica, sans-serif;
     }
+
+    a { color: inherit; }
 
     .layout {
       min-height: 100vh;
@@ -43,7 +49,7 @@
     }
 
     .brand {
-      font-size: 22px;
+      font-size: 23px;
       font-weight: 800;
       letter-spacing: 1px;
       margin-bottom: 8px;
@@ -52,8 +58,8 @@
     .brand-sub {
       color: #b8c7df;
       font-size: 12px;
-      margin-bottom: 38px;
-      line-height: 1.5;
+      margin-bottom: 35px;
+      line-height: 1.6;
     }
 
     .nav-label {
@@ -62,6 +68,7 @@
       font-weight: bold;
       text-transform: uppercase;
       margin: 25px 10px 10px;
+      letter-spacing: .7px;
     }
 
     .nav-item {
@@ -72,12 +79,20 @@
       color: #e4ebf7;
       text-decoration: none;
       font-size: 14px;
+      transition: background .2s ease;
     }
 
     .nav-item.active,
     .nav-item:hover {
       background: #293e5d;
       color: white;
+    }
+
+    .nav-item:focus-visible,
+    button:focus-visible,
+    select:focus-visible {
+      outline: 3px solid #84adff;
+      outline-offset: 2px;
     }
 
     main {
@@ -98,6 +113,7 @@
     h1 {
       margin: 0 0 7px;
       font-size: 27px;
+      letter-spacing: -.5px;
     }
 
     .subtitle {
@@ -130,6 +146,10 @@
       background: var(--blue);
       color: white;
       border-color: var(--blue);
+    }
+
+    .primary:hover:not(:disabled) {
+      background: #1947bc;
     }
 
     .error, .notice {
@@ -166,8 +186,27 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 2px 5px rgba(16, 24, 40, .025);
+      box-shadow: var(--shadow);
     }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--blue);
+    }
+
+    .card.alert-card::before { background: var(--orange); }
+    .card.visitor-card::before { background: var(--green); }
+    .card.critical-card::before { background: var(--red); }
 
     .metric-label {
       font-size: 13px;
@@ -185,6 +224,7 @@
       color: var(--muted);
       font-size: 12px;
       margin-top: 9px;
+      line-height: 1.5;
     }
 
     .content-grid {
@@ -216,6 +256,10 @@
       margin-bottom: 7px;
     }
 
+    .bar-heading span {
+      overflow-wrap: anywhere;
+    }
+
     .bar-track {
       height: 9px;
       background: #edf0f5;
@@ -225,9 +269,9 @@
 
     .bar-fill {
       height: 100%;
-      min-width: 0;
       background: var(--blue);
       border-radius: 20px;
+      transition: width .25s ease;
     }
 
     .bar-fill.red { background: var(--red); }
@@ -239,14 +283,14 @@
       display: flex;
       align-items: end;
       gap: 8px;
-      padding-top: 15px;
+      padding: 15px 4px 0;
       border-bottom: 1px solid var(--border);
       overflow-x: auto;
     }
 
     .trend-column {
       flex: 1;
-      min-width: 22px;
+      min-width: 25px;
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -293,6 +337,7 @@
       color: var(--muted);
       font-size: 11px;
       text-transform: uppercase;
+      letter-spacing: .4px;
     }
 
     .empty {
@@ -301,23 +346,15 @@
       padding: 12px 0;
     }
 
-    .status {
-      display: inline-block;
-      padding: 5px 8px;
-      border-radius: 20px;
-      font-size: 11px;
-      background: #ecfdf3;
-      color: #027a48;
-    }
-
     footer {
       color: var(--muted);
       font-size: 12px;
-      padding: 10px 0 25px;
+      padding: 15px 0 25px;
     }
 
     @media (max-width: 1100px) {
       .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      main { padding: 22px; }
     }
 
     @media (max-width: 760px) {
@@ -332,6 +369,9 @@
 
     @media (max-width: 400px) {
       .cards { grid-template-columns: 1fr; }
+      .header-actions { width: 100%; }
+      .header-actions select,
+      .header-actions button { flex: 1; }
     }
   </style>
 </head>
@@ -377,26 +417,26 @@
       <div id="errorBox" class="error" role="alert" hidden></div>
       <div id="noticeBox" class="notice" role="status" hidden></div>
 
-      <section class="cards">
+      <section class="cards" aria-label="Security summary">
         <article class="card">
           <div class="metric-label">Total Incidents</div>
           <div class="metric-value" id="totalIncidents">—</div>
           <div class="metric-note">For selected period</div>
         </article>
 
-        <article class="card">
-          <div class="metric-label">Pending Emergency Alerts</div>
+        <article class="card alert-card">
+          <div class="metric-label">Active Emergency Alerts</div>
           <div class="metric-value" id="pendingAlerts">—</div>
-          <div class="metric-note">Awaiting attention</div>
+          <div class="metric-note">Awaiting resolution</div>
         </article>
 
-        <article class="card">
+        <article class="card visitor-card">
           <div class="metric-label">Visitors on Campus</div>
           <div class="metric-value" id="visitors">—</div>
           <div class="metric-note">Currently on campus</div>
         </article>
 
-        <article class="card">
+        <article class="card critical-card">
           <div class="metric-label">Open Critical Incidents</div>
           <div class="metric-value" id="highSeverity">—</div>
           <div class="metric-note">Critical incidents not yet closed</div>
@@ -428,7 +468,9 @@
 
       <section class="panel" style="margin-bottom:20px">
         <h2>Incident Hotspots</h2>
-        <div class="panel-subtitle">Locations with reported incidents</div>
+        <div class="panel-subtitle">
+          Locations with reported incidents during the selected period
+        </div>
 
         <div class="table-wrap">
           <table>
