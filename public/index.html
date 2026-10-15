@@ -90,38 +90,48 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 13px;
-      margin-bottom: 30px;
+      gap: 14px;
+      padding-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 26px;
     }
-
-    .brand-icon {
-      width: 54px;
-      height: 54px;
-      flex: 0 0 54px;
+    .rp-mark {
       display: grid;
       place-items: center;
-      border-radius: 15px;
-      background: var(--accent);
+      flex: 0 0 58px;
+      width: 58px;
+      height: 58px;
+      border-radius: 10px;
+      background: #123b70;
       color: #fff;
-      border-bottom: 3px solid var(--gold);
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      border: 3px solid #e1b341;
+    }
+    .brand-copy { min-width: 0; }
+    .brand-college {
+      margin: 3px 0;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
     }
 
-    .brand-icon svg {
-      width: 31px;
-      height: 31px;
-    }
+    
 
     .brand-name {
       margin: 0;
-      font-size: 1.05rem;
+      color: #123b70;
+      font-size: 19px;
       font-weight: 800;
-      letter-spacing: 0.02em;
+      letter-spacing: -.3px;
     }
 
     .brand-caption {
-      margin: 2px 0 0;
+      margin: 4px 0 0;
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 11px;
+      line-height: 1.4;
     }
 
     .eyebrow {
@@ -360,25 +370,12 @@
 
 <body>
   <main class="login-card">
-    <header class="brand">
-      <div class="brand-icon" aria-hidden="true">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/>
-          <path d="m9 12 2 2 4-4"/>
-        </svg>
-      </div>
-
-      <div>
-        <p class="brand-name">CSRS</p>
-        <p class="brand-caption">RP Musanze College</p>
+    <header class="brand" aria-label="Rwanda Polytechnic Musanze College">
+      <div class="rp-mark" aria-hidden="true">RP</div>
+      <div class="brand-copy">
+        <p class="brand-name">Rwanda Polytechnic</p>
+        <p class="brand-college">Musanze College</p>
+        <p class="brand-caption">Skills for a better destiny</p>
       </div>
     </header>
 
