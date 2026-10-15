@@ -20,7 +20,17 @@
     }
     header h1 { margin: 0 0 8px; }
     header p { margin: 0; color: #d9e6f2; }
-    nav {
+    .institution-header { display:flex; align-items:center; justify-content:space-between; gap:22px; flex-wrap:wrap; padding:18px 5%; border-bottom:4px solid #e1b341; }
+    .institution-brand { display:flex; align-items:center; gap:12px; }
+    .rp-mark { display:grid; place-items:center; width:48px; height:48px; border:2px solid #e1b341; border-radius:8px; background:#fff; color:#123b70; font-size:18px; font-weight:900; }
+    .institution-brand strong,.institution-brand span,.institution-brand small { display:block; }
+    .institution-brand strong { font-size:18px; }
+    .institution-brand span { margin-top:3px; font-size:13px; font-weight:700; }
+    .institution-brand small { margin-top:3px; color:#dbeafe; font-size:11px; }
+    .header-page-title { text-align:right; }
+    .header-page-title h1 { margin:0 0 5px; }
+    .header-page-title p { margin:0; }
+    .institution-nav {
       display: flex;
       flex-wrap: wrap;
       gap: 18px;
@@ -29,6 +39,8 @@
       border-bottom: 1px solid #e2e8f0;
     }
     nav a { color: #174ea6; text-decoration: none; }
+    .institution-nav a { color:#fff; text-decoration:none; padding:8px 11px; border-radius:6px; font-weight:700; }
+    .institution-nav a:hover,.institution-nav a:focus { background:#294e78; }
     main { max-width: 1100px; margin: 25px auto; padding: 0 18px; }
     .panel {
       background: white;
@@ -83,16 +95,12 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Incident Monitoring</h1>
-    <p>Campus Security and Reporting System</p>
+  <header class="institution-header">
+    <div class="institution-brand"><div class="rp-mark" aria-hidden="true">RP</div><div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Skills for a better destiny</small></div></div>
+    <div class="header-page-title"><h1>Incident Monitoring</h1><p>Campus Security and Reporting System</p></div>
   </header>
-
-  <nav>
-    <a href="/dashboard.html">Dashboard</a>
-    <a href="/incidents.html">Incident Monitoring</a>
-    <a href="/index.html" id="signInLink">Sign in</a>
-    <a href="#" id="logoutLink" hidden>Sign out</a>
+  <nav class="institution-nav" aria-label="Main navigation">
+    <a href="/dashboard.html">Dashboard</a><a href="/incidents.html">Incidents</a><a href="/emergency.html">Emergency Centre</a><a href="/gate.html">Visitors</a><a href="/lost-found.html">Lost &amp; Found</a><a href="/index.html" id="signInLink">Sign in</a><a href="#" id="logoutLink" hidden>Logout</a>
   </nav>
 
   <main>
