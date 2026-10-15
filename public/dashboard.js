@@ -28,6 +28,7 @@ const VIEW_TITLES = {
   overview: "Security Dashboard",
   incidents: "Incident Monitoring",
   emergency: "Emergency Centre",
+  "lost-found": "Lost & Found",
   visitors: "Campus Visitors"
 };
 
