@@ -1,137 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Incident Monitoring | CSRS</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
-      color: #172033;
-    }
-    header {
-      background: #102a43;
-      color: white;
-      padding: 20px 5%;
-    }
-    header h1 { margin: 0 0 8px; }
-    header p { margin: 0; color: #d9e6f2; }
-    .institution-header { display:flex; align-items:center; justify-content:space-between; gap:22px; flex-wrap:wrap; padding:18px 5%; border-bottom:4px solid #e1b341; }
-    .institution-brand { display:flex; align-items:center; gap:12px; }
-    .rp-mark { display:grid; place-items:center; width:48px; height:48px; border:2px solid #e1b341; border-radius:8px; background:#fff; color:#123b70; font-size:18px; font-weight:900; }
-    .institution-brand strong,.institution-brand span,.institution-brand small { display:block; }
-    .institution-brand strong { font-size:18px; }
-    .institution-brand span { margin-top:3px; font-size:13px; font-weight:700; }
-    .institution-brand small { margin-top:3px; color:#dbeafe; font-size:11px; }
-    .header-page-title { text-align:right; }
-    .header-page-title h1 { margin:0 0 5px; }
-    .header-page-title p { margin:0; }
-    .institution-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      padding: 14px 5%;
-      background: white;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    nav a { color: #174ea6; text-decoration: none; }
-    .institution-nav a { color:#fff; text-decoration:none; padding:8px 11px; border-radius:6px; font-weight:700; }
-    .institution-nav a:hover,.institution-nav a:focus { background:#294e78; }
-    main { max-width: 1100px; margin: 25px auto; padding: 0 18px; }
-    .panel {
-      background: white;
-      padding: 22px;
-      margin-bottom: 22px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px #102a4310;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-    label { display: block; font-weight: 600; margin-bottom: 7px; }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 11px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font: inherit;
-    }
-    textarea { min-height: 110px; resize: vertical; }
-    .full { grid-column: 1 / -1; }
-    .check { display: flex; align-items: center; gap: 9px; }
-    .check input { width: auto; }
-    button {
-      cursor: pointer;
-      background: #174ea6;
-      color: white;
-      border: none;
-      font-weight: 600;
-    }
-    button:disabled { opacity: .6; cursor: wait; }
-    .message { margin: 12px 0; white-space: pre-wrap; }
-    .error { color: #b42318; }
-    .success { color: #027a48; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #e2e8f0;
-      text-align: left;
-      vertical-align: top;
-    }
-    th { background: #f8fafc; }
-    .muted { color: #64748b; }
-    @media (max-width: 650px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .full { grid-column: auto; }
-      .panel { padding: 15px; }
-    }
-  </style>
+  <meta name="theme-color" content="#123b70">
+  <title>Incidents | CSRS</title>
+  <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-  <header class="institution-header">
-    <div class="institution-brand"><div class="rp-mark" aria-hidden="true">RP</div><div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Skills for a better destiny</small></div></div>
-    <div class="header-page-title"><h1>Incident Monitoring</h1><p>Campus Security and Reporting System</p></div>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="brand" href="/home.html">
+        <div class="rp-mark" aria-hidden="true">RP</div>
+        <div>
+          <strong>Rwanda Polytechnic</strong>
+          <span>Musanze College</span>
+          <small>Campus Security and Reporting System</small>
+        </div>
+      </a>
+      <div class="app-page-title">
+        <h1>Incident reporting</h1>
+        <p>Submit a case, attach evidence, or track an anonymous report</p>
+        <div class="app-user" id="appUser"></div>
+      </div>
+    </div>
+    <nav class="app-nav" id="appNav" aria-label="Main navigation"></nav>
   </header>
-  <nav class="institution-nav" aria-label="Main navigation">
-    <a href="/dashboard.html">Dashboard</a><a href="/incidents.html">Incidents</a><a href="/emergency.html">Emergency Centre</a><a href="/gate.html">Visitors</a><a href="/lost-found.html">Lost &amp; Found</a><a href="/index.html" id="signInLink">Sign in</a><a href="#" id="logoutLink" hidden>Logout</a>
-  </nav>
 
-  <main>
+  <main class="app-main">
     <section class="panel">
-      <h2>Report an Incident</h2>
-      <p class="muted">
-        Complete the form with accurate information. You may submit
-        anonymously, but keep the reference number and access code provided.
-      </p>
-
+      <h2>Report an incident</h2>
+      <p class="muted">You can report without signing in. If you submit anonymously, save the reference number and access code so you can check the status later.</p>
       <form id="incidentForm">
-        <div class="form-grid">
+        <div class="grid">
           <div>
             <label for="category">Category</label>
             <select id="category" required>
               <option value="">Loading categories...</option>
             </select>
           </div>
-
           <div>
             <label for="location">Location</label>
             <select id="location" required>
               <option value="">Loading locations...</option>
             </select>
           </div>
-
           <div>
             <label for="incidentDate">When did it happen?</label>
             <input id="incidentDate" type="datetime-local" required>
           </div>
-
           <div>
             <label for="severity">Severity</label>
             <select id="severity" required>
@@ -141,32 +58,53 @@
               <option>Critical</option>
             </select>
           </div>
-
           <div class="full">
             <label for="description">Description</label>
             <textarea id="description" required maxlength="10000"
               placeholder="Describe what happened, where, and any relevant details."></textarea>
           </div>
-
+          <div class="full">
+            <label for="evidence">Evidence (optional, up to 5 files)</label>
+            <input id="evidence" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx">
+          </div>
           <div class="full check">
             <input id="anonymous" type="checkbox">
-            <label for="anonymous" style="margin:0">Submit anonymously</label>
+            <label for="anonymous">Submit anonymously</label>
           </div>
-
           <div class="full">
-            <button id="submitButton" type="submit">Submit Incident</button>
+            <button id="submitButton" type="submit">Submit incident</button>
           </div>
         </div>
       </form>
       <div id="formMessage" class="message" role="status"></div>
     </section>
 
-    <section class="panel">
-      <h2>Incident Records</h2>
-      <p class="muted">Records are loaded from the CSRS backend according to your permissions.</p>
-      <button id="refreshButton" type="button">Refresh Records</button>
-      <div id="listMessage" class="message" role="status"></div>
+    <section class="panel" id="trackPanel">
+      <h2>Track an anonymous report</h2>
+      <p class="muted">Use the reference number and access code issued when the report was submitted.</p>
+      <form id="trackForm" class="grid">
+        <div>
+          <label for="trackRef">Reference number</label>
+          <input id="trackRef" required placeholder="INC-2026-0001" autocapitalize="characters">
+        </div>
+        <div>
+          <label for="trackCode">Access code</label>
+          <input id="trackCode" required autocomplete="off">
+        </div>
+        <div class="full">
+          <button type="submit">Check status</button>
+        </div>
+      </form>
+      <div id="trackMessage" class="message" role="status"></div>
+    </section>
 
+    <section class="panel" id="recordsPanel">
+      <h2>Incident records</h2>
+      <p class="muted" id="recordsHelp">Records shown here depend on your role: your own reports, assigned cases, or all campus cases.</p>
+      <div class="toolbar">
+        <button id="refreshButton" type="button" class="secondary">Refresh records</button>
+      </div>
+      <div id="listMessage" class="message" role="status"></div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -180,12 +118,14 @@
             </tr>
           </thead>
           <tbody id="incidentRows">
-            <tr><td colspan="6">Loading incidents...</td></tr>
+            <tr><td colspan="6" class="empty">Sign in to view incident records.</td></tr>
           </tbody>
         </table>
       </div>
     </section>
   </main>
-<script src="/incidents.js" defer></script>
+
+  <script src="/js/csrs.js"></script>
+  <script src="/incidents.js"></script>
 </body>
 </html>

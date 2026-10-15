@@ -402,10 +402,10 @@
         <a class="nav-item active" href="#overview" data-view="overview" aria-current="page">Security Dashboard</a>
 
         <div class="nav-label">Campus services</div>
-        <a class="nav-item" href="#incidents" data-view="incidents">Incident Monitoring</a>
-        <a class="nav-item" href="#emergency" data-view="emergency">Emergency Alerts</a>
-        <a class="nav-item" href="#lost-found" data-view="lost-found">Lost &amp; Found</a>
-        <a class="nav-item" href="#visitors" data-view="visitors">Campus Visitors</a>
+        <a class="nav-item" href="/incidents.html">Incident Monitoring</a>
+        <a class="nav-item" href="/emergency.html">Emergency Alerts</a>
+        <a class="nav-item" href="/lost-found.html">Lost &amp; Found</a>
+        <a class="nav-item" href="/gate.html" data-role-gate>Campus Visitors</a>
 
         <div class="nav-label">Account</div>
         <a class="nav-item" href="#" id="logoutLink">Sign out</a>
@@ -419,7 +419,7 @@
           <div class="subtitle" id="welcome">Campus security overview</div>
         </div>
 
-        <div class="header-actions">
+        <div class="header-actions" id="headerActions">
           <label for="period" class="visually-hidden" style="position:absolute;left:-9999px">Reporting period</label>
           <select id="period" aria-label="Dashboard reporting period">
             <option value="7">Last 7 days</option>
@@ -437,7 +437,38 @@
       <div id="errorBox" class="error" role="alert" hidden></div>
       <div id="noticeBox" class="notice" role="status" hidden></div>
 
-      <section class="dashboard-view" id="view-overview" data-view-panel="overview">
+      <section class="dashboard-view" id="opsBlock" hidden>
+        <section class="cards" aria-label="Operations summary">
+          <article class="card">
+            <div class="metric-label">Open incidents</div>
+            <div class="metric-value" id="opsIncidents">—</div>
+            <div class="metric-note">Cases assigned to you or still open</div>
+          </article>
+          <article class="card alert-card">
+            <div class="metric-label">Open emergency alerts</div>
+            <div class="metric-value" id="opsAlerts">—</div>
+            <div class="metric-note">Triggered, acknowledged or on scene</div>
+          </article>
+          <article class="card visitor-card">
+            <div class="metric-label">Visitors on campus</div>
+            <div class="metric-value" id="opsVisitors">—</div>
+            <div class="metric-note">Currently checked in</div>
+          </article>
+        </section>
+        <section class="quick-ops panel" style="margin-bottom:20px">
+          <h2>Open a workspace</h2>
+          <p class="panel-subtitle">Each tool uses your account permissions. Officers see assigned cases; administrators see campus-wide records.</p>
+          <div class="header-actions">
+            <a class="open-link" href="/incidents.html">Incidents</a>
+            <a class="open-link" href="/emergency.html">Emergency alerts</a>
+            <a class="open-link" href="/lost-found.html">Lost &amp; Found</a>
+            <a class="open-link" href="/gate.html" data-role-gate>Visitors</a>
+            <button type="button" id="refreshOps">Refresh counts</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="dashboard-view" id="analyticsBlock">
         <section class="cards" aria-label="Security summary" aria-live="polite">
           <article class="card">
             <div class="metric-label">Total Incidents</div>
@@ -506,42 +537,6 @@
         </section>
       </section>
 
-      <section class="dashboard-view embedded-view" id="view-incidents" data-view-panel="incidents" hidden>
-        <div class="embedded-head">
-          <h2>Incident Monitoring</h2>
-          <a class="open-link" href="/incidents.html" target="_blank" rel="noopener">Open in new tab ↗</a>
-        </div>
-        <p class="view-help">Manage and review incident reports here using the existing incident page.</p>
-        <iframe class="embedded-frame" title="Incident Monitoring" data-page="/incidents.html" loading="lazy"></iframe>
-      </section>
-
-      <section class="dashboard-view embedded-view" id="view-emergency" data-view-panel="emergency" hidden>
-        <div class="embedded-head">
-          <h2>Emergency Centre</h2>
-          <a class="open-link" href="/emergency.html" target="_blank" rel="noopener">Open in new tab ↗</a>
-        </div>
-        <p class="view-help">View and manage emergency alerts using the existing emergency page and permissions.</p>
-        <iframe class="embedded-frame" title="Emergency Centre" data-page="/emergency.html" loading="lazy"></iframe>
-      </section>
-
-      <section class="dashboard-view embedded-view" id="view-lost-found" data-view-panel="lost-found" hidden>
-        <div class="embedded-head">
-          <h2>Lost &amp; Found</h2>
-          <a class="open-link" href="/lost-found.html" target="_blank" rel="noopener">Open in new tab</a>
-        </div>
-        <p class="view-help">Review lost-item reports and browse found items. Reporting and matching actions follow the existing CSRS API permissions.</p>
-        <iframe class="embedded-frame" title="Lost and Found" data-page="/lost-found.html" loading="lazy"></iframe>
-      </section>
-
-      <section class="dashboard-view embedded-view" id="view-visitors" data-view-panel="visitors" hidden>
-        <div class="embedded-head">
-          <h2>Campus Visitors</h2>
-          <a class="open-link" href="/gate.html" target="_blank" rel="noopener">Open in new tab ↗</a>
-        </div>
-        <p class="view-help">Access visitor management without leaving the main dashboard.</p>
-        <iframe class="embedded-frame" title="Campus Visitors" data-page="/gate.html" loading="lazy"></iframe>
-      </section>
-
       <footer>
         CSRS · Campus Security and Reporting System
         <span id="lastUpdated"></span>
@@ -549,6 +544,7 @@
     </main>
   </div>
 
+  <script src="/js/csrs.js"></script>
   <script src="/dashboard.js" defer></script>
 </body>
 </html>

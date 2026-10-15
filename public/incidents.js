@@ -1,55 +1,12 @@
+const C = window.CSRS;
+const { $, getToken, api, mountShell, formatDate, addCell, statusCell, emptyRow,
+  showMessage, setLoading } = C;
 
-const token = sessionStorage.getItem("csrs_token");
-const $ = id => document.getElementById(id);
-
-if (token) {
-  $("signInLink").hidden = true;
-  $("logoutLink").hidden = false;
-}
-
-$("logoutLink").addEventListener("click", event => {
-  event.preventDefault();
-  sessionStorage.removeItem("csrs_token");
-  sessionStorage.removeItem("csrs_user");
-  window.location.replace("/index.html");
-});
-
-function authHeaders() {
-  const headers = { Accept: "application/json" };
-  if (token) headers.Authorization = "Bearer " + token;
-  return headers;
-}
-
-async function request(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...authHeaders(),
-      ...(options.headers || {})
-    }
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (response.status === 401 && token) {
-    sessionStorage.removeItem("csrs_token");
-    sessionStorage.removeItem("csrs_user");
-    window.location.replace("/index.html");
-    throw new Error("Your session has expired. Please sign in again.");
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data.error || "Request failed (HTTP " + response.status + ")."
-    );
-  }
-
-  return data;
-}
+mountShell({ current: "incidents" });
 
 function addOptions(select, records, placeholder) {
   select.replaceChildren(new Option(placeholder, ""));
-  records.forEach(record => {
+  records.forEach((record) => {
     select.add(new Option(record.name, record.id));
   });
 }
@@ -57,133 +14,141 @@ function addOptions(select, records, placeholder) {
 async function loadReferenceData() {
   try {
     const [categories, locations] = await Promise.all([
-      request("/api/categories"),
-      request("/api/locations")
+      api("/api/categories"),
+      api("/api/locations")
     ]);
-
     addOptions($("category"), categories, "Select category");
     addOptions($("location"), locations, "Select location");
-
     if (!categories.length || !locations.length) {
-      $("formMessage").textContent =
-        "Some categories or locations have not been configured yet.";
-      $("formMessage").className = "message error";
+      showMessage($("formMessage"), "Some categories or locations have not been configured yet.", "error");
     }
   } catch (error) {
-    $("formMessage").textContent =
-      "Could not load categories and locations: " + error.message;
-    $("formMessage").className = "message error";
+    showMessage($("formMessage"), "Could not load categories and locations: " + error.message, "error");
   }
 }
 
 async function loadIncidents() {
-  $("listMessage").textContent = "Loading records...";
-  $("listMessage").className = "message";
+  if (!getToken()) {
+    $("incidentRows").replaceChildren();
+    $("incidentRows").appendChild(emptyRow(6, "Sign in to view incident records for your account."));
+    showMessage($("listMessage"), "");
+    return;
+  }
+
+  showMessage($("listMessage"), "Loading records...");
   $("incidentRows").replaceChildren();
 
   try {
-    const records = await request("/api/incidents");
-
+    const records = await api("/api/incidents");
     if (!Array.isArray(records) || records.length === 0) {
-      $("incidentRows").innerHTML =
-        '<tr><td colspan="6">No incidents are available to display.</td></tr>';
+      $("incidentRows").appendChild(emptyRow(6, "No incidents are available to display."));
     } else {
-      records.forEach(incident => {
+      records.forEach((incident) => {
         const tr = document.createElement("tr");
-
-        const values = [
-          incident.reference_no,
-          incident.category,
-          incident.location,
-          incident.severity,
-          incident.status,
-          incident.reported_datetime
-            ? new Date(incident.reported_datetime).toLocaleString()
-            : "—"
-        ];
-
-        values.forEach(value => {
-          const td = document.createElement("td");
-          td.textContent = value ?? "—";
-          tr.appendChild(td);
-        });
-
+        addCell(tr, incident.reference_no);
+        addCell(tr, incident.category);
+        addCell(tr, incident.location);
+        addCell(tr, incident.severity);
+        tr.appendChild(statusCell(incident.status));
+        addCell(tr, formatDate(incident.reported_datetime, true));
         $("incidentRows").appendChild(tr);
       });
     }
-
-    $("listMessage").textContent = "Records loaded from the server.";
-    $("listMessage").className = "message success";
+    showMessage($("listMessage"), "Records loaded from the server.", "ok");
   } catch (error) {
-    $("incidentRows").innerHTML =
-      '<tr><td colspan="6">Unable to load incident records.</td></tr>';
-    $("listMessage").textContent = error.message;
-    $("listMessage").className = "message error";
+    $("incidentRows").appendChild(emptyRow(6, "Unable to load incident records."));
+    showMessage($("listMessage"), error.message, "error");
   }
 }
 
-$("incidentForm").addEventListener("submit", async event => {
+$("incidentForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-
   const button = $("submitButton");
   const message = $("formMessage");
-
-  button.disabled = true;
-  button.textContent = "Submitting...";
-  message.textContent = "";
-  message.className = "message";
+  setLoading(button, true, "Submit incident", "Submitting...");
+  showMessage(message, "");
 
   try {
     const dateValue = $("incidentDate").value;
+    if (!dateValue) throw new Error("Please select when the incident happened.");
 
-    if (!dateValue) {
-      throw new Error("Please select when the incident happened.");
+    const categoryId = $("category").value;
+    const locationId = $("location").value;
+    const description = $("description").value.trim();
+    if (!categoryId || !locationId) throw new Error("Please select a category and location.");
+    if (!description) throw new Error("Please enter an incident description.");
+
+    const files = $("evidence").files;
+    let incident;
+
+    if (files && files.length) {
+      const form = new FormData();
+      form.append("category_id", categoryId);
+      form.append("location_id", locationId);
+      form.append("incident_datetime", new Date(dateValue).toISOString());
+      form.append("severity", $("severity").value);
+      form.append("description", description);
+      form.append("is_anonymous", $("anonymous").checked ? "true" : "false");
+      Array.from(files).slice(0, 5).forEach((file) => form.append("evidence", file));
+      incident = await api("/api/incidents", { method: "POST", body: form });
+    } else {
+      incident = await api("/api/incidents", {
+        method: "POST",
+        body: JSON.stringify({
+          category_id: Number(categoryId),
+          location_id: Number(locationId),
+          incident_datetime: new Date(dateValue).toISOString(),
+          severity: $("severity").value,
+          description,
+          is_anonymous: $("anonymous").checked
+        })
+      });
     }
 
-    const payload = {
-      category_id: Number($("category").value),
-      location_id: Number($("location").value),
-      incident_datetime: new Date(dateValue).toISOString(),
-      severity: $("severity").value,
-      description: $("description").value.trim(),
-      is_anonymous: $("anonymous").checked
-    };
-
-    if (!payload.category_id || !payload.location_id) {
-      throw new Error("Please select a category and location.");
+    let text = "Incident submitted successfully.\nReference: " + (incident.reference_no || "Not provided");
+    if (incident.access_code) {
+      text += "\nAnonymous access code: " + incident.access_code + "\nKeep this code. You will need it to track the report.";
     }
-
-    if (!payload.description) {
-      throw new Error("Please enter an incident description.");
-    }
-
-    const incident = await request("/api/incidents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    message.className = "message success";
-    message.textContent =
-      "Incident submitted successfully.\nReference: " +
-      (incident.reference_no || "Not provided") +
-      (incident.access_code
-        ? "\nAnonymous access code: " + incident.access_code
-        : "") +
-      (incident.notice ? "\n" + incident.notice : "");
-
+    if (incident.notice) text += "\n" + incident.notice;
+    showMessage(message, text, "ok");
     $("incidentForm").reset();
     await loadIncidents();
   } catch (error) {
-    message.className = "message error";
-    message.textContent = "Submission failed: " + error.message;
+    showMessage(message, "Submission failed: " + error.message, "error");
   } finally {
-    button.disabled = false;
-    button.textContent = "Submit Incident";
+    setLoading(button, false, "Submit incident");
+  }
+});
+
+$("trackForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const ref = $("trackRef").value.trim();
+  const code = $("trackCode").value.trim();
+  const box = $("trackMessage");
+  showMessage(box, "Checking...");
+
+  try {
+    const result = await api("/api/incidents/track/" + encodeURIComponent(ref), {
+      headers: { "x-access-code": code }
+    });
+    const updates = Array.isArray(result.updates) && result.updates.length
+      ? result.updates.map((item) =>
+        formatDate(item.created_at, true) + " · " + (item.new_status || "") + (item.note ? " — " + item.note : "")
+      ).join("\n")
+      : "No public updates yet.";
+    showMessage(
+      box,
+      "Status: " + result.status +
+        "\nSeverity: " + result.severity +
+        "\nReported: " + formatDate(result.reported_datetime, true) +
+        "\n\nUpdates:\n" + updates,
+      "ok"
+    );
+  } catch (error) {
+    showMessage(box, error.message, "error");
   }
 });
 
 $("refreshButton").addEventListener("click", loadIncidents);
-
 loadReferenceData();
 loadIncidents();

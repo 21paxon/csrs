@@ -1,142 +1,47 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSRS | Emergency Alerts</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      color: #1f2937;
-    }
-    header {
-      background: #172554;
-      color: white;
-      padding: 18px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    header h1 { margin: 0; font-size: 22px; }
-    nav { display: flex; gap: 10px; flex-wrap: wrap; }
-    nav a { color: white; text-decoration: none; }
-    .institution-header { display:flex; align-items:center; justify-content:space-between; gap:22px; flex-wrap:wrap; padding:18px 5%; border-bottom:4px solid #e1b341; }
-    .institution-brand { display:flex; align-items:center; gap:12px; }
-    .rp-mark { display:grid; place-items:center; width:48px; height:48px; border:2px solid #e1b341; border-radius:8px; background:#fff; color:#123b70; font-size:18px; font-weight:900; }
-    .institution-brand strong,.institution-brand span,.institution-brand small { display:block; }
-    .institution-brand strong { font-size:18px; }
-    .institution-brand span { margin-top:3px; font-size:13px; font-weight:700; }
-    .institution-brand small { margin-top:3px; color:#dbeafe; font-size:11px; }
-    .header-page-title { text-align:right; }
-    .header-page-title h1 { margin:0 0 5px; }
-    .header-page-title p { margin:0; }
-    .institution-nav a { color:#fff; text-decoration:none; padding:8px 11px; border-radius:6px; font-weight:700; }
-    .institution-nav a:hover,.institution-nav a:focus { background:#294e78; }
-    main { max-width: 1100px; margin: 28px auto; padding: 0 16px; }
-    .card {
-      background: white;
-      padding: 22px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px #0000000d;
-    }
-    h2 { margin-top: 0; font-size: 19px; }
-    label { display: block; margin: 12px 0 6px; font-weight: 600; }
-    input, textarea, select {
-      width: 100%;
-      padding: 11px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font: inherit;
-    }
-    textarea { resize: vertical; min-height: 85px; }
-    button {
-      padding: 10px 14px;
-      border: 0;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      background: #1d4ed8;
-      color: white;
-    }
-    button:disabled { opacity: .6; cursor: wait; }
-    .danger { background: #b91c1c; }
-    .success { background: #15803d; }
-    .secondary { background: #475569; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .message { margin-top: 12px; white-space: pre-wrap; }
-    .error { color: #b91c1c; }
-    .ok { color: #15803d; }
-    .muted { color: #64748b; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 780px; }
-    th, td {
-      padding: 12px;
-      text-align: left;
-      border-bottom: 1px solid #e2e8f0;
-      vertical-align: top;
-    }
-    th { background: #f8fafc; }
-    .status { font-weight: 700; }
-    .toolbar {
-      display: flex;
-      gap: 12px;
-      align-items: end;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-    .toolbar > div { min-width: 180px; flex: 1; }
-    .hidden { display: none; }
-    @media (max-width: 600px) {
-      header { padding: 16px; }
-      main { margin-top: 18px; }
-      .card { padding: 16px; }
-    }
-  </style>
-  <script src="/emergency.js" defer></script>
+  <meta name="theme-color" content="#123b70">
+  <title>Emergency Centre | CSRS</title>
+  <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-  <header class="institution-header">
-    <div class="institution-brand"><div class="rp-mark" aria-hidden="true">RP</div><div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Skills for a better destiny</small></div></div>
-    <div class="header-page-title"><h1>Emergency Centre</h1><p>Campus Security and Reporting System</p></div>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="brand" href="/home.html">
+        <div class="rp-mark" aria-hidden="true">RP</div>
+        <div>
+          <strong>Rwanda Polytechnic</strong>
+          <span>Musanze College</span>
+          <small>Campus Security and Reporting System</small>
+        </div>
+      </a>
+      <div class="app-page-title">
+        <h1>Emergency Centre</h1>
+        <p>Request help or manage panic alerts</p>
+        <div class="app-user" id="appUser"></div>
+      </div>
+    </div>
+    <nav class="app-nav" id="appNav" aria-label="Main navigation"></nav>
   </header>
-  <nav class="institution-nav" aria-label="Main navigation">
-    <a href="/dashboard.html">Dashboard</a><a href="/incidents.html">Incidents</a><a href="/emergency.html">Emergency Centre</a><a href="/gate.html">Visitors</a><a href="/lost-found.html">Lost &amp; Found</a><a href="#" id="logoutBtn">Logout</a>
-  </nav>
 
-  <main>
-    <section class="card">
-      <h2>Request Emergency Assistance</h2>
-      <p class="muted">Submit an emergency alert to notify the security response team.</p>
-
+  <main class="app-main">
+    <section class="panel">
+      <h2>Request emergency assistance</h2>
+      <p class="muted">This notifies the security response team. If you allow location access, your coordinates are attached automatically.</p>
       <form id="alertForm">
         <label for="alertMessage">Emergency details</label>
-        <textarea id="alertMessage" maxlength="1000"
-          placeholder="Briefly describe the emergency..." required></textarea>
-
-        <label for="latitude">Latitude (optional)</label>
-        <input id="latitude" type="number" step="any"
-          min="-90" max="90" placeholder="e.g. -1.949">
-
-        <label for="longitude">Longitude (optional)</label>
-        <input id="longitude" type="number" step="any"
-          min="-180" max="180" placeholder="e.g. 30.060">
-
-        <p class="muted">Only provide coordinates if you know the correct location.</p>
-        <button type="submit" class="danger" id="triggerBtn">Trigger Emergency Alert</button>
-        <div id="formMessage" class="message" role="status" aria-live="polite"></div>
+        <textarea id="alertMessage" maxlength="1000" required placeholder="Briefly describe the emergency and where help is needed."></textarea>
+        <p class="muted" id="locationNote">Location will be requested when you send the alert.</p>
+        <button type="submit" class="danger" id="triggerBtn">Trigger emergency alert</button>
+        <div id="formMessage" class="message" role="status"></div>
       </form>
     </section>
 
-    <section class="card" id="responderSection">
-      <h2>Emergency Alert Management</h2>
+    <section class="panel hidden" id="responderSection">
+      <h2>Emergency alert management</h2>
       <div class="toolbar">
         <div>
           <label for="statusFilter">Filter by status</label>
@@ -148,10 +53,9 @@
             <option value="Resolved">Resolved</option>
           </select>
         </div>
-        <button type="button" id="refreshBtn" class="secondary">Refresh Alerts</button>
+        <button type="button" id="refreshBtn" class="secondary">Refresh alerts</button>
       </div>
-
-      <div id="listMessage" class="message" role="status" aria-live="polite"></div>
+      <div id="listMessage" class="message" role="status"></div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -165,12 +69,13 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="alertsBody">
-            <tr><td colspan="7">Loading alerts...</td></tr>
-          </tbody>
+          <tbody id="alertsBody"></tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <script src="/js/csrs.js"></script>
+  <script src="/emergency.js"></script>
 </body>
 </html>

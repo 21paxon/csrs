@@ -1,395 +1,182 @@
+const C = window.CSRS;
+const { $, requireAuth, getUser, roleOf, roleLabel, isPortalRole, homePath,
+  logout, api, formatDate, statusCell, addCell, emptyRow, setLoading,
+  getDeviceLocation } = C;
 
-// ============================================
-// CSRS - Student Dashboard
-// Rwanda Polytechnic, Musanze College
-// ============================================
-
-const token = sessionStorage.getItem("csrs_token");
-
-let currentUser = {};
-
-try {
-  currentUser = JSON.parse(
-    sessionStorage.getItem("csrs_user") || "{}"
-  );
-} catch {
-  currentUser = {};
-}
-
-const $ = id => document.getElementById(id);
-
-// ============================================
-// Authentication
-// ============================================
-
-function logout() {
-  sessionStorage.removeItem("csrs_token");
-  sessionStorage.removeItem("csrs_user");
-  window.location.replace("/index.html");
-}
-
-$("logoutLink").addEventListener("click", event => {
-  event.preventDefault();
-  logout();
-});
-
-if (!token) {
-  window.location.replace("/index.html");
+if (!requireAuth()) {
+  /* redirected */
+} else if (!isPortalRole()) {
+  window.location.replace(homePath());
 } else {
-  $("welcome").textContent =
-    `Welcome, ${currentUser.username || "Student"}`;
-
-  $("profileUsername").textContent =
-    currentUser.username || "Not available";
-
-  $("profileEmail").textContent =
-    currentUser.email || "Not available";
-
-  $("profileRole").textContent =
-    currentUser.role || "Student";
-
-  loadStudentDashboard();
+  initPortal();
 }
 
-// ============================================
-// API Helper
-// ============================================
+function initPortal() {
+  const user = getUser() || {};
+  const role = roleOf(user);
+  const isStaff = role === "staff";
 
-async function apiRequest(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-      ...(options.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...(options.headers || {})
-    }
-  });
+  $("welcome").textContent = "Welcome, " + (user.username || "User") + " · " + roleLabel(role);
+  $("portalHeading").textContent = isStaff ? "Staff portal" : "Student dashboard";
+  $("portalBannerTitle").textContent = isStaff
+    ? "Campus safety tools for staff"
+    : "Welcome to your campus safety portal";
 
-  const data = await response.json().catch(() => ({}));
+  $("profileUsername").textContent = user.username || "Not available";
+  $("profileEmail").textContent = user.email || "Not available";
+  $("profileRole").textContent = roleLabel(role);
 
-  if (response.status === 401) {
+  $("logoutLink").addEventListener("click", (event) => {
+    event.preventDefault();
     logout();
-    throw new Error("Your session has expired. Please log in again.");
-  }
+  });
 
-  if (!response.ok) {
-    throw new Error(
-      data.error ||
-      data.message ||
-      `Request failed with status ${response.status}`
-    );
-  }
+  $("refreshButton").addEventListener("click", loadPortal);
+  $("refreshItemsButton").addEventListener("click", loadLostAndFound);
+  $("emergencyButton").addEventListener("click", submitEmergencyAlert);
 
-  return data;
+  setupSectionNav();
+  loadPortal();
+  loadProfile();
 }
 
-// ============================================
-// General Helpers
-// ============================================
+function setupSectionNav() {
+  const links = {};
+  document.querySelectorAll('.nav-item[href^="#"]').forEach((anchor) => {
+    const id = anchor.getAttribute("href").slice(1);
+    if (id) links[id] = anchor;
+  });
 
-function displayDate(value) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
+  function setActive(id) {
+    Object.keys(links).forEach((key) => {
+      const on = key === id;
+      links[key].classList.toggle("active", on);
+      if (on) links[key].setAttribute("aria-current", "page");
+      else links[key].removeAttribute("aria-current");
+    });
   }
 
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric"
+  if (!("IntersectionObserver" in window)) return;
+
+  const ids = ["overview", "my-reports", "found-items", "emergency", "profile"];
+  const visible = {};
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      visible[entry.target.id] = entry.isIntersecting;
+    });
+    const current = ids.find((id) => id !== "overview" && visible[id]) || "overview";
+    setActive(current);
+  }, { rootMargin: "-20% 0px -60% 0px" });
+
+  ids.slice(1).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
   });
 }
 
-function textValue(value, fallback = "—") {
-  if (value === null || value === undefined || value === "") {
-    return fallback;
+async function loadProfile() {
+  try {
+    const me = await api("/api/auth/me");
+    $("profileUsername").textContent = me.username || me.full_name || "Not available";
+    $("profileEmail").textContent = me.email || "Not available";
+    $("profileRole").textContent = roleLabel(me.role);
+    if (me.full_name) {
+      $("welcome").textContent = "Welcome, " + me.full_name + " · " + roleLabel(me.role);
+    }
+  } catch {
+    /* session user is already shown */
   }
-
-  return String(value);
 }
 
-function normalise(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function createCell(value, className = "") {
-  const cell = document.createElement("td");
-
-  if (className) {
-    cell.className = className;
-  }
-
-  cell.textContent = textValue(value);
-
-  return cell;
-}
-
-function createStatus(value) {
-  const cell = document.createElement("td");
-  const badge = document.createElement("span");
-
-  const status = textValue(value, "Unknown");
-
-  badge.className = "status";
-
-  const cssStatus = normalise(status).replace(/\s+/g, "-");
-
-  if (
-    ["closed", "resolved", "returned", "found"].includes(cssStatus)
-  ) {
-    badge.classList.add("closed");
-  } else if (
-    ["pending", "open", "triggered", "escalated"].includes(cssStatus)
-  ) {
-    badge.classList.add("pending");
-  } else if (
-    ["rejected", "critical"].includes(cssStatus)
-  ) {
-    badge.classList.add("critical");
-  }
-
-  badge.textContent = status;
-  cell.appendChild(badge);
-
-  return cell;
-}
-
-function showTableMessage(elementId, message, columnCount = 4) {
-  const body = $(elementId);
-  body.replaceChildren();
-
-  const row = document.createElement("tr");
-  const cell = document.createElement("td");
-
-  cell.colSpan = columnCount;
-  cell.className = "empty";
-  cell.textContent = message;
-
-  row.appendChild(cell);
-  body.appendChild(row);
-}
-
-function showError(message) {
-  $("errorBox").textContent = message;
-  $("errorBox").hidden = false;
-}
-
-function showNotice(message) {
-  $("noticeBox").textContent = message;
-  $("noticeBox").hidden = false;
-}
-
-// ============================================
-// Load Dashboard
-// ============================================
-
-$("refreshButton").addEventListener(
-  "click",
-  loadStudentDashboard
-);
-
-$("refreshItemsButton").addEventListener(
-  "click",
-  loadLostAndFound
-);
-
-async function loadStudentDashboard() {
-  if (!token) return;
-
+async function loadPortal() {
   $("errorBox").hidden = true;
   $("noticeBox").hidden = true;
-
   const button = $("refreshButton");
-  button.disabled = true;
-  button.textContent = "Loading...";
-
+  setLoading(button, true, "Refresh Dashboard", "Loading...");
   try {
-    await loadMyReports();
-    await loadLostAndFound();
-
-    showNotice("Your student dashboard has been updated.");
+    await Promise.all([loadMyReports(), loadLostAndFound()]);
+    $("noticeBox").textContent = "Your portal has been updated.";
+    $("noticeBox").hidden = false;
   } catch (error) {
-    console.error("Student dashboard error:", error);
-    showError(error.message || "Could not load dashboard information.");
+    $("errorBox").textContent = error.message || "Could not load dashboard information.";
+    $("errorBox").hidden = false;
   } finally {
-    button.disabled = false;
-    button.textContent = "Refresh Dashboard";
+    setLoading(button, false, "Refresh Dashboard");
   }
 }
 
-// ============================================
-// My Incident Reports
-// GET /api/incidents
-// ============================================
+function closedStatus(status) {
+  return ["closed", "resolved", "rejected", "duplicate"].includes(
+    String(status || "").trim().toLowerCase()
+  );
+}
 
 async function loadMyReports() {
-  const reports = await apiRequest("/api/incidents");
-
+  const reports = await api("/api/incidents");
   if (!Array.isArray(reports)) {
     throw new Error("The incidents API returned an unexpected response.");
   }
 
   $("totalReports").textContent = reports.length.toLocaleString();
-
-  const openCount = reports.filter(report => {
-    return normalise(report.status) !== "closed";
-  }).length;
-
-  $("openReports").textContent = openCount.toLocaleString();
-
+  $("openReports").textContent = reports.filter((report) => !closedStatus(report.status)).length.toLocaleString();
   renderMyReports(reports);
 }
 
 function renderMyReports(reports) {
   const body = $("reportsBody");
   body.replaceChildren();
-
   if (!reports.length) {
-    showTableMessage(
-      "reportsBody",
-      "You have not submitted any incident reports yet.",
-      5
-    );
+    body.appendChild(emptyRow(5, "You have not submitted any incident reports yet."));
     return;
   }
 
-  reports.forEach(report => {
+  reports.forEach((report) => {
     const row = document.createElement("tr");
-
-    row.appendChild(
-      createCell(
-        report.reference_no || report.reference || report.id
-      )
-    );
-
-    row.appendChild(
-      createCell(
-        report.category_name ||
-        report.category ||
-        report.category_title
-      )
-    );
-
-    row.appendChild(
-      createCell(report.severity)
-    );
-
-    row.appendChild(
-      createStatus(report.status)
-    );
-
-    row.appendChild(
-      createCell(
-        displayDate(
-          report.reported_datetime ||
-          report.created_at
-        )
-      )
-    );
-
+    addCell(row, report.reference_no || report.id);
+    addCell(row, report.category);
+    addCell(row, report.severity);
+    row.appendChild(statusCell(report.status));
+    addCell(row, formatDate(report.reported_datetime || report.created_at, true));
     body.appendChild(row);
   });
 }
 
-// ============================================
-// Lost and Found
-// GET /api/lost-found/lost
-// GET /api/lost-found/found
-// ============================================
-
 async function loadLostAndFound() {
   const results = await Promise.allSettled([
-    apiRequest("/api/lost-found/lost"),
-    apiRequest("/api/lost-found/found")
+    api("/api/lost-found/lost"),
+    api("/api/lost-found/found")
   ]);
 
-  const lostResult = results[0];
-  const foundResult = results[1];
-
-  if (lostResult.status === "fulfilled") {
-    const lostItems = lostResult.value;
-
-    if (!Array.isArray(lostItems)) {
-      showTableMessage(
-        "lostBody",
-        "Unexpected response from the lost-items service."
-      );
-      $("lostItems").textContent = "—";
-    } else {
-      $("lostItems").textContent = lostItems.length.toLocaleString();
-      renderLostItems(lostItems);
-    }
+  if (results[0].status === "fulfilled" && Array.isArray(results[0].value)) {
+    $("lostItems").textContent = results[0].value.length.toLocaleString();
+    renderLostItems(results[0].value);
   } else {
-    showTableMessage(
-      "lostBody",
-      "Could not load your lost items."
-    );
-
     $("lostItems").textContent = "—";
-    console.error("Lost items error:", lostResult.reason);
+    $("lostBody").replaceChildren();
+    $("lostBody").appendChild(emptyRow(4, "Could not load your lost items."));
   }
 
-  if (foundResult.status === "fulfilled") {
-    const foundItems = foundResult.value;
-
-    if (Array.isArray(foundItems)) {
-      renderFoundItems(foundItems);
-    } else {
-      showTableMessage(
-        "foundBody",
-        "Unexpected response from the found-items service."
-      );
-    }
+  if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) {
+    renderFoundItems(results[1].value);
   } else {
-    showTableMessage(
-      "foundBody",
-      "Could not load found items."
-    );
-
-    console.error("Found items error:", foundResult.reason);
+    $("foundBody").replaceChildren();
+    $("foundBody").appendChild(emptyRow(4, "Could not load found items."));
   }
 }
 
 function renderLostItems(items) {
   const body = $("lostBody");
   body.replaceChildren();
-
   if (!items.length) {
-    showTableMessage(
-      "lostBody",
-      "You have not reported any lost items.",
-      4
-    );
+    body.appendChild(emptyRow(4, "You have not reported any lost items."));
     return;
   }
-
-  items.forEach(item => {
+  items.forEach((item) => {
     const row = document.createElement("tr");
-
-    row.appendChild(
-      createCell(item.item_name || item.title)
-    );
-
-    row.appendChild(
-      createCell(item.location_lost || item.location_text)
-    );
-
-    row.appendChild(
-      createCell(
-        displayDate(item.date_lost || item.event_date)
-      )
-    );
-
-    row.appendChild(
-      createStatus(item.status)
-    );
-
+    addCell(row, item.item_name || item.title);
+    addCell(row, item.location_lost || item.location_text);
+    addCell(row, formatDate(item.date_lost || item.event_date));
+    row.appendChild(statusCell(item.status));
     body.appendChild(row);
   });
 }
@@ -397,89 +184,55 @@ function renderLostItems(items) {
 function renderFoundItems(items) {
   const body = $("foundBody");
   body.replaceChildren();
-
   if (!items.length) {
-    showTableMessage(
-      "foundBody",
-      "No found items are currently available.",
-      4
-    );
+    body.appendChild(emptyRow(4, "No found items are currently available."));
     return;
   }
-
-  items.forEach(item => {
+  items.forEach((item) => {
     const row = document.createElement("tr");
-
-    row.appendChild(
-      createCell(item.item_name || item.title)
-    );
-
-    row.appendChild(
-      createCell(item.description, "description")
-    );
-
-    row.appendChild(
-      createCell(
-        item.location_found || item.location_text
-      )
-    );
-
-    row.appendChild(
-      createCell(
-        displayDate(item.date_found || item.event_date)
-      )
-    );
-
+    addCell(row, item.item_name || item.title);
+    addCell(row, item.description, "description");
+    addCell(row, item.location_found || item.location_text);
+    addCell(row, formatDate(item.date_found || item.event_date));
     body.appendChild(row);
   });
 }
-
-// ============================================
-// Emergency Centre
-// POST /api/emergency
-// ============================================
-
-$("emergencyButton").addEventListener(
-  "click",
-  submitEmergencyAlert
-);
 
 async function submitEmergencyAlert() {
   const button = $("emergencyButton");
   const result = $("emergencyResult");
   const message = $("emergencyMessage").value.trim();
 
-  const confirmed = window.confirm(
-    "Do you need urgent campus security assistance? " +
-    "This will send an emergency alert to campus security."
-  );
+  if (!window.confirm(
+    "Do you need urgent campus security assistance? This will send an emergency alert."
+  )) {
+    return;
+  }
 
-  if (!confirmed) return;
-
-  button.disabled = true;
-  button.textContent = "Sending Alert...";
-  result.textContent = "";
+  setLoading(button, true, "Request Emergency Assistance", "Sending Alert...");
+  result.textContent = "Sending alert…";
 
   try {
-    const alert = await apiRequest("/api/emergency", {
+    const coords = await getDeviceLocation();
+    const payload = { message: message || "Emergency assistance requested" };
+    if (coords) {
+      payload.latitude = coords.latitude;
+      payload.longitude = coords.longitude;
+    }
+
+    const alert = await api("/api/emergency", {
       method: "POST",
-      body: JSON.stringify({
-        message: message || "Emergency assistance requested"
-      })
+      body: JSON.stringify(payload)
     });
 
     result.textContent =
-      `Emergency alert sent successfully. Alert ID: ${alert.id}. ` +
-      "Campus security has been notified.";
-
+      "Emergency alert sent successfully. Alert ID: " + alert.id +
+      (coords ? " Location was attached." : " Location was not available.") +
+      " Campus security has been notified.";
     $("emergencyMessage").value = "";
   } catch (error) {
-    console.error("Emergency alert error:", error);
-
-    result.textContent =
-      error.message || "Unable to send the emergency alert.";
+    result.textContent = error.message || "Unable to send the emergency alert.";
   } finally {
-    button.disabled = false;
-    button.textContent = "Request Emergency Assistance";
+    setLoading(button, false, "Request Emergency Assistance");
   }
 }

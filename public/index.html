@@ -428,7 +428,7 @@
         </div>
 
         <button class="sign-in" id="submitBtn" type="submit">
-          Sign in
+          <span class="btn-label">Sign in</span>
 
           <svg
             width="18"
@@ -501,26 +501,7 @@
     </footer>
   </main>
 
-  <script>
-    const passwordInput = document.getElementById("p");
-    const togglePassword = document.getElementById("togglePassword");
-
-    togglePassword.addEventListener("click", function () {
-      const isPassword = passwordInput.type === "password";
-
-      passwordInput.type = isPassword ? "text" : "password";
-      togglePassword.textContent = isPassword ? "Hide" : "Show";
-      togglePassword.setAttribute("aria-pressed", String(isPassword));
-      togglePassword.setAttribute(
-        "aria-label",
-        isPassword ? "Hide password" : "Show password"
-      );
-    });
-
-    document.getElementById("year").textContent =
-      new Date().getFullYear();
-  </script>
-
+  <script src="/js/csrs.js"></script>
   <script src="/login.js"></script>
 </body>
 </html>

@@ -269,7 +269,7 @@
     <nav aria-label="Student navigation">
       <div class="nav-label">Student menu</div>
       <a class="nav-item active" href="#overview" aria-current="page">Dashboard</a>
-      <a class="nav-item" href="#my-reports">Report an Incident</a>
+      <a class="nav-item" href="/incidents.html">Report an Incident</a>
       <a class="nav-item" href="#my-reports">My Reports</a>
       <a class="nav-item" href="#found-items">Lost &amp; Found</a>
       <a class="nav-item" href="#emergency">Emergency Centre</a>
@@ -285,7 +285,7 @@
 
     <header>
       <div>
-        <h1>Student Dashboard</h1>
+        <h1 id="portalHeading">Student Dashboard</h1>
         <div class="subtitle" id="welcome">Welcome</div>
       </div>
       <button class="primary" id="refreshButton" type="button">Refresh Dashboard</button>
@@ -299,7 +299,7 @@
     <div id="noticeBox" class="message notice" role="status" hidden></div>
 
     <section class="welcome-panel">
-      <h2>Welcome to your campus safety portal</h2>
+      <h2 id="portalBannerTitle">Welcome to your campus safety portal</h2>
       <p>Report safety concerns, follow the status of your reports, find lost property, and request emergency assistance when necessary.</p>
     </section>
 
@@ -395,43 +395,7 @@
   </main>
 </div>
 
+<script src="/js/csrs.js"></script>
 <script src="/student-dashboard.js"></script>
-
-<!-- Highlights the sidebar link for the section currently on screen -->
-<script>
-  (function () {
-    var links = {};
-    document.querySelectorAll('.nav-item[href^="#"]').forEach(function (a) {
-      var id = a.getAttribute('href').slice(1);
-      if (id) links[id] = a;
-    });
-
-    function setActive(id) {
-      Object.keys(links).forEach(function (key) {
-        var on = key === id;
-        links[key].classList.toggle('active', on);
-        if (on) links[key].setAttribute('aria-current', 'page');
-        else links[key].removeAttribute('aria-current');
-      });
-    }
-
-    if (!('IntersectionObserver' in window)) return;
-
-    var ids = ['overview', 'my-reports', 'found-items', 'emergency', 'profile'];
-    var visible = {};
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
-      for (var i = 0; i < ids.length; i++) {
-        if (visible[ids[i]] && ids[i] !== 'overview') { setActive(ids[i]); return; }
-      }
-      setActive('overview');
-    }, { rootMargin: '-20% 0px -60% 0px' });
-
-    ids.slice(1).forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) io.observe(el);
-    });
-  })();
-</script>
 </body>
 </html>

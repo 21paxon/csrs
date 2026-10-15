@@ -1,9 +1,26 @@
-
 const loginForm = document.getElementById("login");
 const usernameInput = document.getElementById("u");
 const passwordInput = document.getElementById("p");
 const messageBox = document.getElementById("msg");
 const submitButton = document.getElementById("submitBtn");
+const togglePassword = document.getElementById("togglePassword");
+const year = document.getElementById("year");
+
+if (year) year.textContent = String(new Date().getFullYear());
+
+if (window.CSRS?.getToken()) {
+  window.location.replace(window.CSRS.homePath());
+}
+
+if (togglePassword && passwordInput) {
+  togglePassword.addEventListener("click", () => {
+    const show = passwordInput.type === "password";
+    passwordInput.type = show ? "text" : "password";
+    togglePassword.textContent = show ? "Hide" : "Show";
+    togglePassword.setAttribute("aria-pressed", String(show));
+    togglePassword.setAttribute("aria-label", show ? "Hide password" : "Show password");
+  });
+}
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -22,9 +39,7 @@ loginForm.addEventListener("submit", async (event) => {
   try {
     const response = await fetch("/api/auth/login", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     });
 
@@ -32,44 +47,22 @@ loginForm.addEventListener("submit", async (event) => {
 
     if (!response.ok) {
       showMessage(
-        data.error ||
-          "Sign-in failed. Check your credentials and try again.",
+        data.error || "Sign-in failed. Check your credentials and try again.",
         "err"
       );
       return;
     }
 
     if (!data.token || !data.user) {
-      showMessage(
-        "The server returned an invalid login response.",
-        "err"
-      );
+      showMessage("The server returned an invalid login response.", "err");
       return;
     }
 
-    // Store authentication details for API requests.
-    sessionStorage.setItem("csrs_token", data.token);
-    sessionStorage.setItem(
-      "csrs_user",
-      JSON.stringify(data.user)
-    );
-
-    showMessage(
-      "Sign-in successful. Opening your dashboard...",
-      "success"
-    );
-
-    // Redirect according to the account's role.
-    const role = String(data.user.role || "").toLowerCase();
-
-    if (role === "student") {
-      window.location.assign("/student-dashboard.html");
-    } else {
-      window.location.assign("/dashboard.html");
-    }
+    window.CSRS.setSession(data.token, data.user);
+    showMessage("Sign-in successful. Opening your workspace...", "success");
+    window.location.assign(window.CSRS.homePath(data.user.role));
   } catch (error) {
     console.error("Login request failed:", error);
-
     showMessage(
       "Unable to connect to the server. Check that CSRS is running.",
       "err"
@@ -87,8 +80,8 @@ function showMessage(message, type = "") {
 function setLoading(loading) {
   submitButton.disabled = loading;
   submitButton.setAttribute("aria-busy", String(loading));
-
-  submitButton.textContent = loading
-    ? "Signing in..."
-    : "Sign in";
+  const label = submitButton.querySelector(".btn-label");
+  if (label) {
+    label.textContent = loading ? "Signing in..." : "Sign in";
+  }
 }
