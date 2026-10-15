@@ -27,18 +27,16 @@ function initDashboard() {
 
   const overviewOnly = canAnalytics(role);
   $("analyticsBlock").hidden = !overviewOnly;
-  $("opsBlock").hidden = overviewOnly && !canSecurityOps(role) ? true : false;
+  $("opsBlock").hidden = false;
   $("headerActions").hidden = !overviewOnly;
+
+  $("refreshOps").addEventListener("click", loadOperations);
+  loadOperations();
 
   if (overviewOnly) {
     $("refreshButton").addEventListener("click", loadAnalytics);
     $("period").addEventListener("change", loadAnalytics);
     loadAnalytics();
-  }
-
-  if (canSecurityOps(role)) {
-    loadOperations();
-    $("refreshOps").addEventListener("click", loadOperations);
   }
 }
 

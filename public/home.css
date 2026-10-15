@@ -127,11 +127,17 @@ h1, h2 {
 }
 
 .rp-logo {
-  display: block;
+  display: grid;
+  place-items: center;
   width: 66px;
   height: 66px;
-  object-fit: contain;
   flex-shrink: 0;
+  border: 3px solid var(--rp-gold);
+  border-radius: 10px;
+  background: var(--rp-blue);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 900;
 }
 
 .brand-text {

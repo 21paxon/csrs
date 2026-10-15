@@ -1,5 +1,8 @@
 
 
+const yearEl = document.getElementById("year");
+if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
 const registerForm = document.getElementById("registerForm");
 const registerButton = document.getElementById("registerButton");
 const messageBox = document.getElementById("message");
@@ -104,7 +107,7 @@ registerForm.addEventListener("submit", async (event) => {
     registerButton.textContent = "Account created";
 
     window.setTimeout(() => {
-      window.location.assign("/");
+      window.location.assign("/index.html");
     }, 1800);
   } catch (error) {
     console.error("Registration request failed:", error);

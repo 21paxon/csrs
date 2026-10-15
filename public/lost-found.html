@@ -1,33 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lost &amp; Found | CSRS</title>
-<style>
-:root{font-family:Inter,Arial,sans-serif;color:#172b43;background:#f4f7fb}*{box-sizing:border-box}body{margin:0;background:#f4f7fb}
-.institution-header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:16px 5%;background:#123b70;color:#fff;border-bottom:4px solid #e1b341}.institution-brand{display:flex;align-items:center;gap:12px}.rp-mark{display:grid;place-items:center;width:48px;height:48px;border:2px solid #e1b341;border-radius:8px;background:#fff;color:#123b70;font-weight:900;font-size:18px}.institution-brand strong,.institution-brand span,.institution-brand small{display:block}.institution-brand strong{font-size:18px}.institution-brand span{margin-top:3px;font-size:13px;font-weight:700}.institution-brand small{margin-top:3px;color:#dbeafe;font-size:11px}.institution-nav{display:flex;gap:8px;flex-wrap:wrap;padding:10px 5%;background:#0d2c55}.institution-nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:700}.institution-nav a:hover{background:#294e78}main{max-width:1200px;margin:auto;padding:18px}.panel{background:#fff;border:1px solid #e0e7f0;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 4px 14px #14243a0a}h1{font-size:23px;margin:0 0 6px}h2{font-size:17px;margin:0 0 14px}.muted{font-size:13px;color:#66758a;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}input,textarea,select{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:7px;font:inherit}textarea{min-height:75px}button{border:0;border-radius:7px;padding:10px 14px;background:#1769aa;color:white;font-weight:600;cursor:pointer}button:disabled{opacity:.6}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button{background:#e8eef6;color:#203752}.tabs button.active{background:#1769aa;color:white}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px;font-size:13px}th,td{padding:11px;text-align:left;border-bottom:1px solid #e7edf4;vertical-align:top}th{background:#f7f9fc}.message{font-size:13px;margin-top:10px;white-space:pre-wrap}.error{color:#b42318}.ok{color:#147d45}.hidden{display:none!important}@media(max-width:620px){main{padding:10px}.panel{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:20px}}
-</style><script src="/lost-found.js" defer></script>
-</head><body>
-<header class="institution-header"><div class="institution-brand"><div class="rp-mark" aria-hidden="true">RP</div><div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Skills for a better destiny</small></div></div><div><h1 style="margin:0 0 5px;font-size:23px">Lost &amp; Found</h1><p style="margin:0">Campus Security and Reporting System</p></div></header>
-<nav class="institution-nav" aria-label="Main navigation"><a href="/dashboard.html">Dashboard</a><a href="/incidents.html">Incidents</a><a href="/emergency.html">Emergency Centre</a><a href="/gate.html">Visitors</a><a href="/lost-found.html">Lost &amp; Found</a><a href="/index.html">Sign in</a></nav>
-<main>
-<header class="panel"><p class="muted">Report items you have lost, review your reports, and browse items found on campus. Security officers can register found items and match reports.</p><div id="pageMessage" class="message" role="status" aria-live="polite"></div></header>
-<section class="panel"><div class="tabs"><button type="button" class="active" data-tab="lost">Lost items</button><button type="button" data-tab="found">Found items</button></div>
-<div id="lostPanel"><h2>Report a lost item</h2><form id="lostForm"><div class="grid">
-<div class="field"><label for="lostName">Item name *</label><input id="lostName" name="item_name" required maxlength="180"></div>
-<div class="field"><label for="lostCategory">Category</label><input id="lostCategory" name="category" maxlength="100"></div>
-<div class="field"><label for="lostLocation">Where was it lost?</label><input id="lostLocation" name="location_lost" maxlength="200"></div>
-<div class="field"><label for="lostDate">Date lost</label><input id="lostDate" name="date_lost" type="date"></div>
-<div class="field"><label for="lostPhone">Contact phone</label><input id="lostPhone" name="contact_phone" maxlength="50"></div>
-<div class="field"><label for="lostPhoto">Photo (optional)</label><input id="lostPhoto" name="photo" type="file" accept="image/*"></div>
-<div class="field" style="grid-column:1/-1"><label for="lostDescription">Description</label><textarea id="lostDescription" name="description" maxlength="2000"></textarea></div></div><p><button id="lostSubmit" type="submit">Submit lost-item report</button></p><div id="lostMessage" class="message" role="status" aria-live="polite"></div></form>
-<h2 style="margin-top:24px">My lost-item reports</h2><div class="table-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Location</th><th>Date</th><th>Status</th></tr></thead><tbody id="lostRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
-<div id="foundPanel" class="hidden"><div id="foundFormWrap" class="hidden"><h2>Register a found item (security)</h2><form id="foundForm"><div class="grid">
-<div class="field"><label for="foundName">Item name *</label><input id="foundName" name="item_name" required maxlength="180"></div>
-<div class="field"><label for="foundCategory">Category</label><input id="foundCategory" name="category" maxlength="100"></div>
-<div class="field"><label for="foundLocation">Where was it found?</label><input id="foundLocation" name="location_found" maxlength="200"></div>
-<div class="field"><label for="foundDate">Date found</label><input id="foundDate" name="date_found" type="date"></div>
-<div class="field"><label for="foundPhoto">Photo (optional)</label><input id="foundPhoto" name="photo" type="file" accept="image/*"></div>
-<div class="field" style="grid-column:1/-1"><label for="foundDescription">Description</label><textarea id="foundDescription" name="description" maxlength="2000"></textarea></div></div><p><button id="foundSubmit" type="submit">Register found item</button></p><div id="foundMessage" class="message" role="status" aria-live="polite"></div></form><h2 style="margin-top:24px">Match lost and found reports</h2><form id="matchForm" class="grid"><div class="field"><label for="matchLostId">Lost report ID *</label><input id="matchLostId" name="lost_id" type="number" min="1" required></div><div class="field"><label for="matchFoundId">Found item ID *</label><input id="matchFoundId" name="found_id" type="number" min="1" required></div><div><button type="submit">Match items</button></div></form><div id="matchMessage" class="message" role="status" aria-live="polite"></div></div>
-<h2 style="margin-top:12px">Open found items</h2><div class="table-wrap"><table><thead><tr><th>Item</th><th>Category</th><th>Location</th><th>Date found</th><th>Description</th></tr></thead><tbody id="foundRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
-</section></main></body></html>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123b70">
+  <title>Lost &amp; Found | CSRS</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="brand" href="/home.html">
+        <div class="rp-mark" aria-hidden="true">RP</div>
+        <div>
+          <strong>Rwanda Polytechnic</strong>
+          <span>Musanze College</span>
+          <small>Campus Security and Reporting System</small>
+        </div>
+      </a>
+      <div class="app-page-title">
+        <h1>Lost &amp; Found</h1>
+        <p>Report lost items and browse found property</p>
+        <div class="app-user" id="appUser"></div>
+      </div>
+    </div>
+    <nav class="app-nav" id="appNav" aria-label="Main navigation"></nav>
+  </header>
+
+  <main class="app-main">
+    <section class="panel">
+      <p class="muted">Report items you have lost, review your reports, and browse items found on campus. Security officers can register found items and match reports.</p>
+      <div id="pageMessage" class="message" role="status"></div>
+      <div class="tabs">
+        <button type="button" class="ghost active" data-tab="lost">Lost items</button>
+        <button type="button" class="ghost" data-tab="found">Found items</button>
+      </div>
+
+      <div id="lostPanel">
+        <h2>Report a lost item</h2>
+        <form id="lostForm">
+          <div class="grid">
+            <div>
+              <label for="lostName">Item name</label>
+              <input id="lostName" name="item_name" required maxlength="180">
+            </div>
+            <div>
+              <label for="lostCategory">Category</label>
+              <input id="lostCategory" name="category" maxlength="100">
+            </div>
+            <div>
+              <label for="lostLocation">Where was it lost?</label>
+              <input id="lostLocation" name="location_lost" maxlength="200">
+            </div>
+            <div>
+              <label for="lostDate">Date lost</label>
+              <input id="lostDate" name="date_lost" type="date">
+            </div>
+            <div>
+              <label for="lostPhone">Contact phone</label>
+              <input id="lostPhone" name="contact_phone" maxlength="50">
+            </div>
+            <div>
+              <label for="lostPhoto">Photo (optional)</label>
+              <input id="lostPhoto" name="photo" type="file" accept="image/*">
+            </div>
+            <div class="full">
+              <label for="lostDescription">Description</label>
+              <textarea id="lostDescription" name="description" maxlength="2000"></textarea>
+            </div>
+          </div>
+          <p><button id="lostSubmit" type="submit">Submit lost-item report</button></p>
+          <div id="lostMessage" class="message" role="status"></div>
+        </form>
+
+        <h2>My lost-item reports</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="lostRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="foundPanel" class="hidden">
+        <div id="foundFormWrap" class="hidden">
+          <h2>Register a found item (security)</h2>
+          <form id="foundForm">
+            <div class="grid">
+              <div>
+                <label for="foundName">Item name</label>
+                <input id="foundName" name="item_name" required maxlength="180">
+              </div>
+              <div>
+                <label for="foundCategory">Category</label>
+                <input id="foundCategory" name="category" maxlength="100">
+              </div>
+              <div>
+                <label for="foundLocation">Where was it found?</label>
+                <input id="foundLocation" name="location_found" maxlength="200">
+              </div>
+              <div>
+                <label for="foundDate">Date found</label>
+                <input id="foundDate" name="date_found" type="date">
+              </div>
+              <div>
+                <label for="foundPhoto">Photo (optional)</label>
+                <input id="foundPhoto" name="photo" type="file" accept="image/*">
+              </div>
+              <div class="full">
+                <label for="foundDescription">Description</label>
+                <textarea id="foundDescription" name="description" maxlength="2000"></textarea>
+              </div>
+            </div>
+            <p><button id="foundSubmit" type="submit">Register found item</button></p>
+            <div id="foundMessage" class="message" role="status"></div>
+          </form>
+
+          <h2>Match lost and found reports</h2>
+          <form id="matchForm" class="grid">
+            <div>
+              <label for="matchLostId">Lost report ID</label>
+              <input id="matchLostId" name="lost_id" type="number" min="1" required>
+            </div>
+            <div>
+              <label for="matchFoundId">Found item ID</label>
+              <input id="matchFoundId" name="found_id" type="number" min="1" required>
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <button type="submit">Match items</button>
+            </div>
+          </form>
+          <div id="matchMessage" class="message" role="status"></div>
+        </div>
+
+        <h2>Open found items</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Date found</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="foundRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/csrs.js"></script>
+  <script src="/lost-found.js"></script>
+</body>
+</html>

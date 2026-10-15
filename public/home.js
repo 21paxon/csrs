@@ -1,15 +1,38 @@
 "use strict";
 
-// The public landing page does not require an admin login.
-// Do not redirect visitors based on sessionStorage.
-// Do not provide sign-out functionality on this page.
-
 document.addEventListener("DOMContentLoaded", () => {
-  // Footer year
   const yearElement = document.getElementById("currentYear");
 
   if (yearElement) {
     yearElement.textContent = new Date().getFullYear();
+  }
+
+  const token = sessionStorage.getItem("csrs_token");
+  let user = null;
+  try {
+    user = JSON.parse(sessionStorage.getItem("csrs_user") || "null");
+  } catch {
+    user = null;
+  }
+
+  if (token && user) {
+    const role = String(user.role || "").toLowerCase();
+    const home = role === "student" || role === "staff"
+      ? "/student-dashboard.html"
+      : "/dashboard.html";
+    document.querySelectorAll('a[href="/index.html"]').forEach((link) => {
+      link.href = home;
+      link.textContent = "Open workspace";
+      link.classList.remove("nav-signin");
+      if (link.classList.contains("module-link")) {
+        link.innerHTML = 'Open workspace <span aria-hidden="true">&#8594;</span>';
+      }
+    });
+    const register = document.querySelector(".nav-links > a.login-btn");
+    if (register) {
+      register.href = home;
+      register.textContent = "My CSRS";
+    }
   }
 
   // Highlight the header link for the section currently on screen
