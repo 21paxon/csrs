@@ -25,6 +25,6 @@
   $("matchForm").addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget;const lost_id=Number(form.elements.lost_id.value),found_id=Number(form.elements.found_id.value);try{await api("/api/lost-found/match",{method:"POST",body:JSON.stringify({lost_id,found_id})});form.reset();msg($("matchMessage"),"Items matched successfully.");await loadLost();await loadFound();}catch(err){msg($("matchMessage"),err.message,true);}});
   document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>{const tab=button.dataset.tab;document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===button));$("lostPanel").classList.toggle("hidden",tab!=="lost");$("foundPanel").classList.toggle("hidden",tab!=="found");}));
   if(!token){window.top.location.replace("/index.html");return;}
-  if(isOfficer())$("foundFormWrap").classList.remove("hidden");
+  if(isOfficer)$("foundFormWrap").classList.remove("hidden");
   Promise.all([loadLost(),loadFound()]).catch(e=>msg($("pageMessage"),e.message,true));
 })();
