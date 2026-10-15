@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Visitors | CSRS</title>
+  <style>
+    :root{font-family:Inter,Arial,sans-serif;color:#172b43;background:#f4f7fb;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;background:#f4f7fb}main{padding:18px;max-width:1200px;margin:auto}
+    .panel{background:#fff;border:1px solid #e0e7f0;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 4px 14px #14243a0a}
+    h1{font-size:23px;margin:0 0 6px}h2{font-size:17px;margin:0 0 14px}.muted{color:#66758a;font-size:13px;line-height:1.5;margin:0 0 16px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-weight:600;font-size:13px;margin-bottom:6px}
+    input,select,textarea{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;background:white;color:inherit}
+    .field{min-width:0}button{border:0;border-radius:7px;padding:10px 14px;background:#1769aa;color:white;font-weight:600;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+    .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px;font-size:13px}th,td{text-align:left;padding:11px;border-bottom:1px solid #e7edf4;vertical-align:top}th{background:#f7f9fc;color:#526174}
+    .message{font-size:13px;margin-top:10px;white-space:pre-wrap}.error{color:#b42318}.ok{color:#147d45}.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:#eaf2ff;color:#1c4f91;font-weight:600}
+    @media(max-width:620px){main{padding:10px}.panel{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:20px}}
+  </style>
+  <script src="/gate.js" defer></script>
+</head>
+<body>
+<main>
+  <header class="panel">
+    <h1>Campus Visitors</h1>
+    <p class="muted">Register campus visitors, view people currently on campus, and record their departure. Access is limited by the server's security roles.</p>
+    <div class="toolbar"><span id="visitorCount" class="badge">Loading visitors…</span><button type="button" id="refreshVisitors">Refresh list</button></div>
+    <div id="pageMessage" class="message" role="status" aria-live="polite"></div>
+  </header>
+  <section class="panel">
+    <h2>Register visitor / check in</h2>
+    <form id="checkInForm">
+      <div class="grid">
+        <div class="field"><label for="full_name">Visitor full name *</label><input id="full_name" name="full_name" required maxlength="160"></div>
+        <div class="field"><label for="id_number">ID / passport number *</label><input id="id_number" name="id_number" required maxlength="100"></div>
+        <div class="field"><label for="phone">Phone number *</label><input id="phone" name="phone" required maxlength="50"></div>
+        <div class="field"><label for="purpose">Purpose of visit *</label><input id="purpose" name="purpose" required maxlength="500"></div>
+        <div class="field"><label for="host_user_id">Person being visited *</label><select id="host_user_id" name="host_user_id" required><option value="">Loading hosts…</option></select></div>
+        <div class="field"><label for="vehicle_plate">Vehicle plate (optional)</label><input id="vehicle_plate" name="vehicle_plate" maxlength="40"></div>
+        <div class="field"><label for="host_text">Host / office details (optional)</label><input id="host_text" name="host_text" maxlength="160"></div>
+      </div>
+      <p><button id="checkInButton" type="submit">Register and check in</button></p>
+      <div id="formMessage" class="message" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="toolbar"><h2 style="margin:0">Currently on campus</h2><span class="muted" style="margin:0">Check visitors out when they leave.</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Visitor</th><th>ID / Passport</th><th>Phone</th><th>Purpose</th><th>Host</th><th>Badge</th><th>Entry time</th><th>Action</th></tr></thead><tbody id="visitorRows"><tr><td colspan="8">Loading visitors…</td></tr></tbody></table></div>
+    <div id="listMessage" class="message" role="status" aria-live="polite"></div>
+  </section>
+</main>
+</body>
+</html>
