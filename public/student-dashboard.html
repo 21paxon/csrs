@@ -72,7 +72,10 @@
       overflow-y: auto;
     }
 
-    .brand { margin: 0 10px; font-size: 22px; font-weight: 800; letter-spacing: .5px; }
+    .rp-sidebar-brand { display:flex; align-items:center; gap:10px; margin:0 8px 12px; }
+    .rp-mark { display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; border:2px solid #e1b341; border-radius:8px; background:#fff; color:#123b70; font-size:16px; font-weight:900; }
+    .brand { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.2px; }
+    .brand-college { color:#d5e2f4; font-size:11px; font-weight:700; margin-top:3px; }
     .brand-sub { margin: 8px 10px 30px; color: #d5e2f4; font-size: 12px; line-height: 1.7; }
     .nav-label { margin: 24px 10px 8px; color: #b8c9e1; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .8px; }
 
@@ -257,17 +260,16 @@
 
 <div class="layout">
   <aside>
-    <div class="brand">CSRS</div>
-    <div class="brand-sub">
-      RWANDA POLYTECHNIC<br>
-      Musanze College<br>
-      Campus Security &amp; Response System
+    <div class="rp-sidebar-brand">
+      <div class="rp-mark" aria-hidden="true">RP</div>
+      <div><div class="brand">Rwanda Polytechnic</div><div class="brand-college">Musanze College</div></div>
     </div>
+    <div class="brand-sub">Skills for a better destiny<br>Campus Security and Reporting System</div>
 
     <nav aria-label="Student navigation">
       <div class="nav-label">Student menu</div>
       <a class="nav-item active" href="#overview" aria-current="page">Dashboard</a>
-      <a class="nav-item" href="/incidents.html">Report an Incident</a>
+      <a class="nav-item" href="#my-reports">Report an Incident</a>
       <a class="nav-item" href="#my-reports">My Reports</a>
       <a class="nav-item" href="#found-items">Lost &amp; Found</a>
       <a class="nav-item" href="#emergency">Emergency Centre</a>
