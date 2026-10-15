@@ -6,7 +6,12 @@
   <title>Campus Visitors | CSRS</title>
   <style>
     :root{font-family:Inter,Arial,sans-serif;color:#172b43;background:#f4f7fb;font-synthesis:none}
-    *{box-sizing:border-box}body{margin:0;background:#f4f7fb}main{padding:18px;max-width:1200px;margin:auto}
+    *{box-sizing:border-box}body{margin:0;background:#f4f7fb}
+    .institution-header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:16px 5%;background:#123b70;color:#fff;border-bottom:4px solid #e1b341}
+    .institution-brand{display:flex;align-items:center;gap:12px}.rp-mark{display:grid;place-items:center;width:48px;height:48px;border:2px solid #e1b341;border-radius:8px;background:#fff;color:#123b70;font-weight:900;font-size:18px}
+    .institution-brand strong,.institution-brand span,.institution-brand small{display:block}.institution-brand strong{font-size:18px}.institution-brand span{margin-top:3px;font-size:13px;font-weight:700}.institution-brand small{margin-top:3px;color:#dbeafe;font-size:11px}
+    .institution-nav{display:flex;gap:8px;flex-wrap:wrap;padding:10px 5%;background:#0d2c55}.institution-nav a{color:#fff;text-decoration:none;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:700}.institution-nav a:hover{background:#294e78}
+    main{padding:18px;max-width:1200px;margin:auto}
     .panel{background:#fff;border:1px solid #e0e7f0;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 4px 14px #14243a0a}
     h1{font-size:23px;margin:0 0 6px}h2{font-size:17px;margin:0 0 14px}.muted{color:#66758a;font-size:13px;line-height:1.5;margin:0 0 16px}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-weight:600;font-size:13px;margin-bottom:6px}
@@ -20,9 +25,10 @@
   <script src="/gate.js" defer></script>
 </head>
 <body>
+<header class="institution-header"><div class="institution-brand"><div class="rp-mark" aria-hidden="true">RP</div><div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Skills for a better destiny</small></div></div><div><h1 style="margin:0 0 5px;font-size:23px">Campus Visitors</h1><p style="margin:0">Campus Security and Reporting System</p></div></header>
+<nav class="institution-nav" aria-label="Main navigation"><a href="/dashboard.html">Dashboard</a><a href="/incidents.html">Incidents</a><a href="/emergency.html">Emergency Centre</a><a href="/gate.html">Visitors</a><a href="/lost-found.html">Lost &amp; Found</a><a href="/index.html">Sign in</a></nav>
 <main>
   <header class="panel">
-    <h1>Campus Visitors</h1>
     <p class="muted">Register campus visitors, view people currently on campus, and record their departure. Access is limited by the server's security roles.</p>
     <div class="toolbar"><span id="visitorCount" class="badge">Loading visitors…</span><button type="button" id="refreshVisitors">Refresh list</button></div>
     <div id="pageMessage" class="message" role="status" aria-live="polite"></div>
