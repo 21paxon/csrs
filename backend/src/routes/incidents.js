@@ -37,7 +37,13 @@ const SELECT_INCIDENT = `
             FROM incident_assignments ia
            WHERE ia.incident_id = i.id
            ORDER BY ia.assigned_at DESC
-           LIMIT 1) AS assigned_to
+           LIMIT 1) AS assigned_to,
+         (SELECT COALESCE(u.full_name, u.username)
+            FROM incident_assignments ia
+            JOIN users u ON u.id = ia.officer_id
+           WHERE ia.incident_id = i.id
+           ORDER BY ia.assigned_at DESC
+           LIMIT 1) AS assigned_officer
     FROM incidents i
     LEFT JOIN incident_categories c ON c.id = i.category_id
     LEFT JOIN locations l ON l.id = i.location_id`;

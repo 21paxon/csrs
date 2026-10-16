@@ -122,6 +122,55 @@
         </table>
       </div>
     </section>
+
+    <section class="panel" id="incidentDetailsPanel" hidden>
+      <div class="toolbar" style="justify-content:space-between">
+        <div>
+          <h2 id="incidentDetailsTitle">Incident review</h2>
+          <p class="muted" id="incidentDetailsSummary"></p>
+        </div>
+        <button id="closeIncidentDetails" type="button" class="secondary">Close</button>
+      </div>
+      <div id="incidentDetailsBody"></div>
+      <div id="incidentAssignment" class="grid" hidden>
+        <div>
+          <label for="incidentOfficer">Assign to security officer</label>
+          <select id="incidentOfficer">
+            <option value="">Loading officers...</option>
+          </select>
+        </div>
+        <div>
+          <button id="assignIncident" type="button">Assign case</button>
+        </div>
+      </div>
+      <form id="incidentUpdateForm" class="grid" hidden>
+        <div>
+          <label for="incidentStatus">Update status</label>
+          <select id="incidentStatus">
+            <option value="">Keep current status</option>
+            <option>Verified</option>
+            <option>In Progress</option>
+            <option>Resolved</option>
+            <option>Closed</option>
+            <option>Rejected</option>
+            <option>Duplicate</option>
+            <option>Escalated</option>
+          </select>
+        </div>
+        <div class="full">
+          <label for="incidentNotes">Findings or action notes</label>
+          <textarea id="incidentNotes" maxlength="5000" placeholder="Record what was found, action taken, or what should happen next."></textarea>
+        </div>
+        <div class="check">
+          <input id="incidentInternal" type="checkbox">
+          <label for="incidentInternal">Internal note (not visible to the reporter)</label>
+        </div>
+        <div class="full">
+          <button id="saveIncidentUpdate" type="submit">Save review update</button>
+        </div>
+      </form>
+      <div id="incidentDetailsMessage" class="message" role="status"></div>
+    </section>
   </main>
 
   <script src="/config.js"></script>
