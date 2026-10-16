@@ -52,7 +52,7 @@ img { max-width: 100%; }
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .brand {
@@ -79,7 +79,11 @@ img { max-width: 100%; }
 .brand span { margin-top: 2px; font-size: 13px; font-weight: 700; }
 .brand small { margin-top: 2px; color: #dbeafe; font-size: 11px; }
 
-.app-page-title { text-align: right; }
+.app-page-title {
+  min-width: 0;
+  margin-left: auto;
+  text-align: right;
+}
 .app-page-title h1 { margin: 0 0 4px; font-size: 22px; }
 .app-page-title p { margin: 0; color: #dbeafe; font-size: 13px; }
 
@@ -88,6 +92,54 @@ img { max-width: 100%; }
   color: #f3d889;
   font-size: 12px;
   font-weight: 700;
+}
+
+.lost-found-page .app-top-inner {
+  flex-wrap: nowrap;
+}
+
+.lost-found-page .app-page-title {
+  width: auto;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .lost-found-page .app-top-inner {
+    gap: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .lost-found-page .brand {
+    gap: 7px;
+  }
+
+  .lost-found-page .rp-mark {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .lost-found-page .brand strong {
+    font-size: 14px;
+  }
+
+  .lost-found-page .brand span {
+    font-size: 11px;
+  }
+
+  .lost-found-page .brand small {
+    font-size: 9px;
+  }
+
+  .lost-found-page .app-page-title h1 {
+    font-size: 18px;
+  }
+
+  .lost-found-page .app-page-title p,
+  .lost-found-page .app-user {
+    font-size: 10px;
+  }
 }
 
 .app-nav {
@@ -257,7 +309,12 @@ th {
 .actions button { width: auto; }
 
 @media (max-width: 720px) {
-  .app-top-inner, .app-nav { padding-left: 14px; padding-right: 14px; }
+  .app-top-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+    flex-wrap: wrap;
+  }
+  .app-nav { padding-left: 14px; padding-right: 14px; }
   .app-page-title { text-align: left; width: 100%; }
   .grid { grid-template-columns: 1fr; }
   .full { grid-column: auto; }
