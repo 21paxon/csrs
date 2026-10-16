@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#123b70">
+  <meta name="description" content="Report lost property, browse found items, and help reunite campus community members with their belongings at Rwanda Polytechnic Musanze College.">
   <title>Lost &amp; Found | CSRS</title>
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/theme.css">
@@ -33,12 +34,12 @@
     <section class="panel">
       <p class="muted">Report items you have lost, review your reports, and browse items found on campus. Security officers can register found items and match reports.</p>
       <div id="pageMessage" class="message" role="status"></div>
-      <div class="tabs">
-        <button type="button" class="ghost active" data-tab="lost">Lost items</button>
-        <button type="button" class="ghost" data-tab="found">Found items</button>
+      <div class="tabs" role="tablist" aria-label="Lost and found items">
+        <button type="button" class="ghost active" id="lostTab" role="tab" aria-selected="true" aria-controls="lostPanel" data-tab="lost">Lost items</button>
+        <button type="button" class="ghost" id="foundTab" role="tab" aria-selected="false" aria-controls="foundPanel" data-tab="found">Found items</button>
       </div>
 
-      <div id="lostPanel">
+      <div id="lostPanel" role="tabpanel" aria-labelledby="lostTab">
         <h2>Report a lost item</h2>
         <form id="lostForm">
           <div class="grid">
@@ -92,7 +93,7 @@
         </div>
       </div>
 
-      <div id="foundPanel" class="hidden">
+      <div id="foundPanel" class="hidden" role="tabpanel" aria-labelledby="foundTab">
         <div id="foundFormWrap" class="hidden">
           <h2>Register a found item (security)</h2>
           <form id="foundForm">
