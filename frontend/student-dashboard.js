@@ -29,7 +29,7 @@ function initPortal() {
 
   document.querySelectorAll("[data-role-any]").forEach((element) => {
     const allowed = element.dataset.roleAny.split(",").map((value) => value.trim());
-    element.hidden = !allowed.includes(role);
+    element.hidden = !allowed.includes(role) || element.hasAttribute("data-start-hidden");
   });
 
   $("logoutLink").addEventListener("click", (event) => {
