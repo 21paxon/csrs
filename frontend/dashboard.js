@@ -142,7 +142,7 @@ function initDashboard() {
     $("moduleWorkspace").hidden = true;
     $("moduleFrame").src = "about:blank";
     $("analyticsBlock").hidden = !canAnalytics(roleOf());
-    $("opsBlock").hidden = false;
+    $("opsBlock").hidden = !canSecurityOps(roleOf());
     $("headerActions").hidden = !canAnalytics(roleOf());
 
     document.querySelectorAll(".nav-item").forEach((item) => {

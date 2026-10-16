@@ -187,6 +187,8 @@
     .content-heading p { margin: 0; color: var(--muted); font-size: 13px; }
 
     .panel { margin-bottom: 22px; overflow: hidden; scroll-margin-top: 16px; }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 18px; align-items: start; }
+    .content-grid > .panel { min-width: 0; }
     .incident-workspace iframe { display: block; width: 100%; min-height: 980px; border: 0; background: var(--bg); }
     .report-history { margin: 0; padding-left: 22px; }
     .report-history li { padding: 9px 0; border-bottom: 1px solid var(--border); }
@@ -248,7 +250,7 @@
       .brand-sub { margin-bottom: 12px; }
       .nav-label { margin: 12px 4px 6px; }
       main { padding: 18px 13px; }
-      .cards, .quick-actions, .profile-grid { grid-template-columns: 1fr; }
+      .cards, .quick-actions, .profile-grid, .content-grid { grid-template-columns: 1fr; }
       h1 { font-size: 23px; }
     }
 
@@ -278,7 +280,7 @@
 
     <nav aria-label="Portal navigation">
     <div class="nav-label">My portal</div>
-    <a class="nav-item active" href="#overview">Overview</a>
+    <a class="nav-item active" href="#overview" aria-current="page">Overview</a>
     <a class="nav-item" href="#my-reports">My reports</a>
     <a class="nav-item" href="#found-items">Lost &amp; Found</a>
     <a class="nav-item" href="#emergency">Emergency Centre</a>
@@ -341,6 +343,12 @@
       </article>
     </section>
 
+    <div class="content-heading">
+      <div>
+        <h2>Safety services</h2>
+        <p>Choose a service to get help or manage your campus safety requests.</p>
+      </div>
+    </div>
     <section class="quick-actions" aria-label="Quick actions">
       <a class="action-card" href="#incident-workspace" data-open-report data-role-any="student,staff">
         <strong>Report an Incident</strong>
@@ -438,6 +446,7 @@
       <iframe id="lostFoundFrame" title="Lost and found workspace" src="/lost-found.html" loading="lazy"></iframe>
     </section>
 
+    <div class="content-grid">
     <section class="panel" id="emergency" aria-labelledby="emergencyHeading" data-role-any="student,staff">
       <h2 id="emergencyHeading">Emergency Centre</h2>
       <p class="subtitle">Use this only when urgent assistance is needed. Your alert will be sent to campus security.</p>
@@ -455,6 +464,7 @@
         <div class="profile-field"><span>Account Role</span><strong id="profileRole">—</strong></div>
       </div>
     </section>
+    </div>
 
     <footer>Rwanda Polytechnic · Musanze College · Campus Security &amp; Reporting System</footer>
   </main>
