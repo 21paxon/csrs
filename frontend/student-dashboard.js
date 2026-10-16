@@ -56,10 +56,6 @@ function initPortal() {
       openModuleWorkspace(link.dataset.openModule);
     });
   });
-  $("closeLostFoundWorkspace").addEventListener("click", () => {
-    closeWorkspace($("lost-found-workspace"));
-  });
-
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       const workspace = document.querySelector(".workspace-overlay:not([hidden])");
@@ -104,6 +100,7 @@ function closeWorkspace(workspace) {
 
 function setupSectionNav() {
   const links = document.querySelectorAll(".nav-item[data-view]");
+  const triggers = document.querySelectorAll("[data-view]");
   const views = document.querySelectorAll("[data-dashboard-view]:not([data-view-detail])");
 
   function showView(view) {
@@ -125,7 +122,7 @@ function setupSectionNav() {
     history.replaceState(null, "", "#" + selectedView);
   }
 
-  links.forEach((link) => {
+  triggers.forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
       showView(link.dataset.view);
@@ -133,7 +130,7 @@ function setupSectionNav() {
   });
 
   const initialView = window.location.hash.slice(1);
-  showView(["overview", "reports", "emergency", "profile"].includes(initialView)
+  showView(["overview", "reports", "emergency", "profile", "lost-found"].includes(initialView)
     ? initialView
     : "overview");
 }

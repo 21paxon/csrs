@@ -289,7 +289,7 @@
       <a class="nav-item" href="#emergency" data-view="emergency">Emergency Centre</a>
 
       <div class="nav-label">Campus services</div>
-      <a class="nav-item" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">Lost &amp; Found</a>
+      <a class="nav-item" href="#lost-found-workspace" data-view="lost-found">Lost &amp; Found</a>
 
       <div class="nav-label">Account</div>
       <a class="nav-item" href="#profile" data-view="profile">My profile</a>
@@ -365,7 +365,7 @@
         <strong>Emergency Centre</strong>
         <span>Request urgent assistance from campus security.</span>
       </a>
-      <a class="action-card" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found" data-role-any="student,staff">
+      <a class="action-card" href="#lost-found-workspace" data-view="lost-found" data-role-any="student,staff">
         <strong>Lost &amp; Found</strong>
         <span>Review found items or check your lost-item reports.</span>
       </a>
@@ -430,8 +430,7 @@
       </div>
     </section>
 
-    <section class="panel incident-workspace" id="lost-found-workspace" aria-label="Lost and found workspace" data-role-any="student,staff" data-start-hidden hidden>
-      <button class="workspace-close" id="closeLostFoundWorkspace" type="button">Close</button>
+    <section class="panel incident-workspace lost-found-dashboard-view" id="lost-found-workspace" aria-label="Lost and found workspace" data-role-any="student,staff" data-start-hidden data-dashboard-view="lost-found" hidden>
       <iframe id="lostFoundFrame" title="Lost and found workspace" src="/lost-found.html" loading="lazy"></iframe>
     </section>
 
