@@ -37,7 +37,7 @@ loginForm.addEventListener("submit", async (event) => {
   showMessage("");
 
   try {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch(window.CSRS.apiUrl("/api/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })

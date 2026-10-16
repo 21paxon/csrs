@@ -19,7 +19,8 @@ CSRS helps the college manage campus safety in one place: incident reporting (in
 Requirements: Node.js 18+ and a Neon PostgreSQL database.
 
 ```bash
-# 1. Install dependencies
+# 1. Install backend dependencies
+cd backend
 npm install
 
 # 2. Configure Neon and application secrets
@@ -27,6 +28,7 @@ cp .env.example .env          # then set DATABASE_URL and JWT_SECRET
 
 # 3. Create tables, then the first admin account
 npm run db:init
+npm run db:migrate
 npm run seed:admin
 
 # 4. Start the server
@@ -35,6 +37,50 @@ npm run dev                   # http://localhost:3000
 
 > `db:init` must run on an empty Neon database or temporary Neon branch. Use a
 > temporary branch for testing instead of running it against production data.
+
+For an existing Neon database, use `npm run db:migrate` instead. Migrations
+are stored in [`backend/db/migrations/`](backend/db/migrations/) and are
+transactional and tracked in the `schema_migrations` table. They preserve
+existing application data.
+
+## Free hosting layout
+
+The project is separated into two deployable parts:
+
+- **Backend:** the [`backend/`](backend/) folder, running `npm start`. It needs
+  `DATABASE_URL`, `JWT_SECRET`, and `FRONTEND_ORIGINS`. Deploy this service to
+  a Node-compatible host such as Render or Railway.
+- **Frontend:** the [`frontend/`](frontend/) folder. It is static HTML, CSS, and
+  JavaScript and can be deployed to Netlify, Vercel, or GitHub Pages.
+
+Before deploying the frontend, edit [`frontend/config.js`](frontend/config.js) and
+set `apiBaseUrl` to the public backend URL, for example:
+
+```js
+window.CSRS_CONFIG = Object.freeze({
+  apiBaseUrl: "https://your-csrs-api.example.com"
+});
+```
+
+Set the backend environment variable to the exact frontend origin:
+
+```env
+FRONTEND_ORIGINS=https://your-csrs-frontend.example.com
+```
+
+Keep the backend URL out of `DATABASE_URL`; the frontend only needs the API
+URL, while the Neon connection string must remain a backend-only secret.
+
+For local development, leave `apiBaseUrl` empty and start the backend from its
+folder:
+
+```bash
+cd backend
+npm run dev
+```
+
+The backend continues to serve [`frontend/`](frontend/) at
+`http://localhost:3000`.
 
 ## API
 
@@ -71,9 +117,11 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 
 ## Checking that everything works
 
-With the server running (`npm run dev`), run this in a second terminal:
+With the backend running (`cd backend && npm run dev`), run this in a second
+terminal:
 
 ```bash
+cd backend
 npm run smoke
 ```
 
@@ -86,19 +134,34 @@ Push/SMS/email delivery (notifications are stored in-app; the `channel` column i
 
 ```
 .
-├── db/schema.sql          # Neon/PostgreSQL schema, indexes, seed data
-├── scripts/               # init-db.js, seed-admin.js, smoke-test.js
+├── backend/
+│   ├── db/schema.sql      # Neon/PostgreSQL schema, indexes, seed data
+│   ├── scripts/           # init-db.js, seed-admin.js, smoke-test.js
+│   ├── src/
+│   ├── package.json
+│   └── .env.example
+├── frontend/              # Static HTML, CSS, JavaScript, and images
+│   ├── config.js
+│   ├── index.html
+│   └── ...
+└── README.md
+```
+
+The backend source layout is:
+
+```
+backend/
 ├── src/
 │   ├── server.js, app.js  # entry point and Express setup
 │   ├── config.js, db.js   # environment and database connection
 │   ├── middleware/        # auth.js (JWT + role guard), error.js
-│   ├── middleware/upload.js  # evidence/photo uploads (type and size limits)
-│   ├── routes/            # one file per module (incidents, emergency, lostfound, gate, patrol, ...)
+│   ├── routes/            # one file per module
 │   └── utils/             # audit, notify, csv, helpers
-├── public/                # login page (index.html, login.js)
-├── uploads/               # evidence files (created at runtime, not in git)
-├── .env.example
-└── README.md
+├── db/schema.sql
+├── scripts/
+├── uploads/               # evidence files created at runtime
+├── package.json
+└── .env.example
 ```
 
 ## Next steps

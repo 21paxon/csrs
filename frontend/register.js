@@ -72,20 +72,23 @@ registerForm.addEventListener("submit", async (event) => {
   setLoading(true);
 
   try {
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        fullName,
-        registrationNumber,
-        username,
-        email,
-        phone,
-        password
-      })
-    });
+    const response = await fetch(
+      (window.CSRS?.apiUrl || ((path) => path))("/api/auth/register"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          fullName,
+          registrationNumber,
+          username,
+          email,
+          phone,
+          password
+        })
+      }
+    );
 
     const data = await response.json().catch(() => ({}));
 

@@ -102,6 +102,14 @@
     return window.location.pathname + window.location.search + window.location.hash;
   }
 
+  function apiUrl(path) {
+    const base = String(window.CSRS_CONFIG?.apiBaseUrl || "").replace(/\/+$/, "");
+    const normalizedPath = String(path || "").startsWith("/")
+      ? String(path)
+      : "/" + String(path);
+    return base + normalizedPath;
+  }
+
   function isSafeReturnPath(value) {
     return typeof value === "string" &&
       value.startsWith("/") &&
@@ -139,7 +147,7 @@
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(url, { ...options, headers, body });
+    const response = await fetch(apiUrl(url), { ...options, headers, body });
     const data = await response.json().catch(() => ({}));
 
     if (response.status === 401 && token) {
@@ -338,6 +346,7 @@
     postLoginPath,
     logout,
     requireAuth,
+    apiUrl,
     api,
     formatDate,
     statusClass,
