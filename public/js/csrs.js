@@ -98,9 +98,26 @@
     window.location.replace("/index.html");
   }
 
+  function currentPath() {
+    return window.location.pathname + window.location.search + window.location.hash;
+  }
+
+  function isSafeReturnPath(value) {
+    return typeof value === "string" &&
+      value.startsWith("/") &&
+      !value.startsWith("//") &&
+      !value.startsWith("/index.html");
+  }
+
+  function postLoginPath(role) {
+    const requested = new URLSearchParams(window.location.search).get("returnTo");
+    return isSafeReturnPath(requested) ? requested : homePath(role);
+  }
+
   function requireAuth() {
     if (!getToken()) {
-      window.location.replace("/index.html");
+      const returnTo = encodeURIComponent(currentPath());
+      window.location.replace("/index.html?returnTo=" + returnTo);
       return false;
     }
     return true;
@@ -318,6 +335,7 @@
     canGate,
     isPortalRole,
     homePath,
+    postLoginPath,
     logout,
     requireAuth,
     api,

@@ -9,7 +9,7 @@ const year = document.getElementById("year");
 if (year) year.textContent = String(new Date().getFullYear());
 
 if (window.CSRS?.getToken()) {
-  window.location.replace(window.CSRS.homePath());
+  window.location.replace(window.CSRS.postLoginPath());
 }
 
 if (togglePassword && passwordInput) {
@@ -60,7 +60,7 @@ loginForm.addEventListener("submit", async (event) => {
 
     window.CSRS.setSession(data.token, data.user);
     showMessage("Sign-in successful. Opening your workspace...", "success");
-    window.location.assign(window.CSRS.homePath(data.user.role));
+    window.location.assign(window.CSRS.postLoginPath(data.user.role));
   } catch (error) {
     console.error("Login request failed:", error);
     showMessage(
