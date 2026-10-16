@@ -216,7 +216,7 @@ async function loadReportDetails(id) {
   const summary = $("reportDetailsSummary");
   const details = $("reportDetailsBody");
   panel.hidden = false;
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  panel.focus({ preventScroll: true });
   summary.textContent = "Loading report history...";
   details.replaceChildren();
 

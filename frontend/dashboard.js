@@ -112,6 +112,7 @@ function initDashboard() {
     $("noticeBox").hidden = true;
     $("errorBox").hidden = true;
     workspace.hidden = false;
+    document.body.classList.add("dashboard-workspace-open");
     workspace.setAttribute("aria-label", label + " workspace");
     frame.title = label + " workspace";
     frame.onload = () => {
@@ -135,12 +136,12 @@ function initDashboard() {
       else item.removeAttribute("aria-current");
     });
 
-    workspace.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function closeModule() {
     $("moduleWorkspace").hidden = true;
     $("moduleFrame").src = "about:blank";
+    document.body.classList.remove("dashboard-workspace-open");
     $("analyticsBlock").hidden = !canAnalytics(roleOf());
     $("opsBlock").hidden = !canSecurityOps(roleOf());
     $("headerActions").hidden = !canAnalytics(roleOf());
