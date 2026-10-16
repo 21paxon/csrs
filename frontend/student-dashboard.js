@@ -109,7 +109,9 @@ function setupSectionNav() {
   function showView(view) {
     const selectedView = view || "overview";
     views.forEach((element) => {
-      element.hidden = element.dataset.dashboardView !== selectedView;
+      const isSelected = element.dataset.dashboardView === selectedView;
+      element.hidden = !isSelected;
+      element.classList.toggle("dashboard-view-hidden", !isSelected);
     });
     links.forEach((link) => {
       const active = link.dataset.view === selectedView;

@@ -10,6 +10,11 @@ body {
   overflow: hidden;
 }
 
+[hidden],
+.dashboard-view-hidden {
+  display: none !important;
+}
+
 .layout > aside {
   width: 270px;
   height: 100vh;
