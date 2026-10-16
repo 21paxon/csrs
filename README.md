@@ -9,22 +9,21 @@ CSRS helps the college manage campus safety in one place: incident reporting (in
 | Layer    | Choice                                              |
 |----------|-----------------------------------------------------|
 | Backend  | Node.js + Express                                   |
-| Database | PostgreSQL (`csrs_db`)                              |
+| Database | Neon PostgreSQL                                    |
 | Auth     | JWT + bcrypt, role-based access (7 roles)           |
 | Security | helmet, rate-limited login, parameterized queries, immutable audit log |
 | Frontend | HTML5 / CSS3 / JavaScript (PWA planned)             |
 
 ## Getting Started
 
-Requirements: Node.js 18+ and PostgreSQL.
+Requirements: Node.js 18+ and a Neon PostgreSQL database.
 
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Create the database and configure
-createdb csrs_db
-cp .env.example .env          # then edit DATABASE_URL and JWT_SECRET
+# 2. Configure Neon and application secrets
+cp .env.example .env          # then set DATABASE_URL and JWT_SECRET
 
 # 3. Create tables, then the first admin account
 npm run db:init
@@ -34,11 +33,12 @@ npm run seed:admin
 npm run dev                   # http://localhost:3000
 ```
 
-> `db:init` must run on an empty database. To start over, drop and recreate `csrs_db`.
+> `db:init` must run on an empty Neon database or temporary Neon branch. Use a
+> temporary branch for testing instead of running it against production data.
 
 ## API
 
-Send the token from login as `Authorization: Bearer <token>`. Every state-changing action is written to `audit_logs`.
+Send the token from login as `Authorization: Bearer <token>`. Every state-changing action is written to `audit_log`.
 Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Management (CM), Dean of Students, Staff, Student**.
 
 | Module | Endpoint | Who |
@@ -86,7 +86,7 @@ Push/SMS/email delivery (notifications are stored in-app; the `channel` column i
 
 ```
 .
-├── db/schema.sql          # PostgreSQL schema, indexes, seed data
+├── db/schema.sql          # Neon/PostgreSQL schema, indexes, seed data
 ├── scripts/               # init-db.js, seed-admin.js, smoke-test.js
 ├── src/
 │   ├── server.js, app.js  # entry point and Express setup
@@ -107,14 +107,14 @@ Build the frontend (PWA) on top of this API: login, report form with map, office
 
 ## Database Overview
 
-The schema has **20 tables** (one per entity in SRS 3.5), **7 custom ENUM types**, indexes, and seed data for roles and incident categories, grouped into modules that match the SRS sections.
+The schema contains the application tables, foreign keys, indexes, and seed
+incident categories used by the current API. It is written for PostgreSQL and
+can be initialized safely on a disposable Neon branch before production use.
 
 ### 1. Users and Roles (SRS 2.3, 3.1, 3.3.5)
 | Table            | Purpose                                                         |
 |------------------|-----------------------------------------------------------------|
-| `roles`          | Admin, Head of Security, Security Officer, Student, Staff, Dean of Students |
-| `users`          | Login accounts for every actor in the system                    |
-| `students_staff` | Student and staff details imported from college records         |
+| `users`          | Login accounts, roles, registration numbers, and lockout state |
 
 ### 2. Configuration (SRS 2.1, 2.2.1, 3.5)
 | Table                 | Purpose                                        |
@@ -128,7 +128,7 @@ The schema has **20 tables** (one per entity in SRS 3.5), **7 custom ENUM types*
 | `incidents`        | Reports with severity and status; `reporter_id` is `NULL` for anonymous reports; `access_code_hash` lets anonymous reporters check status |
 | `evidence`         | Photos, videos and documents attached to an incident          |
 | `incident_updates` | Audit trail of status changes and notes                       |
-| `assignments`      | Supervisors assigning cases to security officers              |
+| `incident_assignments` | Supervisors assigning cases to security officers          |
 
 ### 4. Emergency Alerts (SRS 2.2.2)
 | Table              | Purpose                                              |
@@ -138,52 +138,39 @@ The schema has **20 tables** (one per entity in SRS 3.5), **7 custom ENUM types*
 ### 5. Lost and Found (SRS 2.2.5)
 | Table         | Purpose                         |
 |---------------|---------------------------------|
-| `lost_items`  | Items reported lost, with photo and link to a matched found item |
-| `found_items` | Items handed in, with photo and collection/owner verification |
+| `items`       | Unified lost and found records, matching, and collection data |
 
 ### 6. Visitors and Gate (SRS 2.2.6)
 | Table       | Purpose                                                 |
 |-------------|---------------------------------------------------------|
-| `visitors`  | Visitor details, host, and blacklist flag               |
-| `gate_logs` | Entry/exit times, vehicle and badge numbers, gate officer |
+| `visitors`  | Visitor details, host, entry/exit, and badge information |
+| `blacklist`  | Restricted visitor identity records                     |
 
 ### 7. Patrols and Rosters (SRS 2.2.7)
 | Table           | Purpose                                         |
 |-----------------|-------------------------------------------------|
 | `patrol_routes` | Named patrol routes                             |
 | `checkpoints`   | QR-coded checkpoints along each route           |
-| `patrol_logs`   | Checkpoint scans by officers (Checked / Missed) |
-| `duty_rosters`  | Officer shifts (Morning, Afternoon, Night)      |
+| `patrol_logs`   | Checkpoint scans by officers                  |
+| `duty_rosters`  | Officer shifts and assigned routes             |
 
 ### 8. System (SRS 2.2.8, 3.5)
 | Table           | Purpose                                         |
 |-----------------|-------------------------------------------------|
-| `notifications` | In-App, Email, SMS and Push messages to users   |
-| `audit_logs`    | Who did what, on which table, from which IP     |
-
-## ENUM Types
-
-| Type                   | Values                                                                                   |
-|------------------------|------------------------------------------------------------------------------------------|
-| `severity_level`       | Critical, High, Medium, Low                                                              |
-| `incident_status`      | Submitted, Verified, In Progress, Resolved, Closed, Rejected, Duplicate, Escalated       |
-| `alert_status`         | Pending, Acknowledged, Resolved                                                          |
-| `item_status`          | Unclaimed, Matched, Returned                                                             |
-| `found_item_status`    | Available, Claimed                                                                       |
-| `notification_channel` | In-App, Email, SMS, Push                                                                 |
-| `patrol_log_status`    | Checked, Missed                                                                          |
+| `notifications` | In-app messages to users                       |
+| `audit_log`     | Who did what, on which table, from which IP     |
 
 ## Seed Data
 
-`schema.sql` inserts the 7 user roles and the 10 incident categories listed in the SRS, so the system is usable straight after setup.
+`schema.sql` inserts the 10 incident categories listed in the SRS. The first
+administrator is created separately with `npm run seed:admin`.
 
 ## Key Relationships
 
-- Every account in `users` has one role from `roles`.
-- `students_staff` extends `users` with college record details.
+- Every account in `users` has a role from the application role constraint.
 - `incidents` link to a category, a location, an optional reporter, and an optional assigned officer.
-- `evidence`, `incident_updates` and `assignments` belong to an incident and are deleted with it.
-- `visitors` are tied to a host user; `gate_logs` record each visit and the gate officer.
+- `evidence`, `incident_updates` and `incident_assignments` belong to an incident and are deleted with it.
+- `visitors` are tied to a host user and record each visit.
 - `patrol_routes` have many `checkpoints`; each scan is saved in `patrol_logs`.
 
 ## Team
