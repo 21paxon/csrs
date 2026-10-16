@@ -104,10 +104,13 @@ function closeWorkspace(workspace) {
 
 function setupSectionNav() {
   const links = document.querySelectorAll(".nav-item[data-view]");
-  const views = document.querySelectorAll("[data-dashboard-view]");
+  const views = document.querySelectorAll("[data-dashboard-view]:not([data-view-detail])");
 
   function showView(view) {
     const selectedView = view || "overview";
+    document.querySelectorAll("[data-view-detail]").forEach((element) => {
+      element.hidden = true;
+    });
     views.forEach((element) => {
       const isSelected = element.dataset.dashboardView === selectedView;
       element.hidden = !isSelected;
