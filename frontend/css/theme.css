@@ -1,0 +1,154 @@
+/* Shared CSRS visual language. Loaded after page styles so every screen
+   uses the same Rwanda Polytechnic palette and interaction states. */
+:root {
+  color-scheme: light;
+  --csrs-navy: #123b70;
+  --csrs-navy-dark: #0b2850;
+  --csrs-blue: #2457d6;
+  --csrs-blue-light: #eaf1f9;
+  --csrs-gold: #e5ad32;
+  --csrs-bg: #f4f7fb;
+  --csrs-surface: #ffffff;
+  --csrs-text: #182b43;
+  --csrs-muted: #596579;
+  --csrs-border: #dce4ed;
+  --csrs-danger: #b42332;
+  --csrs-success: #18794e;
+  --csrs-warning: #b54708;
+  --csrs-radius: 10px;
+  --csrs-shadow: 0 10px 28px rgba(18, 59, 112, .08);
+
+  /* Aliases used by the older page-specific stylesheets. */
+  --navy: var(--csrs-navy);
+  --navy-light: var(--csrs-navy-dark);
+  --navy-hover: var(--csrs-blue);
+  --blue: var(--csrs-blue);
+  --blue-dark: var(--csrs-navy-dark);
+  --blue-light: var(--csrs-blue-light);
+  --background: var(--csrs-bg);
+  --bg: var(--csrs-bg);
+  --card: var(--csrs-surface);
+  --surface: var(--csrs-surface);
+  --white: var(--csrs-surface);
+  --text: var(--csrs-text);
+  --muted: var(--csrs-muted);
+  --border: var(--csrs-border);
+  --danger: var(--csrs-danger);
+  --error: var(--csrs-danger);
+  --success: var(--csrs-success);
+  --green: var(--csrs-success);
+  --warn: var(--csrs-warning);
+  --orange: var(--csrs-warning);
+  --gold: var(--csrs-gold);
+  --accent: var(--csrs-blue);
+  --accent-hover: var(--csrs-navy);
+  --rp-blue: var(--csrs-navy);
+  --rp-blue-dark: var(--csrs-navy-dark);
+  --rp-blue-light: var(--csrs-blue-light);
+  --rp-gold: var(--csrs-gold);
+}
+
+body {
+  background-color: var(--csrs-bg);
+  color: var(--csrs-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button,
+input,
+select,
+textarea,
+.button,
+.primary,
+.primary-btn,
+.submit-button {
+  border-radius: var(--csrs-radius);
+}
+
+button,
+.button,
+.primary,
+.primary-btn,
+.submit-button {
+  background-color: var(--csrs-navy);
+  border-color: var(--csrs-navy);
+  color: #fff;
+}
+
+button:hover:not(:disabled),
+.button:hover:not(:disabled),
+.primary:hover:not(:disabled),
+.primary-btn:hover:not(:disabled),
+.submit-button:hover:not(:disabled) {
+  background-color: var(--csrs-navy-dark);
+  border-color: var(--csrs-navy-dark);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--csrs-blue);
+  outline: 3px solid rgba(36, 87, 214, .18);
+}
+
+input,
+select,
+textarea {
+  border-color: var(--csrs-border);
+  color: var(--csrs-text);
+  background: var(--csrs-surface);
+}
+
+.card,
+.login-card,
+.registration-card,
+.panel,
+.stat-card,
+.module-card,
+.signin-dialog {
+  border-color: var(--csrs-border);
+  box-shadow: var(--csrs-shadow);
+}
+
+.badge.ok,
+.success,
+.message.ok {
+  color: var(--csrs-success);
+}
+
+.badge.warn,
+.warning {
+  color: var(--csrs-warning);
+}
+
+.badge.danger,
+.error,
+.message.error {
+  color: var(--csrs-danger);
+}
+
+.institution-header,
+.topbar,
+aside {
+  border-color: var(--csrs-gold);
+}
+
+.header-link:hover,
+.nav-links > a.nav-signin:hover {
+  border-color: var(--csrs-navy);
+  background: var(--csrs-blue-light);
+  color: var(--csrs-navy);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
