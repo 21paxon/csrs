@@ -281,3 +281,71 @@ th {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
 }
+
+/* The Lost & Found page is embedded as a dashboard view. Keep its complete
+   working area inside the available dashboard viewport. */
+.lost-found-page {
+  overflow: hidden;
+  width: 222.22%;
+  zoom: .45;
+}
+
+.lost-found-page .app-main {
+  height: auto;
+  min-height: 100vh;
+  margin: 0;
+  padding: 12px;
+  overflow: visible;
+}
+
+.lost-found-page .panel {
+  height: auto;
+  margin: 0;
+  padding: 14px;
+  overflow: visible;
+}
+
+.lost-found-page .panel > .muted {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.lost-found-page .tabs {
+  margin-bottom: 8px;
+}
+
+.lost-found-page h2 {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.lost-found-page .grid {
+  gap: 8px 12px;
+}
+
+.lost-found-page label {
+  margin-bottom: 3px;
+  font-size: 11px;
+}
+
+.lost-found-page input,
+.lost-found-page textarea,
+.lost-found-page button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.lost-found-page textarea {
+  min-height: 42px;
+}
+
+.lost-found-page form p {
+  margin: 8px 0;
+}
+
+.lost-found-page .table-wrap {
+  max-height: 145px;
+  overflow: hidden;
+}

@@ -105,6 +105,7 @@ function setupSectionNav() {
 
   function showView(view) {
     const selectedView = view || "overview";
+    document.body.classList.toggle("lost-found-mode", selectedView === "lost-found");
     document.querySelectorAll("[data-view-detail]").forEach((element) => {
       element.hidden = true;
     });
