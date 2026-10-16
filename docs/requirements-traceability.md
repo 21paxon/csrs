@@ -1,8 +1,9 @@
 # CSRS Functional Requirements Traceability Matrix
 
-This matrix maps SRS functional requirements FR-01 through FR-15 to the
-current implementation. Status reflects the code currently in the repository,
-not only the intended design.
+This matrix maps the supplied CSRS SRS functional requirements FR-01 through
+FR-15 and the main non-functional requirements to the current implementation.
+Status reflects the code currently in the repository, not only the intended
+design.
 
 ## Status definitions
 
@@ -33,6 +34,31 @@ not only the intended design.
 | **FR-13 Report Generation** | **Partial** | Incident, lost/found, gate, patrol, and audit report endpoints are implemented in [`src/routes/reports.js`](../backend/src/routes/reports.js), including CSV output. | PDF and Excel export are not implemented. Officer/location and all requested filter combinations need endpoint-level verification. |
 | **FR-14 User Management** | **Partial** | Admins can create, deactivate/reactivate, change roles, and bulk-import users in [`src/routes/users.js`](../backend/src/routes/users.js). | No administrator password-reset endpoint or UI was found. Temporary passwords from bulk import require an explicit secure delivery/first-login process. |
 | **FR-15 Audit Logging** | **Partial** | Login, user changes, reports, assignments, announcements, and other actions call [`src/utils/audit.js`](../backend/src/utils/audit.js). [`db/schema.sql`](../backend/db/schema.sql) now creates the same immutable `audit_log` table used by the application. | Audit failures are caught and logged instead of failing the operation. Coverage should be expanded to every security-sensitive action and verified with integration tests. |
+
+## Non-functional and supporting requirements
+
+| Requirement area | Status | Already present | Gap / next verification |
+|---|---|---|---|
+| Reliability and recovery | **Partial** | PostgreSQL transactions are used for important operations; submitted reports and alerts are stored independently of in-app notification delivery. | No scheduled database/evidence backup, retention policy, restore procedure, or restoration test is included in the project. Notification retry handling also needs to be added and tested. |
+| Availability | **Not verified** | The application can run as a Node.js service with Neon PostgreSQL. | The SRS target is 99% monthly availability. Hosting monitoring, health checks, planned-maintenance handling, and an availability measurement process are not configured in the repository. |
+| Security and privacy | **Partial** | bcrypt password hashing, JWT authentication, role guards, Helmet, CORS, rate limiting, parameterized queries, anonymous access-code hashing, and audit logging are present. | Account lockout, password reset, optional MFA for privileged users, evidence/report confidentiality controls, secure backups, HTTPS deployment enforcement, and privacy/retention procedures remain incomplete or unverified. |
+| Scalability | **Not verified** | Database indexes and a separately deployable backend/frontend are present. | The target of at least 500 concurrent users has not been load-tested. Attachment storage, connection-pool sizing, and multi-campus scalability have not been validated. |
+| Browser and mobile compatibility | **Partial** | Responsive HTML/CSS pages are available without a native app. | Cross-browser/mobile acceptance testing and PWA installation behavior are not complete. |
+| Email, SMS, and web push | **Missing** | In-app notifications are stored; notification records include a channel field. | SMTP/email, SMS gateway delivery, web push subscriptions, delivery retries, and delivery-status monitoring are not implemented. |
+| Maps and location | **Partial** | Browser geolocation can be captured for emergency alerts. | A map service, incident/alert map display, hotspot visualization, and location permission/error UX are not implemented. |
+| User interface and accessibility | **Partial** | Institutional styling, responsive layouts, confirmation/status messages, role-specific dashboard navigation, and consistent logos are present. | Kinyarwanda translation, accessibility audit, keyboard/screen-reader checks, and complete emergency/report access from every main screen remain outstanding. |
+| Database and data protection | **Partial** | Neon PostgreSQL schema, constraints, indexes, migrations, and parameterized queries are present. | Encryption-at-rest choices, evidence protection, backup retention, incident retention policy, and recovery testing must be documented and verified. |
+| Documentation and training | **Partial** | README, API overview, deployment instructions, schema documentation, and this traceability matrix exist. | A student/staff user manual, administrator manual, technical operations/runbook, and role-specific training materials are not yet present. |
+| Testing and acceptance | **Partial** | JavaScript syntax checks, database migration checks, smoke checks, and manual browser verification have been used. | Unit, integration, system, security, load, mobile/accessibility, and user-acceptance tests mapped to TC-01 through TC-15 are not complete. |
+| Performance targets | **Not verified** | Some database indexes and upload limits exist. | The SRS targets require measurement for login (3s), submission (5s), emergency delivery (10s), search (3s), reports (10s), 20 MB attachments, 500 concurrent users, and daily backups. |
+| Maintainability | **Implemented / partial** | Frontend/backend separation, modular Express routes, migrations, environment configuration, and documented scripts are present. | Operational monitoring, dependency/security update procedures, backup monitoring, support procedures, and configuration-management documentation remain to be established. |
+
+## SRS items intentionally outside application code
+
+The supplied SRS also includes project planning material such as budget,
+schedule, training, hosting, domain, SMS, backup, and maintenance costs. These
+are project-management or deployment decisions rather than features that can
+be safely implemented in the application without institutional choices.
 
 ## Cross-cutting blockers
 
@@ -69,3 +95,16 @@ happy paths, but a complete acceptance suite should add:
 4. Add map visualization and PDF/Excel exports.
 5. Add administrator password reset and formal owner verification.
 6. Expand automated acceptance tests to cover every role and requirement.
+
+### 3. Implementation order recommended from the supplied SRS
+
+1. Complete security-critical workflows: account lockout, password reset,
+   privileged-user MFA decision, incident closure approval, and audit coverage.
+2. Complete operational response: critical notifications, emergency retry and
+   acknowledgement behavior, missed-patrol detection, and visitor host alerts.
+3. Add search/report completeness: reference and officer filters, then PDF and
+   Excel exports.
+4. Add maps, web push, and bilingual UI after the operational workflows are
+   stable.
+5. Establish backups, restore testing, load testing, accessibility testing,
+   acceptance testing, and the user/administrator manuals before deployment.
