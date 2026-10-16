@@ -103,13 +103,17 @@
     }
 
     /* ---------- Main ---------- */
-    main { min-width: 0; flex: 1; padding: 28px 32px; max-width: 1400px; }
+    main { min-width: 0; flex: 1; padding: 30px clamp(20px, 4vw, 52px) 44px; max-width: 1400px; }
 
-    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
     h1 { margin: 0 0 6px; font-size: 27px; letter-spacing: -.5px; }
     h2 { margin: 0 0 16px; font-size: 18px; }
     h3 { margin: 18px 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
     .subtitle { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .header-kicker { margin: 0 0 6px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .header-tools { display: flex; align-items: center; gap: 10px; }
+    .portal-status { display: inline-flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid #b7ebcd; border-radius: 20px; background: #f0fdf4; color: var(--green); font-size: 12px; font-weight: 700; }
+    .portal-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 
     button, .button {
       display: inline-block;
@@ -136,7 +140,7 @@
 
     .welcome-panel {
       padding: 26px;
-      margin-bottom: 22px;
+      margin-bottom: 18px;
       border-radius: 14px;
       color: white;
       background: linear-gradient(120deg, #123b70, #2457d6);
@@ -165,7 +169,7 @@
     .metric-value { font-size: 32px; font-weight: 750; line-height: 1.1; font-variant-numeric: tabular-nums; }
     .metric-note { margin-top: 8px; color: var(--muted); font-size: 12px; }
 
-    .quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 26px; }
     .action-card {
       display: block;
       padding: 18px;
@@ -178,6 +182,9 @@
     .action-card:hover { border-color: #9bb8f8; background: var(--pale); transform: translateY(-1px); }
     .action-card strong { display: block; margin-bottom: 8px; color: var(--navy); }
     .action-card span { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .content-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 4px 0 12px; }
+    .content-heading h2 { margin: 0; }
+    .content-heading p { margin: 0; color: var(--muted); font-size: 13px; }
 
     .panel { margin-bottom: 22px; overflow: hidden; scroll-margin-top: 16px; }
     .incident-workspace iframe { display: block; width: 100%; min-height: 980px; border: 0; background: var(--bg); }
@@ -269,8 +276,14 @@
     </div>
     <div class="brand-sub">Skills for a better destiny<br>Campus Security and Reporting System</div>
 
-    <nav aria-label="Student navigation">
-      <div class="nav-label">Account</div>
+    <nav aria-label="Portal navigation">
+    <div class="nav-label">My portal</div>
+    <a class="nav-item active" href="#overview">Overview</a>
+    <a class="nav-item" href="#my-reports">My reports</a>
+    <a class="nav-item" href="#found-items">Lost &amp; Found</a>
+    <a class="nav-item" href="#emergency">Emergency Centre</a>
+    <a class="nav-item" href="#profile">My profile</a>
+    <div class="nav-label">Account</div>
       <a class="nav-item" href="/change-password.html">Change password</a>
       <a class="nav-item" href="/home.html">Back to home</a>
       <a class="nav-item" href="#" id="logoutLink">Log Out</a>
@@ -282,10 +295,14 @@
 
     <header>
       <div>
+        <p class="header-kicker">Campus safety portal</p>
         <h1 id="portalHeading">Student Dashboard</h1>
         <div class="subtitle" id="welcome">Welcome</div>
       </div>
-      <button class="primary" id="refreshButton" type="button">Refresh Dashboard</button>
+      <div class="header-tools">
+        <span class="portal-status">Portal active</span>
+        <button class="primary" id="refreshButton" type="button">Refresh dashboard</button>
+      </div>
     </header>
 
     <noscript>
@@ -300,6 +317,12 @@
       <p>Report safety concerns, follow the status of your reports, find lost property, and request emergency assistance when necessary.</p>
     </section>
 
+    <div class="content-heading">
+      <div>
+        <h2>At a glance</h2>
+        <p>Your current activity and report summary.</p>
+      </div>
+    </div>
     <section class="cards" aria-label="Your summary" aria-live="polite">
       <article class="card">
         <div class="metric-label">My Incident Reports</div>
@@ -333,6 +356,12 @@
       </a>
     </section>
 
+    <div class="content-heading">
+      <div>
+        <h2>Your reports</h2>
+        <p>Track updates and follow up on reports submitted from your account.</p>
+      </div>
+    </div>
     <section class="panel" id="my-reports" aria-labelledby="reportsHeading" data-role-any="student,staff">
       <div class="panel-heading">
         <h2 id="reportsHeading">My Incident Reports</h2>

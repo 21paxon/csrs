@@ -21,6 +21,7 @@ function initPortal() {
   $("portalBannerTitle").textContent = isStaff
     ? "Campus safety tools for staff"
     : "Welcome to your campus safety portal";
+  document.title = isStaff ? "CSRS | Staff Portal" : "CSRS | Student Dashboard";
 
   $("profileUsername").textContent = user.username || "Not available";
   $("profileEmail").textContent = user.email || "Not available";
