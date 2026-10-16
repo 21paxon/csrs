@@ -89,13 +89,13 @@
 
   function homePath(role) {
     const value = role || roleOf();
-    if (!value) return "/index.html";
+    if (!value) return "/home.html";
     return isPortalRole(value) ? "/student-dashboard.html" : "/dashboard.html";
   }
 
   function logout() {
     clearSession();
-    window.location.replace("/index.html");
+    window.location.replace("/home.html");
   }
 
   function currentPath() {
@@ -125,7 +125,7 @@
   function requireAuth() {
     if (!getToken()) {
       const returnTo = encodeURIComponent(currentPath());
-      window.location.replace("/index.html?returnTo=" + returnTo);
+      window.location.replace("/home.html?signin=1&returnTo=" + returnTo);
       return false;
     }
     return true;
@@ -186,6 +186,7 @@
     if (
       [
         "pending",
+        "pending-approval",
         "submitted",
         "verified",
         "in-progress",
@@ -247,7 +248,7 @@
       return [
         { id: "home", href: "/home.html", label: "Home" },
         { id: "incidents", href: "/incidents.html", label: "Report incident" },
-        { id: "signin", href: "/index.html", label: "Sign in" },
+        { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
         { id: "register", href: "/register.html", label: "Student registration" }
       ];
     }

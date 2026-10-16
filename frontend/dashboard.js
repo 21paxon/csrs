@@ -16,6 +16,40 @@ function initDashboard() {
   $("welcome").textContent =
     "Welcome, " + (user.username || "User") + " · " + roleLabel(role);
 
+  const roleCopy = {
+    admin: {
+      title: "Administrator Dashboard",
+      welcome: "Manage campus security operations, users, reports and system controls.",
+      help: "You have full access to campus security records and management tools."
+    },
+    head_security: {
+      title: "Head of Security Dashboard",
+      welcome: "Coordinate incidents, emergency response and security operations.",
+      help: "Review campus-wide cases, assign officers and monitor overdue work."
+    },
+    security_officer: {
+      title: "Security Officer Dashboard",
+      welcome: "Work on assigned incidents and respond to active campus alerts.",
+      help: "Incident records are limited to cases assigned to you and your permitted operations."
+    },
+    management: {
+      title: "College Management Dashboard",
+      welcome: "Review read-only campus safety performance and trends.",
+      help: "This dashboard provides oversight information without operational controls."
+    },
+    dean: {
+      title: "Dean of Students Dashboard",
+      welcome: "Review student-safety incidents, alerts and campus trends.",
+      help: "This dashboard provides read-only safety information for student support."
+    }
+  }[role];
+
+  if (roleCopy) {
+    $("dashboardTitle").textContent = roleCopy.title;
+    $("welcome").textContent = roleCopy.welcome;
+    $("workspaceHelp").textContent = roleCopy.help;
+  }
+
   $("logoutLink").addEventListener("click", (event) => {
     event.preventDefault();
     logout();
@@ -36,14 +70,30 @@ function initDashboard() {
   document.querySelectorAll("[data-role-gate]").forEach((el) => {
     el.hidden = !canGate(role);
   });
+  document.querySelectorAll("[data-role-any]").forEach((el) => {
+    const allowed = el.dataset.roleAny.split(",").map((value) => value.trim());
+    el.hidden = !allowed.includes(role);
+  });
+  document.querySelectorAll("[data-menu-label]").forEach((label) => {
+    let hasVisibleItem = false;
+    let next = label.nextElementSibling;
+    while (next && !next.matches("[data-menu-label]")) {
+      if (!next.hidden && next.classList.contains("nav-item")) hasVisibleItem = true;
+      next = next.nextElementSibling;
+    }
+    label.hidden = !hasVisibleItem;
+  });
 
   const overviewOnly = canAnalytics(role);
+  const operational = canSecurityOps(role);
   $("analyticsBlock").hidden = !overviewOnly;
-  $("opsBlock").hidden = false;
+  $("opsBlock").hidden = !operational;
   $("headerActions").hidden = !overviewOnly;
 
-  $("refreshOps").addEventListener("click", loadOperations);
-  loadOperations();
+  if (operational) {
+    $("refreshOps").addEventListener("click", loadOperations);
+    loadOperations();
+  }
 
   if (overviewOnly) {
     $("refreshButton").addEventListener("click", loadAnalytics);

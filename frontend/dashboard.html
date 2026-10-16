@@ -420,11 +420,12 @@
         <div class="nav-label">Workspace</div>
         <a class="nav-item active" href="#overview" data-view="overview" aria-current="page">Security Dashboard</a>
 
-        <div class="nav-label">Campus services</div>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/incidents.html">Incident Monitoring</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/emergency.html">Emergency Alerts</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/lost-found.html">Lost &amp; Found</a>
+        <div class="nav-label" data-menu-label="services">Campus services</div>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/incidents.html" data-role-any="admin,head_security,security_officer,management,dean">Incident Monitoring</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/emergency.html" data-role-any="admin,head_security,security_officer">Emergency Alerts</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/lost-found.html" data-role-any="admin,head_security,security_officer">Lost &amp; Found Operations</a>
         <a class="nav-item" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Campus Visitors</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/users.html" data-role-any="admin">User Management</a>
 
         <div class="nav-label">Account</div>
         <a class="nav-item" href="/change-password.html">Change password</a>
@@ -436,7 +437,7 @@
     <main id="mainContent" tabindex="-1">
       <header>
         <div>
-          <h1>Security Dashboard</h1>
+          <h1 id="dashboardTitle">Security Dashboard</h1>
           <div class="subtitle" id="welcome">Campus security overview</div>
         </div>
 
@@ -482,12 +483,13 @@
         </section>
         <section class="quick-ops panel" style="margin-bottom:20px">
           <h2>Open a workspace</h2>
-          <p class="panel-subtitle">Each tool uses your account permissions. Officers see assigned cases; administrators see campus-wide records.</p>
+          <p class="panel-subtitle" id="workspaceHelp">Each tool uses your account permissions.</p>
           <div class="header-actions">
-            <a class="open-link" href="#workspace" data-dashboard-module="/incidents.html">Incidents</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/emergency.html">Emergency alerts</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/lost-found.html">Lost &amp; Found</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/incidents.html" data-role-any="admin,head_security,security_officer,management,dean">Incidents</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/emergency.html" data-role-any="admin,head_security,security_officer">Emergency alerts</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/lost-found.html" data-role-any="admin,head_security,security_officer">Lost &amp; Found operations</a>
             <a class="open-link" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Visitors</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/users.html" data-role-any="admin">Manage users</a>
             <button type="button" id="refreshOps">Refresh counts</button>
           </div>
         </section>

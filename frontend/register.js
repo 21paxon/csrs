@@ -7,6 +7,8 @@ const registerForm = document.getElementById("registerForm");
 const registerButton = document.getElementById("registerButton");
 const messageBox = document.getElementById("message");
 
+const accountTypeInput = document.getElementById("accountType");
+const accountTypeHint = document.getElementById("accountTypeHint");
 const fullNameInput = document.getElementById("fullName");
 const registrationNumberInput = document.getElementById("registrationNumber");
 const usernameInput = document.getElementById("username");
@@ -14,6 +16,16 @@ const emailInput = document.getElementById("email");
 const phoneInput = document.getElementById("phone");
 const passwordInput = document.getElementById("password");
 const confirmPasswordInput = document.getElementById("confirmPassword");
+
+accountTypeInput.addEventListener("change", updateAccountTypeHint);
+updateAccountTypeHint();
+
+function updateAccountTypeHint() {
+  const isStudent = accountTypeInput.value === "student";
+  accountTypeHint.textContent = isStudent
+    ? "Student accounts can sign in after registration."
+    : "This access request will remain inactive until an administrator approves it.";
+}
 
 // Password visibility controls.
 document.querySelectorAll(".show-password").forEach((button) => {
@@ -36,6 +48,7 @@ registerForm.addEventListener("submit", async (event) => {
   hideMessage();
 
   const fullName = fullNameInput.value.trim();
+  const accountType = accountTypeInput.value;
   const registrationNumber = registrationNumberInput.value.trim();
   const username = usernameInput.value.trim();
   const email = emailInput.value.trim().toLowerCase();
@@ -85,7 +98,8 @@ registerForm.addEventListener("submit", async (event) => {
           username,
           email,
           phone,
-          password
+          password,
+          accountType
         })
       }
     );
@@ -110,7 +124,7 @@ registerForm.addEventListener("submit", async (event) => {
     registerButton.textContent = "Account created";
 
     window.setTimeout(() => {
-      window.location.assign("/index.html");
+      window.location.assign("/home.html?signin=1");
     }, 1800);
   } catch (error) {
     console.error("Registration request failed:", error);
@@ -141,6 +155,6 @@ function setLoading(loading) {
   if (loading) {
     registerButton.textContent = "Creating account...";
   } else {
-    registerButton.textContent = "Create student account";
+    registerButton.textContent = "Submit registration";
   }
 }

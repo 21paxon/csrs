@@ -13,6 +13,23 @@ const { audit } = require('../utils/audit');
 const router = express.Router();
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
+const PUBLIC_REGISTRATION_ROLES = new Set([
+  'student',
+  'staff',
+  'security_officer',
+  'head_security',
+  'management',
+  'dean'
+]);
+
+const REGISTRATION_ROLE_LABELS = {
+  student: 'Student',
+  staff: 'Staff member',
+  security_officer: 'Security officer',
+  head_security: 'Head of security',
+  management: 'College management',
+  dean: 'Dean of students'
+};
 
 // Limit login attempts.
 const loginLimiter = rateLimit({
@@ -37,7 +54,7 @@ const registerLimiter = rateLimit({
 });
 
 // ==================================================
-// STUDENT REGISTRATION
+// PUBLIC ACCOUNT REGISTRATION
 // POST /api/auth/register
 // ==================================================
 router.post('/register', registerLimiter, async (req, res, next) => {
@@ -48,7 +65,8 @@ router.post('/register', registerLimiter, async (req, res, next) => {
       email,
       password,
       registrationNumber,
-      phone
+      phone,
+      accountType
     } = req.body || {};
 
     const cleanFullName = String(fullName || '').trim();
@@ -56,16 +74,19 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     const cleanEmail = String(email || '').trim().toLowerCase();
     const cleanRegNo = String(registrationNumber || '').trim();
     const cleanPhone = String(phone || '').trim();
+    const cleanAccountType = String(accountType || 'student').trim().toLowerCase();
+    const roleLabel = REGISTRATION_ROLE_LABELS[cleanAccountType];
 
     if (
       !cleanFullName ||
       !cleanUsername ||
       !cleanEmail ||
       typeof password !== 'string' ||
-      !password
+      !password ||
+      !PUBLIC_REGISTRATION_ROLES.has(cleanAccountType)
     ) {
       return res.status(400).json({
-        error: 'Full name, username, email and password are required.'
+        error: 'Choose a valid account type and complete the required fields.'
       });
     }
 
@@ -104,8 +125,9 @@ router.post('/register', registerLimiter, async (req, res, next) => {
 
     const { rows } = await db.query(
       `INSERT INTO users
-         (full_name, username, email, reg_no, phone, password_hash, role)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (full_name, username, email, reg_no, phone, password_hash, role,
+          is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, full_name, username, email, reg_no, phone, role`,
       [
         cleanFullName,
@@ -114,12 +136,17 @@ router.post('/register', registerLimiter, async (req, res, next) => {
         cleanRegNo || null,
         cleanPhone || null,
         passwordHash,
-        'student'
+        cleanAccountType,
+        cleanAccountType === 'student'
       ]
     );
 
+    const isStudent = cleanAccountType === 'student';
     return res.status(201).json({
-      message: 'Student account created successfully. You can now sign in.',
+      message: isStudent
+        ? 'Student account created successfully. You can now sign in.'
+        : `${roleLabel} access request submitted. An administrator must approve your account before you can sign in.`,
+      requiresApproval: !isStudent,
       user: rows[0]
     });
   } catch (err) {
@@ -173,6 +200,19 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const validLogin = Boolean(user && user.is_active && !isLocked && passwordMatches);
 
     if (!validLogin) {
+      if (user && !user.is_active && !isLocked && passwordMatches) {
+        await audit(req, {
+          userId: user.id,
+          action: 'LOGIN',
+          targetTable: 'users',
+          recordId: user.id,
+          status: 'Pending approval'
+        });
+        return res.status(403).json({
+          error: 'Your account is awaiting administrator approval. Please try again after it has been activated.'
+        });
+      }
+
       if (user && user.is_active && !isLocked && !passwordMatches) {
         const nextAttempts = Number(user.failed_attempts || 0) + 1;
         const shouldLock = nextAttempts >= MAX_FAILED_ATTEMPTS;

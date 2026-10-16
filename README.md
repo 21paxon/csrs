@@ -153,6 +153,22 @@ minutes. Administrator-issued resets return a temporary password once and set
 `must_change_password`; the user is redirected to the password-change page
 after signing in.
 
+The public registration form supports student, staff, security officer, head of
+security, college management, and dean of students account types. Student
+accounts are active immediately. Other account types are created as inactive
+access requests and must be approved by an administrator in User Management
+before the applicant can sign in to the role-specific dashboard.
+
+To test each role locally:
+
+1. Open `/home.html`, choose **Register**, select a role, and submit the form.
+2. For a non-student role, sign in as an administrator and open **User
+   Management**. The new account appears as **Pending approval**.
+3. Select **Approve account**, then sign out and sign in with the test
+   account.
+4. The account is routed to its role dashboard. Students can sign in
+   immediately after registration; other roles must be approved first.
+
 The backend source layout is:
 
 ```

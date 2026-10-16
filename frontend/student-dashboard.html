@@ -319,21 +319,21 @@
     </section>
 
     <section class="quick-actions" aria-label="Quick actions">
-      <a class="action-card" href="#incident-workspace" data-open-report>
+      <a class="action-card" href="#incident-workspace" data-open-report data-role-any="student,staff">
         <strong>Report an Incident</strong>
         <span>Report a security issue or suspicious activity on campus.</span>
       </a>
-      <a class="action-card" href="#emergency">
+      <a class="action-card" href="#emergency" data-role-any="student,staff">
         <strong>Emergency Centre</strong>
         <span>Request urgent assistance from campus security.</span>
       </a>
-      <a class="action-card" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">
+      <a class="action-card" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found" data-role-any="student,staff">
         <strong>Lost &amp; Found</strong>
         <span>Review found items or check your lost-item reports.</span>
       </a>
     </section>
 
-    <section class="panel" id="my-reports" aria-labelledby="reportsHeading">
+    <section class="panel" id="my-reports" aria-labelledby="reportsHeading" data-role-any="student,staff">
       <div class="panel-heading">
         <h2 id="reportsHeading">My Incident Reports</h2>
         <a class="button primary" href="#incident-workspace" data-open-report>New Report</a>
@@ -347,7 +347,7 @@
       </div>
     </section>
 
-    <section class="panel" id="report-details" aria-labelledby="reportDetailsHeading" hidden>
+    <section class="panel" id="report-details" aria-labelledby="reportDetailsHeading" data-role-any="student,staff" hidden>
       <div class="panel-heading">
         <div>
           <h2 id="reportDetailsHeading">Report tracking</h2>
@@ -358,7 +358,7 @@
       <div id="reportDetailsBody"></div>
     </section>
 
-    <section class="panel incident-workspace" id="incident-workspace" aria-labelledby="incidentWorkspaceHeading" hidden>
+    <section class="panel incident-workspace" id="incident-workspace" aria-labelledby="incidentWorkspaceHeading" data-role-any="student,staff" hidden>
       <div class="panel-heading">
         <div>
           <h2 id="incidentWorkspaceHeading">Report an incident</h2>
@@ -374,7 +374,7 @@
       ></iframe>
     </section>
 
-    <section class="panel" id="found-items" aria-labelledby="lostFoundHeading">
+    <section class="panel" id="found-items" aria-labelledby="lostFoundHeading" data-role-any="student,staff">
       <div class="panel-heading">
         <h2 id="lostFoundHeading">Lost &amp; Found</h2>
         <a class="button" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">Report a lost item</a>
@@ -398,7 +398,7 @@
       </div>
     </section>
 
-    <section class="panel incident-workspace" id="lost-found-workspace" aria-labelledby="lostFoundWorkspaceHeading" hidden>
+    <section class="panel incident-workspace" id="lost-found-workspace" aria-labelledby="lostFoundWorkspaceHeading" data-role-any="student,staff" hidden>
       <div class="panel-heading">
         <div>
           <h2 id="lostFoundWorkspaceHeading">Lost &amp; Found</h2>
@@ -409,7 +409,7 @@
       <iframe id="lostFoundFrame" title="Lost and found workspace" src="/lost-found.html" loading="lazy"></iframe>
     </section>
 
-    <section class="panel" id="emergency" aria-labelledby="emergencyHeading">
+    <section class="panel" id="emergency" aria-labelledby="emergencyHeading" data-role-any="student,staff">
       <h2 id="emergencyHeading">Emergency Centre</h2>
       <p class="subtitle">Use this only when urgent assistance is needed. Your alert will be sent to campus security.</p>
       <label class="field-label" for="emergencyMessage">Briefly describe the emergency</label>

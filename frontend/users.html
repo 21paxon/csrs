@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123b70">
+  <title>User Management | CSRS</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="brand" href="/home.html">
+        <img class="rp-mark" src="/images/rp-logo.jpg" alt="Rwanda Polytechnic logo">
+        <div>
+          <strong>Rwanda Polytechnic</strong>
+          <span>Musanze College</span>
+          <small>Campus Security and Reporting System</small>
+        </div>
+      </a>
+      <div class="app-page-title">
+        <h1>User management</h1>
+        <p>Create and manage authorized CSRS accounts</p>
+        <div class="app-user" id="appUser"></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="panel">
+      <h2>Create a user account</h2>
+      <p class="muted">Use strong passwords. New accounts are active immediately unless you deactivate them later.</p>
+      <form id="createUserForm" class="grid">
+        <div>
+          <label for="fullName">Full name</label>
+          <input id="fullName" required maxlength="150">
+        </div>
+        <div>
+          <label for="username">Username</label>
+          <input id="username" required maxlength="50" autocomplete="off">
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" required maxlength="100">
+        </div>
+        <div>
+          <label for="registrationNumber">Registration number</label>
+          <input id="registrationNumber" maxlength="50">
+        </div>
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" maxlength="20">
+        </div>
+        <div>
+          <label for="role">Role</label>
+          <select id="role" required>
+            <option value="student">Student</option>
+            <option value="staff">Staff</option>
+            <option value="security_officer">Security Officer</option>
+            <option value="head_security">Head of Security</option>
+            <option value="management">College Management</option>
+            <option value="dean">Dean of Students</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        <div>
+          <label for="password">Temporary password</label>
+          <input id="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password">
+        </div>
+        <div>
+          <label for="confirmPassword">Confirm password</label>
+          <input id="confirmPassword" type="password" minlength="12" maxlength="128" required autocomplete="new-password">
+        </div>
+        <div class="full">
+          <button type="submit" id="createUserButton">Create user</button>
+        </div>
+      </form>
+      <div id="formMessage" class="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Accounts</h2>
+          <p class="muted">Pending registrations are inactive until approved. Approve an account before testing its login and role dashboard.</p>
+        </div>
+        <button type="button" id="refreshUsers" class="secondary">Refresh</button>
+      </div>
+      <div id="listMessage" class="message" role="status" aria-live="polite"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="6" class="empty">Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/config.js"></script>
+  <script src="/js/csrs.js"></script>
+  <script src="/users.js"></script>
+</body>
+</html>

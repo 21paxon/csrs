@@ -45,6 +45,26 @@ a {
   text-decoration: none;
 }
 
+.signin-modal[hidden] { display: none; }
+.signin-modal { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 20px; }
+.signin-backdrop { position: absolute; inset: 0; background: rgba(8, 31, 64, .68); backdrop-filter: blur(3px); }
+.signin-dialog { position: relative; width: min(100%, 460px); padding: 34px; border-top: 4px solid var(--rp-gold); border-radius: 10px; background: var(--white); box-shadow: 0 24px 70px rgba(8, 31, 64, .3); }
+.signin-dialog h2 { margin: 4px 0 8px; color: var(--rp-blue-dark); font-size: 30px; }
+.signin-subtitle { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+.signin-dialog label { display: block; margin: 14px 0 6px; color: var(--text); font-size: 13px; font-weight: 700; }
+.signin-dialog input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; color: var(--text); }
+.signin-dialog input:focus { border-color: var(--rp-blue); outline: 3px solid rgba(18, 59, 112, .14); }
+.signin-dialog select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); font: inherit; color: var(--text); }
+.signin-dialog select:focus { border-color: var(--rp-blue); outline: 3px solid rgba(18, 59, 112, .14); }
+.register-dialog { max-height: min(92vh, 780px); overflow-y: auto; }
+.register-dialog label span { color: var(--muted); font-weight: 400; }
+.register-hint { margin: -4px 0 8px; color: var(--muted); font-size: 12px; }
+.signin-close { position: absolute; top: 12px; right: 14px; border: 0; background: transparent; color: var(--muted); font-size: 28px; line-height: 1; cursor: pointer; }
+.signin-submit { width: 100%; margin-top: 22px; border: 0; cursor: pointer; }
+.signin-message { min-height: 22px; margin: 14px 0 0; color: var(--danger); font-size: 13px; }
+.signin-register { margin: 18px 0 0; color: var(--muted); font-size: 13px; }
+.signin-register a { color: var(--rp-blue); font-weight: 700; text-decoration: underline; }
+
 img {
   max-width: 100%;
   height: auto;

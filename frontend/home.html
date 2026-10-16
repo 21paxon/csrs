@@ -14,7 +14,6 @@
   <title>CSRS | Rwanda Polytechnic - Musanze College</title>
 
   <link rel="stylesheet" href="/home.css">
-  <script src="/home.js" defer></script>
 </head>
 
 <body>
@@ -40,8 +39,8 @@
         <a href="/home.html" class="active" aria-current="page">Home</a>
         <a href="#services">Services</a>
         <a href="#about">About CSRS</a>
-        <a href="/index.html" class="nav-signin">Sign In</a>
-        <a href="/register.html" class="login-btn">Student Registration</a>
+        <a href="#sign-in" class="nav-signin" data-open-signin>Sign In</a>
+        <a href="#register" class="login-btn" data-open-register>Register</a>
       </nav>
 
     </div>
@@ -208,7 +207,7 @@
               functions permitted by your account.
             </p>
 
-            <a href="/index.html" class="module-link">
+            <a href="#sign-in" class="module-link" data-open-signin>
               Sign in to CSRS
               <span aria-hidden="true">&#8594;</span>
             </a>
@@ -220,15 +219,15 @@
               <span class="module-category">STUDENT ACCESS</span>
             </div>
 
-            <h3>Student Registration</h3>
+            <h3>Account Registration</h3>
 
             <p>
-              Create a student account to access campus security services
-              and use the reporting functions available to students.
+              Register for access to campus security services and the
+              functions available to your role.
             </p>
 
-            <a href="/register.html" class="module-link">
-              Create a student account
+            <a href="#register" class="module-link" data-open-register>
+              Request an account
               <span aria-hidden="true">&#8594;</span>
             </a>
           </article>
@@ -305,8 +304,8 @@
         <a href="/home.html">Home</a>
         <a href="#services">Services</a>
         <a href="#about">About CSRS</a>
-        <a href="/index.html">Sign In</a>
-        <a href="/register.html">Student Registration</a>
+        <a href="#sign-in" data-open-signin>Sign In</a>
+        <a href="#register" data-open-register>Register</a>
       </nav>
 
       <div class="footer-bottom">
@@ -320,5 +319,66 @@
     </div>
   </footer>
 
+  <div class="signin-modal" id="signinModal" hidden>
+    <div class="signin-backdrop" data-close-signin></div>
+    <section class="signin-dialog" role="dialog" aria-modal="true" aria-labelledby="signinHeading">
+      <button class="signin-close" type="button" aria-label="Close sign-in" data-close-signin>&times;</button>
+      <p class="eyebrow">SECURE ACCESS PORTAL</p>
+      <h2 id="signinHeading">Welcome back</h2>
+      <p class="signin-subtitle">Sign in to access the Campus Security and Reporting System.</p>
+      <form id="homeLogin">
+        <label for="homeUsername">Username, email or registration number</label>
+        <input id="homeUsername" type="text" autocomplete="username" required>
+        <label for="homePassword">Password</label>
+        <input id="homePassword" type="password" autocomplete="current-password" required>
+        <button class="primary-btn signin-submit" id="homeLoginButton" type="submit">Sign in</button>
+      </form>
+      <p id="homeLoginMessage" class="signin-message" role="status" aria-live="polite"></p>
+      <p class="signin-register">Need an account? <a href="#register" data-open-register>Register for access</a></p>
+    </section>
+  </div>
+
+  <div class="signin-modal" id="registerModal" hidden>
+    <div class="signin-backdrop" data-close-register></div>
+    <section class="signin-dialog register-dialog" role="dialog" aria-modal="true" aria-labelledby="registerHeading">
+      <button class="signin-close" type="button" aria-label="Close registration" data-close-register>&times;</button>
+      <p class="eyebrow">CSRS ACCOUNT ACCESS</p>
+      <h2 id="registerHeading">Request access</h2>
+      <p class="signin-subtitle">Choose the role that matches your position at Rwanda Polytechnic.</p>
+      <form id="homeRegister">
+        <label for="homeAccountType">I am registering as</label>
+        <select id="homeAccountType" required>
+          <option value="student">Student</option>
+          <option value="staff">Staff member</option>
+          <option value="security_officer">Security officer</option>
+          <option value="head_security">Head of security</option>
+          <option value="management">College management</option>
+          <option value="dean">Dean of students</option>
+        </select>
+        <p id="homeAccountHint" class="register-hint">Student accounts can sign in after registration.</p>
+        <label for="homeFullName">Full name</label>
+        <input id="homeFullName" type="text" autocomplete="name" maxlength="150" required>
+        <label for="homeRegistrationNumber">Registration number <span>(optional)</span></label>
+        <input id="homeRegistrationNumber" type="text" maxlength="50">
+        <label for="homeRegisterUsername">Username</label>
+        <input id="homeRegisterUsername" type="text" autocomplete="username" maxlength="50" required>
+        <label for="homeRegisterEmail">Email address</label>
+        <input id="homeRegisterEmail" type="email" autocomplete="email" maxlength="100" required>
+        <label for="homeRegisterPhone">Phone number <span>(optional)</span></label>
+        <input id="homeRegisterPhone" type="tel" maxlength="20">
+        <label for="homeRegisterPassword">Password</label>
+        <input id="homeRegisterPassword" type="password" autocomplete="new-password" minlength="12" required>
+        <label for="homeRegisterConfirmPassword">Confirm password</label>
+        <input id="homeRegisterConfirmPassword" type="password" autocomplete="new-password" minlength="12" required>
+        <button class="primary-btn signin-submit" id="homeRegisterButton" type="submit">Submit registration</button>
+      </form>
+      <p id="homeRegisterMessage" class="signin-message" role="status" aria-live="polite"></p>
+      <p class="signin-register">Already registered? <a href="#sign-in" data-open-signin>Sign in</a></p>
+    </section>
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/js/csrs.js"></script>
+  <script src="/home.js"></script>
 </body>
 </html>

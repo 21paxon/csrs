@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#102c54">
-  <title>Student Registration | CSRS</title>
+  <title>CSRS Account Registration | Rwanda Polytechnic</title>
 
   <style>
     :root {
@@ -173,7 +173,8 @@
       font-weight: 400;
     }
 
-    input {
+    input,
+    select {
       display: block;
       width: 100%;
       min-height: 45px;
@@ -186,7 +187,8 @@
       font-size: 14px;
     }
 
-    input:focus {
+    input:focus,
+    select:focus {
       outline: 3px solid rgba(23, 75, 135, 0.14);
       border-color: var(--blue);
     }
@@ -354,27 +356,40 @@
         </div>
       </a>
 
-      <a class="header-link" href="/index.html">Sign in</a>
+      <a class="header-link" href="/home.html?signin=1">Sign in</a>
     </div>
   </header>
 
   <main>
     <section class="intro">
-      <h2>Create your student account</h2>
+      <h2>Request access to CSRS</h2>
       <p>
-        Register to access campus security services and submit reports
-        through the Campus Security and Reporting System.
+        Choose the account type that matches your role at Rwanda Polytechnic.
+        Access for staff and security roles is reviewed by an administrator.
       </p>
     </section>
 
     <section class="registration-card">
       <div class="card-heading">
-        <h3>Student information</h3>
+        <h3>Account information</h3>
         <p>Complete the fields below. Required fields are marked with an asterisk (*).</p>
       </div>
 
       <form id="registerForm" novalidate>
         <div class="form-grid">
+          <div class="field full">
+            <label for="accountType">I am registering as *</label>
+            <select id="accountType" name="accountType" required>
+              <option value="student">Student</option>
+              <option value="staff">Staff member</option>
+              <option value="security_officer">Security officer</option>
+              <option value="head_security">Head of security</option>
+              <option value="management">College management</option>
+              <option value="dean">Dean of students</option>
+            </select>
+            <small class="hint" id="accountTypeHint">Student accounts can sign in after registration.</small>
+          </div>
+
           <div class="field full">
             <label for="fullName">Full name *</label>
             <input
@@ -493,13 +508,13 @@
         <div id="message" class="message" role="status" aria-live="polite"></div>
 
         <button class="submit-button" id="registerButton" type="submit">
-          Create student account
+          Submit registration
         </button>
       </form>
 
       <p class="login-note">
         Already registered?
-        <a href="/index.html">Sign in to your account</a>
+        <a href="/home.html?signin=1">Sign in to your account</a>
       </p>
     </section>
   </main>

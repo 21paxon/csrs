@@ -132,9 +132,9 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    if (password.length < 8) {
+    if (password.length < 12 || password.length > 128) {
       return res.status(400).json({
-        error: 'Password must be at least 8 characters'
+        error: 'Password must contain between 12 and 128 characters'
       });
     }
 
@@ -142,8 +142,9 @@ router.post('/', async (req, res, next) => {
 
     const { rows } = await db.query(
       `INSERT INTO users
-         (full_name, username, email, reg_no, phone, password_hash, role)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+         (full_name, username, email, reg_no, phone, password_hash, role,
+          must_change_password)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
        RETURNING id, full_name, username, email, reg_no, phone,
                  role, is_active, created_at`,
       [
