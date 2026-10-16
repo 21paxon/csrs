@@ -153,11 +153,12 @@ minutes. Administrator-issued resets return a temporary password once and set
 `must_change_password`; the user is redirected to the password-change page
 after signing in.
 
-The public registration form supports student, staff, security officer, head of
-security, college management, and dean of students account types. Student
-accounts are active immediately. Other account types are created as inactive
-access requests and must be approved by an administrator in User Management
-before the applicant can sign in to the role-specific dashboard.
+The public registration form lets applicants submit their own information for
+student, staff, security officer, head of security, college management, or dean
+accounts. Student accounts require a college registration number and are active
+immediately. Staff and privileged-role accounts are created as inactive access
+requests and must be approved by an administrator in User Management.
+Administrator accounts remain administrator-managed.
 
 To test each role locally:
 

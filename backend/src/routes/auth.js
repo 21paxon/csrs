@@ -90,6 +90,12 @@ router.post('/register', registerLimiter, async (req, res, next) => {
       });
     }
 
+    if (cleanAccountType === 'student' && !cleanRegNo) {
+      return res.status(400).json({
+        error: 'Students must provide their college registration number.'
+      });
+    }
+
     if (
       cleanFullName.length > 150 ||
       cleanUsername.length > 50 ||

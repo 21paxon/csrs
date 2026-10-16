@@ -125,6 +125,29 @@ $("closeIncidentDetails").addEventListener("click", () => {
   selectedIncident = null;
 });
 
+$("assignIncident").addEventListener("click", async () => {
+  if (!selectedIncident || !$("incidentOfficer").value) {
+    showMessage($("incidentDetailsMessage"), "Select a security officer first.", "error");
+    return;
+  }
+
+  const button = $("assignIncident");
+  setLoading(button, true, "Assign case", "Assigning...");
+  try {
+    await api(`/api/incidents/${selectedIncident.id}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ officer_id: Number($("incidentOfficer").value) })
+    });
+    showMessage($("incidentDetailsMessage"), "Incident assigned. The officer has been notified.", "ok");
+    await loadIncidents();
+    await openIncidentDetails(selectedIncident.id);
+  } catch (error) {
+    showMessage($("incidentDetailsMessage"), error.message, "error");
+  } finally {
+    setLoading(button, false, "Assign case");
+  }
+});
+
 $("incidentUpdateForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selectedIncident) return;
@@ -140,27 +163,6 @@ $("incidentUpdateForm").addEventListener("submit", async (event) => {
       })
     });
 
-    $("assignIncident").addEventListener("click", async () => {
-      if (!selectedIncident || !$("incidentOfficer").value) {
-        showMessage($("incidentDetailsMessage"), "Select a security officer first.", "error");
-        return;
-      }
-      const button = $("assignIncident");
-      setLoading(button, true, "Assign case", "Assigning...");
-      try {
-        await api(`/api/incidents/${selectedIncident.id}/assign`, {
-          method: "POST",
-          body: JSON.stringify({ officer_id: Number($("incidentOfficer").value) })
-        });
-        showMessage($("incidentDetailsMessage"), "Incident assigned. The officer has been notified.", "ok");
-        await loadIncidents();
-        await openIncidentDetails(selectedIncident.id);
-      } catch (error) {
-        showMessage($("incidentDetailsMessage"), error.message, "error");
-      } finally {
-        setLoading(button, false, "Assign case");
-      }
-    });
     $("incidentNotes").value = "";
     $("incidentStatus").value = "";
     showMessage($("incidentDetailsMessage"), "Review update saved and permitted reporters were notified.", "ok");

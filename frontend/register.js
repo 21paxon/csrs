@@ -23,8 +23,11 @@ updateAccountTypeHint();
 function updateAccountTypeHint() {
   const isStudent = accountTypeInput.value === "student";
   accountTypeHint.textContent = isStudent
-    ? "Student accounts can sign in after registration."
-    : "This access request will remain inactive until an administrator approves it.";
+    ? "Student accounts can sign in after registration. Use your own college registration number."
+    : "This account request remains inactive until an administrator approves it.";
+  registrationNumberInput.required = isStudent;
+  document.getElementById("registrationNumberOptional").textContent =
+    isStudent ? "(required for students)" : "(optional)";
 }
 
 // Password visibility controls.
@@ -56,7 +59,8 @@ registerForm.addEventListener("submit", async (event) => {
   const password = passwordInput.value;
   const confirmPassword = confirmPasswordInput.value;
 
-  if (!fullName || !username || !email || !password || !confirmPassword) {
+  if (!fullName || !username || !email || !password || !confirmPassword ||
+      (accountType === "student" && !registrationNumber)) {
     showMessage("Please complete all required fields.", "error");
     return;
   }

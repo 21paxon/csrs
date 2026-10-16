@@ -31,10 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (lastTrigger) lastTrigger.focus();
   };
   const updateRegistrationHint = () => {
-    document.getElementById("homeAccountHint").textContent =
-      registerType.value === "student"
-        ? "Student accounts can sign in after registration."
-        : "This request stays inactive until an administrator approves it.";
+    const isStudent = registerType.value === "student";
+    document.getElementById("homeAccountHint").textContent = isStudent
+      ? "Student accounts can sign in after registration. Use your own college registration number."
+      : "This account request stays inactive until an administrator approves it.";
+    document.querySelector('label[for="homeRegistrationNumber"] span').textContent =
+      isStudent ? "(required for students)" : "(optional)";
+    document.getElementById("homeRegistrationNumber").required = isStudent;
   };
 
   document.querySelectorAll("[data-open-signin]").forEach((link) => {
@@ -106,10 +109,17 @@ document.addEventListener("DOMContentLoaded", () => {
       registerMessage.textContent = "Username must use 3–50 letters, numbers, dots, underscores or hyphens.";
       return;
     }
-    if (password.length < 12 || password !== confirmation) {
+    if (
+      password.length < 12 ||
+      password !== confirmation ||
+      (registerType.value === "student" &&
+        !document.getElementById("homeRegistrationNumber").value.trim())
+    ) {
       registerMessage.textContent = password.length < 12
         ? "Your password must contain at least 12 characters."
-        : "The passwords do not match.";
+        : password !== confirmation
+          ? "The passwords do not match."
+          : "Students must provide their college registration number.";
       return;
     }
     registerButton.disabled = true;
