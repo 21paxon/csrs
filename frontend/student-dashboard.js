@@ -57,7 +57,14 @@ function initPortal() {
     });
   });
   $("closeLostFoundWorkspace").addEventListener("click", () => {
-    $("lost-found-workspace").hidden = true;
+    closeWorkspace($("lost-found-workspace"));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      const workspace = document.querySelector(".workspace-overlay:not([hidden])");
+      if (workspace) closeWorkspace(workspace);
+    }
   });
 
   setupSectionNav();
@@ -67,54 +74,63 @@ function initPortal() {
 
 function openIncidentWorkspace() {
   const workspace = $("incident-workspace");
-  workspace.hidden = false;
-  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  openWorkspace(workspace);
 }
 
 function closeIncidentWorkspace() {
-  $("incident-workspace").hidden = true;
+  closeWorkspace($("incident-workspace"));
 }
 
 function openModuleWorkspace(path) {
   const workspace = path === "/lost-found.html"
     ? $("lost-found-workspace")
     : $("incident-workspace");
+  openWorkspace(workspace);
+}
+
+function openWorkspace(workspace) {
+  workspace.classList.add("workspace-overlay");
   workspace.hidden = false;
-  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.body.classList.add("workspace-open");
+}
+
+function closeWorkspace(workspace) {
+  workspace.hidden = true;
+  workspace.classList.remove("workspace-overlay");
+  if (!document.querySelector(".workspace-overlay:not([hidden])")) {
+    document.body.classList.remove("workspace-open");
+  }
 }
 
 function setupSectionNav() {
-  const links = {};
-  document.querySelectorAll('.nav-item[href^="#"]').forEach((anchor) => {
-    const id = anchor.getAttribute("href").slice(1);
-    if (id) links[id] = anchor;
-  });
+  const links = document.querySelectorAll(".nav-item[data-view]");
+  const views = document.querySelectorAll("[data-dashboard-view]");
 
-  function setActive(id) {
-    Object.keys(links).forEach((key) => {
-      const on = key === id;
-      links[key].classList.toggle("active", on);
-      if (on) links[key].setAttribute("aria-current", "page");
-      else links[key].removeAttribute("aria-current");
+  function showView(view) {
+    const selectedView = view || "overview";
+    views.forEach((element) => {
+      element.hidden = element.dataset.dashboardView !== selectedView;
     });
+    links.forEach((link) => {
+      const active = link.dataset.view === selectedView;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    history.replaceState(null, "", "#" + selectedView);
   }
 
-  if (!("IntersectionObserver" in window)) return;
-
-  const ids = ["overview", "my-reports", "found-items", "emergency", "profile"];
-  const visible = {};
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      visible[entry.target.id] = entry.isIntersecting;
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      showView(link.dataset.view);
     });
-    const current = ids.find((id) => id !== "overview" && visible[id]) || "overview";
-    setActive(current);
-  }, { rootMargin: "-20% 0px -60% 0px" });
-
-  ids.slice(1).forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) observer.observe(el);
   });
+
+  const initialView = window.location.hash.slice(1);
+  showView(["overview", "reports", "emergency", "profile"].includes(initialView)
+    ? initialView
+    : "overview");
 }
 
 async function loadProfile() {

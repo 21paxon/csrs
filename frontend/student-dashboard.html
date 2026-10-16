@@ -267,6 +267,7 @@
     }
   </style>
   <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/dashboards.css">
 </head>
 <body>
 <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -281,17 +282,17 @@
 
     <nav aria-label="Portal navigation">
       <div class="nav-label">Overview</div>
-      <a class="nav-item active" href="#overview" aria-current="page">Dashboard</a>
+      <a class="nav-item active" href="#overview" data-view="overview" aria-current="page">Dashboard</a>
 
       <div class="nav-label">Safety &amp; reports</div>
-      <a class="nav-item" href="#my-reports">My reports</a>
-      <a class="nav-item" href="#emergency">Emergency Centre</a>
+      <a class="nav-item" href="#my-reports" data-view="reports">My reports</a>
+      <a class="nav-item" href="#emergency" data-view="emergency">Emergency Centre</a>
 
       <div class="nav-label">Campus services</div>
-      <a class="nav-item" href="#found-items">Lost &amp; Found</a>
+      <a class="nav-item" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">Lost &amp; Found</a>
 
       <div class="nav-label">Account</div>
-      <a class="nav-item" href="#profile">My profile</a>
+      <a class="nav-item" href="#profile" data-view="profile">My profile</a>
       <a class="nav-item" href="/change-password.html">Change password</a>
       <a class="nav-item" href="/home.html">Back to home</a>
       <a class="nav-item" href="#" id="logoutLink">Log Out</a>
@@ -320,18 +321,18 @@
     <div id="errorBox" class="message error" role="alert" hidden></div>
     <div id="noticeBox" class="message notice" role="status" hidden></div>
 
-    <section class="welcome-panel">
+    <section class="welcome-panel" data-dashboard-view="overview">
       <h2 id="portalBannerTitle">Welcome to your campus safety portal</h2>
       <p>Report safety concerns, follow the status of your reports, find lost property, and request emergency assistance when necessary.</p>
     </section>
 
-    <div class="content-heading">
+    <div class="content-heading" data-dashboard-view="overview">
       <div>
         <h2>At a glance</h2>
         <p>Your current activity and report summary.</p>
       </div>
     </div>
-    <section class="cards" aria-label="Your summary" aria-live="polite">
+    <section class="cards" aria-label="Your summary" aria-live="polite" data-dashboard-view="overview">
       <article class="card">
         <div class="metric-label">My Incident Reports</div>
         <div class="metric-value" id="totalReports">—</div>
@@ -349,13 +350,13 @@
       </article>
     </section>
 
-    <div class="content-heading">
+    <div class="content-heading" data-dashboard-view="overview">
       <div>
         <h2>Safety services</h2>
         <p>Choose a service to get help or manage your campus safety requests.</p>
       </div>
     </div>
-    <section class="quick-actions" aria-label="Quick actions">
+    <section class="quick-actions" aria-label="Quick actions" data-dashboard-view="overview">
       <a class="action-card" href="#incident-workspace" data-open-report data-role-any="student,staff">
         <strong>Report an Incident</strong>
         <span>Report a security issue or suspicious activity on campus.</span>
@@ -370,13 +371,13 @@
       </a>
     </section>
 
-    <div class="content-heading">
+    <div class="content-heading" data-dashboard-view="reports">
       <div>
         <h2>Your reports</h2>
         <p>Track updates and follow up on reports submitted from your account.</p>
       </div>
     </div>
-    <section class="panel" id="my-reports" aria-labelledby="reportsHeading" data-role-any="student,staff">
+    <section class="panel" id="my-reports" aria-labelledby="reportsHeading" data-role-any="student,staff" data-dashboard-view="reports">
       <div class="panel-heading">
         <h2 id="reportsHeading">My Incident Reports</h2>
         <a class="button primary" href="#incident-workspace" data-open-report>New Report</a>
@@ -390,7 +391,7 @@
       </div>
     </section>
 
-    <section class="panel" id="report-details" aria-labelledby="reportDetailsHeading" data-role-any="student,staff" hidden>
+    <section class="panel" id="report-details" aria-labelledby="reportDetailsHeading" data-role-any="student,staff" data-dashboard-view="reports" hidden>
       <div class="panel-heading">
         <div>
           <h2 id="reportDetailsHeading">Report tracking</h2>
@@ -401,14 +402,8 @@
       <div id="reportDetailsBody"></div>
     </section>
 
-    <section class="panel incident-workspace" id="incident-workspace" aria-labelledby="incidentWorkspaceHeading" data-role-any="student,staff" hidden>
-      <div class="panel-heading">
-        <div>
-          <h2 id="incidentWorkspaceHeading">Report an incident</h2>
-          <p class="subtitle">Complete your report without leaving the student dashboard.</p>
-        </div>
-        <button id="closeIncidentWorkspace" type="button">Close</button>
-      </div>
+    <section class="panel incident-workspace" id="incident-workspace" aria-label="Incident reporting workspace" data-role-any="student,staff" hidden>
+      <button class="workspace-close" id="closeIncidentWorkspace" type="button">Close</button>
       <iframe
         id="incidentFrame"
         title="Incident reporting form"
@@ -417,13 +412,8 @@
       ></iframe>
     </section>
 
-    <section class="panel" id="found-items" aria-labelledby="lostFoundHeading" data-role-any="student,staff">
-      <div class="panel-heading">
-        <h2 id="lostFoundHeading">Lost &amp; Found</h2>
-        <a class="button" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">Report a lost item</a>
-        <button id="refreshItemsButton" type="button">Refresh Items</button>
-      </div>
-      <h3>My Lost Items</h3>
+    <section class="panel" id="found-items" aria-label="Lost and found data" data-role-any="student,staff" hidden>
+      <button id="refreshItemsButton" type="button">Refresh Items</button>
       <div class="table-wrap">
         <table>
           <caption class="sr-only" style="position:absolute;left:-9999px">Items you reported lost</caption>
@@ -431,7 +421,6 @@
           <tbody id="lostBody"><tr><td colspan="4" class="empty">Loading items...</td></tr></tbody>
         </table>
       </div>
-      <h3 style="margin-top:25px">Found Items Available</h3>
       <div class="table-wrap">
         <table>
           <caption class="sr-only" style="position:absolute;left:-9999px">Found items available for collection</caption>
@@ -441,19 +430,12 @@
       </div>
     </section>
 
-    <section class="panel incident-workspace" id="lost-found-workspace" aria-labelledby="lostFoundWorkspaceHeading" data-role-any="student,staff" hidden>
-      <div class="panel-heading">
-        <div>
-          <h2 id="lostFoundWorkspaceHeading">Lost &amp; Found</h2>
-          <p class="subtitle">Manage lost and found items without leaving the student dashboard.</p>
-        </div>
-        <button id="closeLostFoundWorkspace" type="button">Close</button>
-      </div>
+    <section class="panel incident-workspace" id="lost-found-workspace" aria-label="Lost and found workspace" data-role-any="student,staff" hidden>
+      <button class="workspace-close" id="closeLostFoundWorkspace" type="button">Close</button>
       <iframe id="lostFoundFrame" title="Lost and found workspace" src="/lost-found.html" loading="lazy"></iframe>
     </section>
 
-    <div class="content-grid">
-    <section class="panel" id="emergency" aria-labelledby="emergencyHeading" data-role-any="student,staff">
+    <section class="panel" id="emergency" aria-labelledby="emergencyHeading" data-role-any="student,staff" data-dashboard-view="emergency">
       <h2 id="emergencyHeading">Emergency Centre</h2>
       <p class="subtitle">Use this only when urgent assistance is needed. Your alert will be sent to campus security.</p>
       <label class="field-label" for="emergencyMessage">Briefly describe the emergency</label>
@@ -462,7 +444,7 @@
       <p id="emergencyResult" class="subtitle" role="status"></p>
     </section>
 
-    <section class="panel" id="profile" aria-labelledby="profileHeading">
+    <section class="panel" id="profile" aria-labelledby="profileHeading" data-dashboard-view="profile">
       <h2 id="profileHeading">My Profile</h2>
       <div class="profile-grid">
         <div class="profile-field"><span>Username</span><strong id="profileUsername">—</strong></div>
@@ -470,7 +452,6 @@
         <div class="profile-field"><span>Account Role</span><strong id="profileRole">—</strong></div>
       </div>
     </section>
-    </div>
 
     <footer>Rwanda Polytechnic · Musanze College · Campus Security &amp; Reporting System</footer>
   </main>
