@@ -108,7 +108,9 @@ function startLostFound() {
     button.addEventListener("click", () => {
       const tab = button.dataset.tab;
       document.querySelectorAll("[data-tab]").forEach((item) => {
-        item.classList.toggle("active", item === button);
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-selected", String(selected));
       });
       $("lostPanel").classList.toggle("hidden", tab !== "lost");
       $("foundPanel").classList.toggle("hidden", tab !== "found");
