@@ -3,6 +3,7 @@ const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
+const config = require('./config');
 const { notFound, errorHandler } = require('./middleware/error');
 
 const app = express();

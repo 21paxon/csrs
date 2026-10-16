@@ -11,6 +11,8 @@ const { authenticate } = require('../middleware/auth');
 const { audit } = require('../utils/audit');
 
 const router = express.Router();
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
 
 // Limit login attempts.
 const loginLimiter = rateLimit({
@@ -147,29 +149,45 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       !password
     ) {
       return res.status(400).json({
-        error: 'Username and password are required.'
+        error: 'Username, email or registration number and password are required.'
       });
     }
 
     const loginName = username.trim();
 
     const { rows } = await db.query(
-      `SELECT id, username, email, password_hash, is_active, role
+      `SELECT id, username, email, reg_no, password_hash, is_active, role,
+              failed_attempts, locked_until, must_change_password
        FROM users
-       WHERE username = $1 OR email = $1
+       WHERE username = $1 OR email = $1 OR reg_no = $1
        LIMIT 1`,
       [loginName]
     );
 
     const user = rows[0];
+    const isLocked = user?.locked_until && new Date(user.locked_until) > new Date();
 
-    const validLogin = Boolean(
-      user &&
-      user.is_active &&
-      await bcrypt.compare(password, user.password_hash)
-    );
+    const passwordMatches = user
+      ? await bcrypt.compare(password, user.password_hash)
+      : false;
+    const validLogin = Boolean(user && user.is_active && !isLocked && passwordMatches);
 
     if (!validLogin) {
+      if (user && user.is_active && !isLocked && !passwordMatches) {
+        const nextAttempts = Number(user.failed_attempts || 0) + 1;
+        const shouldLock = nextAttempts >= MAX_FAILED_ATTEMPTS;
+        await db.query(
+          `UPDATE users
+              SET failed_attempts = CASE WHEN $1 THEN 0 ELSE $2 END,
+                  locked_until = CASE
+                    WHEN $1 THEN CURRENT_TIMESTAMP + ($3 * INTERVAL '1 minute')
+                    ELSE locked_until
+                  END
+            WHERE id = $4`,
+          [shouldLock, nextAttempts, LOCKOUT_MINUTES, user.id]
+        );
+      }
+
       await audit(req, {
         userId: user ? user.id : null,
         action: 'LOGIN',
@@ -177,6 +195,13 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         recordId: user ? user.id : null,
         status: 'Failed'
       });
+
+      if (isLocked || (user && user.is_active && !passwordMatches &&
+        Number(user.failed_attempts || 0) + 1 >= MAX_FAILED_ATTEMPTS)) {
+        return res.status(423).json({
+          error: `Account temporarily locked. Try again in ${LOCKOUT_MINUTES} minutes.`
+        });
+      }
 
       return res.status(401).json({
         error: 'Invalid credentials.'
@@ -195,6 +220,14 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       }
     );
 
+    await db.query(
+      `UPDATE users
+          SET failed_attempts = 0,
+              locked_until = NULL
+        WHERE id = $1`,
+      [user.id]
+    );
+
     await audit(req, {
       userId: user.id,
       action: 'LOGIN',
@@ -208,6 +241,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        registrationNumber: user.reg_no,
+        mustChangePassword: user.must_change_password,
         role: user.role
       }
     });
@@ -287,7 +322,12 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
     await db.query(
-      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      `UPDATE users
+          SET password_hash = $1,
+              must_change_password = FALSE,
+              failed_attempts = 0,
+              locked_until = NULL
+        WHERE id = $2`,
       [passwordHash, req.user.id]
     );
 

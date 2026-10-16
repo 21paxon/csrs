@@ -180,6 +180,9 @@
     .action-card span { color: var(--muted); font-size: 13px; line-height: 1.6; }
 
     .panel { margin-bottom: 22px; overflow: hidden; scroll-margin-top: 16px; }
+    .incident-workspace iframe { display: block; width: 100%; min-height: 980px; border: 0; background: var(--bg); }
+    .report-history { margin: 0; padding-left: 22px; }
+    .report-history li { padding: 9px 0; border-bottom: 1px solid var(--border); }
     .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
     .panel-heading h2 { margin: 0; }
 
@@ -267,15 +270,9 @@
     <div class="brand-sub">Skills for a better destiny<br>Campus Security and Reporting System</div>
 
     <nav aria-label="Student navigation">
-      <div class="nav-label">Student menu</div>
-      <a class="nav-item active" href="#overview" aria-current="page">Dashboard</a>
-      <a class="nav-item" href="/incidents.html">Report an Incident</a>
-      <a class="nav-item" href="#my-reports">My Reports</a>
-      <a class="nav-item" href="#found-items">Lost &amp; Found</a>
-      <a class="nav-item" href="#emergency">Emergency Centre</a>
-      <a class="nav-item" href="#profile">My Profile</a>
-
       <div class="nav-label">Account</div>
+      <a class="nav-item" href="/change-password.html">Change password</a>
+      <a class="nav-item" href="/home.html">Back to home</a>
       <a class="nav-item" href="#" id="logoutLink">Log Out</a>
     </nav>
   </aside>
@@ -322,7 +319,7 @@
     </section>
 
     <section class="quick-actions" aria-label="Quick actions">
-      <a class="action-card" href="/incidents.html">
+      <a class="action-card" href="#incident-workspace" data-open-report>
         <strong>Report an Incident</strong>
         <span>Report a security issue or suspicious activity on campus.</span>
       </a>
@@ -330,7 +327,7 @@
         <strong>Emergency Centre</strong>
         <span>Request urgent assistance from campus security.</span>
       </a>
-      <a class="action-card" href="#found-items">
+      <a class="action-card" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">
         <strong>Lost &amp; Found</strong>
         <span>Review found items or check your lost-item reports.</span>
       </a>
@@ -339,21 +336,48 @@
     <section class="panel" id="my-reports" aria-labelledby="reportsHeading">
       <div class="panel-heading">
         <h2 id="reportsHeading">My Incident Reports</h2>
-        <a class="button primary" href="/incidents.html">New Report</a>
+        <a class="button primary" href="#incident-workspace" data-open-report>New Report</a>
       </div>
       <div class="table-wrap">
         <table>
           <caption class="sr-only" style="position:absolute;left:-9999px">Your incident reports</caption>
-          <thead><tr><th scope="col">Reference</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Reported</th></tr></thead>
-          <tbody id="reportsBody"><tr><td colspan="5" class="empty">Loading reports...</td></tr></tbody>
+          <thead><tr><th scope="col">Reference</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Reported</th><th scope="col">Action</th></tr></thead>
+          <tbody id="reportsBody"><tr><td colspan="6" class="empty">Loading reports...</td></tr></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="panel" id="report-details" aria-labelledby="reportDetailsHeading" hidden>
+      <div class="panel-heading">
+        <div>
+          <h2 id="reportDetailsHeading">Report tracking</h2>
+          <p class="subtitle" id="reportDetailsSummary"></p>
+        </div>
+        <button id="closeReportDetails" type="button">Close</button>
+      </div>
+      <div id="reportDetailsBody"></div>
+    </section>
+
+    <section class="panel incident-workspace" id="incident-workspace" aria-labelledby="incidentWorkspaceHeading" hidden>
+      <div class="panel-heading">
+        <div>
+          <h2 id="incidentWorkspaceHeading">Report an incident</h2>
+          <p class="subtitle">Complete your report without leaving the student dashboard.</p>
+        </div>
+        <button id="closeIncidentWorkspace" type="button">Close</button>
+      </div>
+      <iframe
+        id="incidentFrame"
+        title="Incident reporting form"
+        src="/incidents.html"
+        loading="lazy"
+      ></iframe>
     </section>
 
     <section class="panel" id="found-items" aria-labelledby="lostFoundHeading">
       <div class="panel-heading">
         <h2 id="lostFoundHeading">Lost &amp; Found</h2>
-        <a class="button" href="/lost-found.html">Report a lost item</a>
+        <a class="button" href="#lost-found-workspace" data-open-module="/lost-found.html" data-module-title="Lost &amp; Found">Report a lost item</a>
         <button id="refreshItemsButton" type="button">Refresh Items</button>
       </div>
       <h3>My Lost Items</h3>
@@ -372,6 +396,17 @@
           <tbody id="foundBody"><tr><td colspan="4" class="empty">Loading items...</td></tr></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="panel incident-workspace" id="lost-found-workspace" aria-labelledby="lostFoundWorkspaceHeading" hidden>
+      <div class="panel-heading">
+        <div>
+          <h2 id="lostFoundWorkspaceHeading">Lost &amp; Found</h2>
+          <p class="subtitle">Manage lost and found items without leaving the student dashboard.</p>
+        </div>
+        <button id="closeLostFoundWorkspace" type="button">Close</button>
+      </div>
+      <iframe id="lostFoundFrame" title="Lost and found workspace" src="/lost-found.html" loading="lazy"></iframe>
     </section>
 
     <section class="panel" id="emergency" aria-labelledby="emergencyHeading">

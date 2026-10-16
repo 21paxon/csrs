@@ -29,7 +29,7 @@ loginForm.addEventListener("submit", async (event) => {
   const password = passwordInput.value;
 
   if (!username || !password) {
-    showMessage("Enter your username and password.", "err");
+    showMessage("Enter your username, email or registration number and password.", "err");
     return;
   }
 
@@ -60,6 +60,10 @@ loginForm.addEventListener("submit", async (event) => {
 
     window.CSRS.setSession(data.token, data.user);
     showMessage("Sign-in successful. Opening your workspace...", "success");
+    if (data.user.mustChangePassword) {
+      window.location.assign("/change-password.html");
+      return;
+    }
     window.location.assign(window.CSRS.postLoginPath(data.user.role));
   } catch (error) {
     console.error("Login request failed:", error);

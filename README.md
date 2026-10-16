@@ -90,7 +90,7 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 | Module | Endpoint | Who |
 |--------|----------|-----|
 | Auth | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password` | public / any user |
-| Users | `GET/POST /api/users`, `PATCH /api/users/:id`, `POST /api/users/import` (college records) | Admin |
+| Users | `GET/POST /api/users`, `PATCH /api/users/:id`, `POST /api/users/:id/reset-password`, `POST /api/users/import` (college records) | Admin |
 | | `GET /api/users/officers`, `GET /api/users/hosts?q=` | Admin, HoS (, SO for hosts) |
 | Reference | `GET /api/categories`, `GET /api/locations` | public |
 | | `POST /api/categories`, `POST/PUT /api/locations` | Admin, HoS |
@@ -146,6 +146,12 @@ Push/SMS/email delivery (notifications are stored in-app; the `channel` column i
 │   └── ...
 └── README.md
 ```
+
+Login accepts a username, email address, or college registration number.
+After five failed password attempts, an active account is locked for 15
+minutes. Administrator-issued resets return a temporary password once and set
+`must_change_password`; the user is redirected to the password-change page
+after signing in.
 
 The backend source layout is:
 

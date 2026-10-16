@@ -34,10 +34,47 @@ function initPortal() {
   $("refreshButton").addEventListener("click", loadPortal);
   $("refreshItemsButton").addEventListener("click", loadLostAndFound);
   $("emergencyButton").addEventListener("click", submitEmergencyAlert);
+  $("closeReportDetails").addEventListener("click", () => {
+    $("report-details").hidden = true;
+  });
+  document.querySelectorAll("[data-open-report]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openIncidentWorkspace();
+    });
+  });
+  $("closeIncidentWorkspace").addEventListener("click", closeIncidentWorkspace);
+  document.querySelectorAll("[data-open-module]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openModuleWorkspace(link.dataset.openModule);
+    });
+  });
+  $("closeLostFoundWorkspace").addEventListener("click", () => {
+    $("lost-found-workspace").hidden = true;
+  });
 
   setupSectionNav();
   loadPortal();
   loadProfile();
+}
+
+function openIncidentWorkspace() {
+  const workspace = $("incident-workspace");
+  workspace.hidden = false;
+  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeIncidentWorkspace() {
+  $("incident-workspace").hidden = true;
+}
+
+function openModuleWorkspace(path) {
+  const workspace = path === "/lost-found.html"
+    ? $("lost-found-workspace")
+    : $("incident-workspace");
+  workspace.hidden = false;
+  workspace.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function setupSectionNav() {
@@ -137,8 +174,66 @@ function renderMyReports(reports) {
     addCell(row, report.severity);
     row.appendChild(statusCell(report.status));
     addCell(row, formatDate(report.reported_datetime || report.created_at, true));
+    const actionCell = document.createElement("td");
+    const trackButton = document.createElement("button");
+    trackButton.type = "button";
+    trackButton.className = "button";
+    trackButton.textContent = "Track report";
+    trackButton.addEventListener("click", () => loadReportDetails(report.id));
+    actionCell.appendChild(trackButton);
+    row.appendChild(actionCell);
     body.appendChild(row);
   });
+}
+
+async function loadReportDetails(id) {
+  const panel = $("report-details");
+  const summary = $("reportDetailsSummary");
+  const details = $("reportDetailsBody");
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  summary.textContent = "Loading report history...";
+  details.replaceChildren();
+
+  try {
+    const report = await api("/api/incidents/" + encodeURIComponent(id));
+    summary.textContent = `${report.reference_no} · ${report.status}`;
+
+    const overview = document.createElement("p");
+    overview.className = "subtitle";
+    overview.textContent =
+      `Severity: ${report.severity || "Not set"} · Reported: ${formatDate(report.reported_datetime, true)}`;
+    details.appendChild(overview);
+
+    const heading = document.createElement("h3");
+    heading.textContent = "Status history";
+    details.appendChild(heading);
+
+    if (!Array.isArray(report.updates) || !report.updates.length) {
+      const empty = document.createElement("p");
+      empty.className = "subtitle";
+      empty.textContent = "No status updates have been recorded yet.";
+      details.appendChild(empty);
+      return;
+    }
+
+    const list = document.createElement("ol");
+    list.className = "report-history";
+    report.updates.forEach((update) => {
+      const item = document.createElement("li");
+      item.textContent =
+        `${formatDate(update.created_at, true)} · ${update.new_status || "Update"}` +
+        (update.note ? ` — ${update.note}` : "");
+      list.appendChild(item);
+    });
+    details.appendChild(list);
+  } catch (error) {
+    summary.textContent = "Could not load report tracking.";
+    const message = document.createElement("p");
+    message.className = "message error";
+    message.textContent = error.message;
+    details.appendChild(message);
+  }
 }
 
 async function loadLostAndFound() {

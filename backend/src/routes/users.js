@@ -228,6 +228,54 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
+// Issue a one-time temporary password to an account administrator can verify.
+router.post('/:id/reset-password', async (req, res, next) => {
+  try {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id < 1) {
+      return res.status(400).json({ error: 'Invalid user id' });
+    }
+
+    if (id === Number(req.user.id)) {
+      return res.status(400).json({
+        error: 'Use the change-password endpoint for your own account'
+      });
+    }
+
+    const temporaryPassword = crypto.randomBytes(15).toString('base64url');
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+    const { rows } = await db.query(
+      `UPDATE users
+          SET password_hash = $1,
+              must_change_password = TRUE,
+              failed_attempts = 0,
+              locked_until = NULL
+        WHERE id = $2
+        RETURNING id, username, email, role`,
+      [passwordHash, id]
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await audit(req, {
+      userId: req.user.id,
+      action: 'RESET USER PASSWORD',
+      targetTable: 'users',
+      recordId: id
+    });
+
+    return res.json({
+      message: 'Temporary password created. Deliver it securely and require the user to change it after signing in.',
+      user: rows[0],
+      temporary_password: temporaryPassword
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 // Bulk import users. Temporary passwords are returned only in this response.
 router.post('/import', async (req, res, next) => {
   const client = await db.pool.connect();
@@ -269,8 +317,9 @@ router.post('/import', async (req, res, next) => {
       try {
         const result = await client.query(
           `INSERT INTO users
-             (full_name, username, email, reg_no, phone, password_hash, role)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+             (full_name, username, email, reg_no, phone, password_hash, role,
+              must_change_password)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
            RETURNING id, username`,
           [
             record.full_name,
