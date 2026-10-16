@@ -21,6 +21,18 @@ function initDashboard() {
     logout();
   });
 
+  document.querySelectorAll("[data-dashboard-module]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openModule(link.dataset.dashboardModule, link.textContent.trim());
+    });
+  });
+
+  document.querySelector('[data-view="overview"]').addEventListener("click", (event) => {
+    event.preventDefault();
+    closeModule();
+  });
+
   document.querySelectorAll("[data-role-gate]").forEach((el) => {
     el.hidden = !canGate(role);
   });
@@ -37,6 +49,46 @@ function initDashboard() {
     $("refreshButton").addEventListener("click", loadAnalytics);
     $("period").addEventListener("change", loadAnalytics);
     loadAnalytics();
+  }
+
+  function openModule(url, label) {
+    const frame = $("moduleFrame");
+    const workspace = $("moduleWorkspace");
+    if (!frame || !workspace || !url) return;
+
+    $("opsBlock").hidden = true;
+    $("analyticsBlock").hidden = true;
+    $("headerActions").hidden = true;
+    $("noticeBox").hidden = true;
+    $("errorBox").hidden = true;
+    workspace.hidden = false;
+    workspace.setAttribute("aria-label", label + " workspace");
+    frame.title = label + " workspace";
+    frame.src = url;
+
+    document.querySelectorAll(".nav-item").forEach((item) => {
+      const active = item.dataset.dashboardModule === url;
+      item.classList.toggle("active", active);
+      if (active) item.setAttribute("aria-current", "page");
+      else item.removeAttribute("aria-current");
+    });
+
+    workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function closeModule() {
+    $("moduleWorkspace").hidden = true;
+    $("moduleFrame").src = "about:blank";
+    $("analyticsBlock").hidden = !canAnalytics(roleOf());
+    $("opsBlock").hidden = false;
+    $("headerActions").hidden = !canAnalytics(roleOf());
+
+    document.querySelectorAll(".nav-item").forEach((item) => {
+      const active = item.dataset.view === "overview";
+      item.classList.toggle("active", active);
+      if (active) item.setAttribute("aria-current", "page");
+      else item.removeAttribute("aria-current");
+    });
   }
 }
 

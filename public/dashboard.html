@@ -310,6 +310,25 @@
     /* ---------- Embedded views ---------- */
     .dashboard-view[hidden] { display: none !important; }
 
+    .module-workspace {
+      margin-top: 22px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .module-workspace[hidden] { display: none !important; }
+
+    .module-workspace iframe {
+      display: block;
+      width: 100%;
+      min-height: 900px;
+      border: 0;
+      background: var(--bg);
+    }
+
     .embedded-view {
       background: var(--white);
       border: 1px solid var(--border);
@@ -402,10 +421,10 @@
         <a class="nav-item active" href="#overview" data-view="overview" aria-current="page">Security Dashboard</a>
 
         <div class="nav-label">Campus services</div>
-        <a class="nav-item" href="/incidents.html">Incident Monitoring</a>
-        <a class="nav-item" href="/emergency.html">Emergency Alerts</a>
-        <a class="nav-item" href="/lost-found.html">Lost &amp; Found</a>
-        <a class="nav-item" href="/gate.html" data-role-gate>Campus Visitors</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/incidents.html">Incident Monitoring</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/emergency.html">Emergency Alerts</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/lost-found.html">Lost &amp; Found</a>
+        <a class="nav-item" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Campus Visitors</a>
 
         <div class="nav-label">Account</div>
         <a class="nav-item" href="#" id="logoutLink">Sign out</a>
@@ -437,6 +456,10 @@
       <div id="errorBox" class="error" role="alert" hidden></div>
       <div id="noticeBox" class="notice" role="status" hidden></div>
 
+      <section class="module-workspace" id="moduleWorkspace" hidden aria-label="Dashboard workspace">
+        <iframe id="moduleFrame" title="Dashboard workspace" loading="lazy"></iframe>
+      </section>
+
       <section class="dashboard-view" id="opsBlock" hidden>
         <section class="cards" aria-label="Operations summary">
           <article class="card">
@@ -459,10 +482,10 @@
           <h2>Open a workspace</h2>
           <p class="panel-subtitle">Each tool uses your account permissions. Officers see assigned cases; administrators see campus-wide records.</p>
           <div class="header-actions">
-            <a class="open-link" href="/incidents.html">Incidents</a>
-            <a class="open-link" href="/emergency.html">Emergency alerts</a>
-            <a class="open-link" href="/lost-found.html">Lost &amp; Found</a>
-            <a class="open-link" href="/gate.html" data-role-gate>Visitors</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/incidents.html">Incidents</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/emergency.html">Emergency alerts</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/lost-found.html">Lost &amp; Found</a>
+            <a class="open-link" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Visitors</a>
             <button type="button" id="refreshOps">Refresh counts</button>
           </div>
         </section>
