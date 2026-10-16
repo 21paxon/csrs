@@ -64,6 +64,18 @@ function initDashboard() {
     workspace.hidden = false;
     workspace.setAttribute("aria-label", label + " workspace");
     frame.title = label + " workspace";
+    frame.onload = () => {
+      try {
+        const style = frame.contentDocument.createElement("style");
+        style.textContent = `
+          .app-top { display: none !important; }
+          .app-main { margin-top: 0 !important; padding-top: 24px !important; }
+        `;
+        frame.contentDocument.head.appendChild(style);
+      } catch (error) {
+        console.error("Unable to prepare embedded workspace:", error);
+      }
+    };
     frame.src = url;
 
     document.querySelectorAll(".nav-item").forEach((item) => {
