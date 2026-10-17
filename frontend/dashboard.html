@@ -1,580 +1,341 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#14243a">
-  <meta name="description" content="CSRS staff workspace: campus incidents, emergency alerts and visitors at a glance.">
-  <meta name="color-scheme" content="light">
-  <title>CSRS | Staff Workspace</title>
-
-  <style>
-    :root {
-      --navy: #14243a;
-      --navy-light: #203752;
-      --navy-hover: #293e5d;
-      --blue: #2457d6;
-      --blue-dark: #1947bc;
-      --blue-light: #eff4ff;
-      --bg: #f3f6fb;
-      --white: #fff;
-      --text: #1d2939;
-      --muted: #596579;           /* darker than before for AA contrast */
-      --border: #e4e9f2;
-      --red: #d92d20;
-      --orange: #dc6803;
-      --green: #16803c;
-      --radius: 12px;
-      --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 3px 12px rgba(16, 24, 40, .05);
-      --shadow-hover: 0 2px 4px rgba(16, 24, 40, .06), 0 8px 20px rgba(16, 24, 40, .08);
-    }
-
-    /* FIX: the original had "\*" which matched nothing */
-    *, *::before, *::after { box-sizing: border-box; }
-
-    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
-      line-height: 1.45;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    a { color: inherit; }
-
-    /* Skip link for keyboard users */
-    .skip-link {
-      position: absolute;
-      left: 12px;
-      top: -60px;
-      background: var(--blue);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 7px;
-      z-index: 100;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .skip-link:focus { top: 12px; }
-
-    .layout { min-height: 100vh; display: flex; }
-
-    /* ---------- Sidebar ---------- */
-    aside {
-      width: 250px;
-      background: linear-gradient(180deg, var(--navy) 0%, #101d30 100%);
-      color: white;
-      padding: 26px 16px;
-      flex-shrink: 0;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-    }
-
-    .rp-sidebar-brand { display:flex; align-items:center; gap:10px; margin:0 0 12px; }
-    .rp-mark { display:block; object-fit:contain; flex:0 0 58px; width:58px; height:58px; padding:4px; border:2px solid #e1b341; border-radius:8px; background:#fff; }
-    .brand-college { color:#d5e2f4; font-size:11px; font-weight:700; margin-top:3px; }
-    .brand {
-      font-size: 23px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      margin: 0 10px 6px;
-    }
-
-    .brand-sub {
-      color: #b8c7df;
-      font-size: 12px;
-      margin: 0 10px 30px;
-      line-height: 1.6;
-    }
-
-    .nav-label {
-      color: #a3b4cf;
-      font-size: 11px;
-      font-weight: bold;
-      text-transform: uppercase;
-      margin: 24px 10px 8px;
-      letter-spacing: .8px;
-    }
-
-    .nav-item {
-      display: block;
-      padding: 11px 12px;
-      margin: 3px 0;
-      border-radius: 8px;
-      color: #e4ebf7;
-      text-decoration: none;
-      font-size: 14px;
-      border-left: 3px solid transparent;
-      transition: background .2s ease, border-color .2s ease;
-    }
-
-    .nav-item.active,
-    .nav-item[aria-current="page"],
-    .nav-item:hover {
-      background: var(--navy-hover);
-      color: white;
-    }
-
-    .nav-item.active,
-    .nav-item[aria-current="page"] { border-left-color: #84adff; font-weight: 600; }
-
-    .nav-item:focus-visible,
-    button:focus-visible,
-    select:focus-visible,
-    .open-link:focus-visible {
-      outline: 3px solid #84adff;
-      outline-offset: 2px;
-    }
-
-    /* ---------- Main ---------- */
-    main {
-      min-width: 0;
-      flex: 1;
-      padding: 28px 32px;
-      max-width: 1500px;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-    }
-
-    h1 { margin: 0 0 6px; font-size: 27px; letter-spacing: -.5px; }
-    .subtitle { color: var(--muted); font-size: 14px; }
-
-    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-    button, select {
-      border: 1px solid #d0d5dd;
-      border-radius: 8px;
-      padding: 10px 14px;
-      background: white;
-      color: var(--text);
-      font: inherit;
-      font-size: 13px;
-      cursor: pointer;
-      min-height: 40px;
-      transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
-    }
-
-    button:hover:not(:disabled), select:hover { border-color: #98a2b3; }
-
-    button:disabled { opacity: .65; cursor: wait; }
-
-    .primary { background: var(--blue); color: white; border-color: var(--blue); font-weight: 600; }
-    .primary:hover:not(:disabled) { background: var(--blue-dark); border-color: var(--blue-dark); }
-
-    .error, .notice {
-      padding: 13px 15px;
-      border-radius: 8px;
-      margin-bottom: 18px;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-    .error  { background: #fef3f2; color: #b42318; border: 1px solid #fecdca; }
-    .notice { background: #eff8ff; color: #175cd3; border: 1px solid #b2ddff; }
-
-    [hidden] { display: none !important; }
-
-    /* ---------- Cards ---------- */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .card, .panel {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      box-shadow: var(--shadow);
-    }
-
-    .card {
-      position: relative;
-      overflow: hidden;
-      transition: box-shadow .2s ease, transform .2s ease;
-    }
-    .card:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 4px;
-      background: var(--blue);
-    }
-    .card.alert-card::before    { background: var(--orange); }
-    .card.visitor-card::before  { background: var(--green); }
-    .card.critical-card::before { background: var(--red); }
-
-    .metric-label { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
-    .metric-value {
-      font-size: 32px;
-      font-weight: 750;
-      overflow-wrap: anywhere;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.1;
-    }
-    .metric-note { color: var(--muted); font-size: 12px; margin-top: 9px; line-height: 1.5; }
-
-    /* ---------- Panels ---------- */
-    .content-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      margin-bottom: 20px;
-    }
-
-    .panel h2 { font-size: 16px; margin: 0 0 18px; }
-    .panel-subtitle { font-size: 12px; color: var(--muted); margin-top: -11px; margin-bottom: 17px; }
-
-    .bar-row { margin: 16px 0; }
-    .bar-heading {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 13px;
-      margin-bottom: 7px;
-    }
-    .bar-heading span { overflow-wrap: anywhere; }
-    .bar-heading > :last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
-
-    .bar-track { height: 9px; background: #edf0f5; border-radius: 20px; overflow: hidden; }
-    .bar-fill { height: 100%; background: var(--blue); border-radius: 20px; transition: width .35s ease; }
-    .bar-fill.red    { background: var(--red); }
-    .bar-fill.orange { background: var(--orange); }
-    .bar-fill.green  { background: var(--green); }
-
-    .trend {
-      height: 210px;
-      display: flex;
-      align-items: end;
-      gap: 8px;
-      padding: 15px 4px 34px;      /* room for the rotated date labels */
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto;
-    }
-    .trend-column {
-      flex: 1;
-      min-width: 28px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: end;
-      align-items: center;
-      gap: 7px;
-      position: relative;
-    }
-    .trend-value { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
-    .trend-bar {
-      width: min(75%, 34px);
-      min-height: 3px;
-      background: #5483ef;
-      border-radius: 5px 5px 0 0;
-      transition: background .15s ease;
-    }
-    .trend-column:hover .trend-bar { background: var(--blue); }
-    .trend-date {
-      font-size: 10px;
-      color: var(--muted);
-      white-space: nowrap;
-      transform: rotate(-35deg);
-      transform-origin: center top;
-      position: absolute;
-      bottom: -28px;
-    }
-
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
-    tbody tr:hover { background: #f8fafc; }
-    td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-
-    .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
-
-    footer { color: var(--muted); font-size: 12px; padding: 15px 0 25px; }
-
-    /* ---------- Embedded views ---------- */
-    .dashboard-view[hidden] { display: none !important; }
-
-    .module-workspace {
-      margin-top: 22px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--white);
-      box-shadow: var(--shadow);
-    }
-
-    .module-workspace[hidden] { display: none !important; }
-
-    .module-workspace iframe {
-      display: block;
-      width: 100%;
-      min-height: 900px;
-      border: 0;
-      background: var(--bg);
-    }
-
-    .embedded-view {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-      box-shadow: var(--shadow);
-      min-height: 70vh;
-    }
-    .embedded-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 4px 4px 4px;
-    }
-    .embedded-view h2 { margin: 0; font-size: 18px; }
-    .open-link {
-      font-size: 13px;
-      color: var(--blue);
-      text-decoration: none;
-      padding: 6px 10px;
-      border-radius: 7px;
-      border: 1px solid var(--border);
-    }
-    .open-link:hover { background: var(--blue-light); }
-    .view-help { margin: 0 4px 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-    .embedded-frame {
-      width: 100%;
-      min-height: 72vh;
-      border: 0;
-      display: block;
-      background: white;
-      border-radius: 8px;
-    }
-
-    noscript .error { margin: 18px; }
-
-    /* ---------- Responsive ---------- */
-    @media (max-width: 1100px) {
-      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      main { padding: 22px; }
-    }
-
-    @media (max-width: 760px) {
-      .layout { display: block; }
-      aside { width: 100%; height: auto; position: static; padding: 16px 12px; }
-      .brand, .brand-sub { margin-left: 4px; margin-right: 4px; }
-      .brand-sub { margin-bottom: 12px; }
-      .nav-label { margin: 12px 4px 6px; }
-      main { padding: 18px 13px; }
-      .content-grid { grid-template-columns: 1fr; }
-      h1 { font-size: 23px; }
-    }
-
-    @media (max-width: 400px) {
-      .cards { grid-template-columns: 1fr; }
-      .header-actions { width: 100%; }
-      .header-actions select,
-      .header-actions button { flex: 1; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
-      .card:hover { transform: none; }
-    }
-
-    @media print {
-      aside, .header-actions, .skip-link, .open-link { display: none !important; }
-      .layout { display: block; }
-      main { padding: 0; }
-      .card, .panel { box-shadow: none; break-inside: avoid; }
-    }
-  </style>
-  <link rel="stylesheet" href="/css/theme.css">
-  <link rel="stylesheet" href="/css/dashboards.css">
+  <title>CSRS | Security Dashboard</title>
+  <link rel="stylesheet" href="/dashboard.css">
+  <script src="/config.js"></script>
+  <script src="/js/csrs.js" defer></script>
+  <script src="/dashboard.js" defer></script>
 </head>
-
 <body>
-  <a class="skip-link" href="#mainContent">Skip to main content</a>
-
-  <div class="layout">
-    <aside>
-      <div class="rp-sidebar-brand">
-        <img class="rp-mark" src="/images/rp-logo.jpg" alt="Rwanda Polytechnic logo">
-        <div><div class="brand">Rwanda Polytechnic</div><div class="brand-college">Musanze College</div></div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-icon">C</div>
+        <div>
+          <strong>CSRS</strong>
+          <small>RP Musanze College</small>
+        </div>
       </div>
-      <div class="brand-sub">Skills for a better destiny<br>Campus Security and Reporting System</div>
 
-      <nav aria-label="Main navigation">
-        <div class="nav-label">Workspace</div>
-        <a class="nav-item active" href="#overview" data-view="overview" aria-current="page">Security Dashboard</a>
-
-        <div class="nav-label" data-menu-label="services">Campus services</div>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/incidents.html" data-role-any="admin,head_security,security_officer,management,dean">Incident Monitoring</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/emergency.html" data-role-any="admin,head_security,security_officer">Emergency Alerts</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/lost-found.html" data-role-any="admin,head_security,security_officer">Lost &amp; Found Operations</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Campus Visitors</a>
-        <a class="nav-item" href="#workspace" data-dashboard-module="/users.html" data-role-any="admin">User Management</a>
-
-        <div class="nav-label">Account</div>
-        <a class="nav-item" href="/change-password.html">Change password</a>
-        <a class="nav-item" href="/home.html">Back to home</a>
-        <a class="nav-item" href="#" id="logoutLink">Sign out</a>
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="navigation" aria-label="Main navigation">
+        <a href="#overview" data-view="overview" class="nav-link active">
+          <span>▦</span> Security Dashboard
+        </a>
+        <a href="#incidents" data-view="incidents" class="nav-link">
+          <span>⚑</span> Incident Monitoring
+        </a>
+        <a href="#emergency" data-view="emergency" class="nav-link">
+          <span>!</span> Emergency Alerts
+        </a>
+        <a href="#visitors" data-view="visitors" class="nav-link">
+          <span>♙</span> Campus Visitors
+        </a>
       </nav>
+
+      <div class="sidebar-bottom">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">U</div>
+          <div>
+            <strong id="sidebarUsername">User</strong>
+            <small id="sidebarRole">Staff</small>
+          </div>
+        </div>
+        <button class="logout-button" id="logoutButton" type="button">
+          Sign out
+        </button>
+      </div>
     </aside>
 
-    <main id="mainContent" tabindex="-1">
-      <header>
+    <main class="main">
+      <header class="topbar">
+        <button id="menuButton" class="menu-button" type="button"
+                aria-label="Toggle navigation" aria-expanded="false">
+          ☰
+        </button>
         <div>
-          <h1 id="dashboardTitle">Security Dashboard</h1>
-          <div class="subtitle" id="welcome">Campus security overview</div>
+          <h1 id="pageTitle">Security Dashboard</h1>
+          <p id="pageSubtitle">Campus security overview</p>
         </div>
-
-        <div class="header-actions" id="headerActions">
-          <label for="period" class="visually-hidden" style="position:absolute;left:-9999px">Reporting period</label>
-          <select id="period" aria-label="Dashboard reporting period">
-            <option value="7">Last 7 days</option>
-            <option value="30" selected>Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
-          <button class="primary" id="refreshButton" type="button">Refresh</button>
-        </div>
+        <button id="refreshButton" class="button secondary" type="button">
+          Refresh
+        </button>
       </header>
 
-      <noscript>
-        <div class="error" role="alert">JavaScript is required to load dashboard data. Please enable it and reload.</div>
-      </noscript>
+      <div id="errorBox" class="message error" role="alert" hidden></div>
+      <div id="noticeBox" class="message success" role="status" hidden></div>
 
-      <div id="errorBox" class="error" role="alert" hidden></div>
-      <div id="noticeBox" class="notice" role="status" hidden></div>
-
-      <section class="module-workspace" id="moduleWorkspace" hidden aria-label="Dashboard workspace">
-        <iframe id="moduleFrame" title="Dashboard workspace" loading="lazy"></iframe>
-      </section>
-
-      <section class="dashboard-view" id="opsBlock" hidden>
-        <section class="cards" aria-label="Operations summary">
-          <article class="card">
-            <div class="metric-label">Open incidents</div>
-            <div class="metric-value" id="opsIncidents">—</div>
-            <div class="metric-note">Cases assigned to you or still open</div>
-          </article>
-          <article class="card alert-card">
-            <div class="metric-label">Open emergency alerts</div>
-            <div class="metric-value" id="opsAlerts">—</div>
-            <div class="metric-note">Triggered, acknowledged or on scene</div>
-          </article>
-          <article class="card visitor-card">
-            <div class="metric-label">Visitors on campus</div>
-            <div class="metric-value" id="opsVisitors">—</div>
-            <div class="metric-note">Currently checked in</div>
-          </article>
-        </section>
-        <section class="quick-ops panel" style="margin-bottom:20px">
-          <h2>Open a workspace</h2>
-          <p class="panel-subtitle" id="workspaceHelp">Each tool uses your account permissions.</p>
-          <div class="header-actions">
-            <a class="open-link" href="#workspace" data-dashboard-module="/incidents.html" data-role-any="admin,head_security,security_officer,management,dean">Incidents</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/emergency.html" data-role-any="admin,head_security,security_officer">Emergency alerts</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/lost-found.html" data-role-any="admin,head_security,security_officer">Lost &amp; Found operations</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/gate.html" data-role-gate>Visitors</a>
-            <a class="open-link" href="#workspace" data-dashboard-module="/users.html" data-role-any="admin">Manage users</a>
-            <button type="button" id="refreshOps">Refresh counts</button>
+      <!-- DASHBOARD -->
+      <section class="view" data-view-panel="overview">
+        <div class="welcome">
+          <div>
+            <h2>Welcome back, <span id="welcomeName">User</span></h2>
+            <p>Monitor incidents and campus security activity.</p>
           </div>
-        </section>
-      </section>
+          <label class="period-control">
+            Reporting period
+            <select id="period">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </label>
+        </div>
 
-      <section class="dashboard-view" id="analyticsBlock">
-        <section class="cards" aria-label="Security summary" aria-live="polite">
-          <article class="card">
-            <div class="metric-label">Total Incidents</div>
-            <div class="metric-value" id="totalIncidents">—</div>
-            <div class="metric-note">For selected period</div>
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span>Total incidents</span>
+            <strong id="totalIncidents">—</strong>
+            <small>Reported incidents</small>
           </article>
-
-          <article class="card alert-card">
-            <div class="metric-label">Active Emergency Alerts</div>
-            <div class="metric-value" id="pendingAlerts">—</div>
-            <div class="metric-note">Awaiting resolution</div>
+          <article class="stat-card">
+            <span>Emergency alerts</span>
+            <strong id="pendingAlerts">—</strong>
+            <small>Awaiting resolution</small>
           </article>
-
-          <article class="card visitor-card">
-            <div class="metric-label">Visitors on Campus</div>
-            <div class="metric-value" id="visitors">—</div>
-            <div class="metric-note">Currently on campus</div>
+          <article class="stat-card">
+            <span>Visitors on campus</span>
+            <strong id="visitors">—</strong>
+            <small>Currently on campus</small>
           </article>
-
-          <article class="card critical-card">
-            <div class="metric-label">Open Critical Incidents</div>
-            <div class="metric-value" id="highSeverity">—</div>
-            <div class="metric-note">Critical incidents not yet closed</div>
+          <article class="stat-card critical">
+            <span>Open critical incidents</span>
+            <strong id="highSeverity">—</strong>
+            <small>Require attention</small>
           </article>
-        </section>
+        </div>
 
-        <section class="content-grid">
+        <div class="dashboard-grid">
           <article class="panel">
-            <h2>Incidents by Severity</h2>
-            <div id="severityChart"></div>
+            <h2>Incidents by severity</h2>
+            <div id="severityChart" class="chart-list"></div>
           </article>
-
           <article class="panel">
-            <h2>Incidents by Status</h2>
-            <div id="statusChart"></div>
+            <h2>Incidents by status</h2>
+            <div id="statusChart" class="chart-list"></div>
           </article>
-
           <article class="panel">
-            <h2>Incidents by Category</h2>
-            <div id="categoryChart"></div>
+            <h2>Incidents by category</h2>
+            <div id="categoryChart" class="chart-list"></div>
           </article>
-
           <article class="panel">
-            <h2>Daily Incident Trend</h2>
-            <div class="panel-subtitle">Incident counts by day</div>
-            <div class="trend" id="trendChart" role="img" aria-label="Daily incident trend chart"></div>
+            <h2>Daily incident trend</h2>
+            <div id="trendChart" class="chart-list"></div>
           </article>
-        </section>
+        </div>
 
-        <section class="panel" style="margin-bottom:20px">
-          <h2>Incident Hotspots</h2>
-          <div class="panel-subtitle">Locations with reported incidents during the selected period</div>
-
-          <div class="table-wrap">
+        <article class="panel">
+          <h2>Incident hotspots</h2>
+          <div class="table-scroll">
             <table>
-              <caption class="visually-hidden" style="position:absolute;left:-9999px">Incident hotspots by location</caption>
               <thead>
-                <tr>
-                  <th scope="col">Location</th>
-                  <th scope="col">Incidents</th>
-                </tr>
+                <tr><th>Location</th><th>Incidents</th></tr>
               </thead>
-              <tbody id="hotspotsTable"></tbody>
+              <tbody id="hotspotsTable">
+                <tr><td colspan="2">Loading locations...</td></tr>
+              </tbody>
             </table>
           </div>
-        </section>
+        </article>
       </section>
 
-      <footer>
-        CSRS · Campus Security and Reporting System
+      <!-- INCIDENTS -->
+      <section class="view" data-view-panel="incidents" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Incident Monitoring</h2>
+            <p>Review and report incidents on campus.</p>
+          </div>
+          <button class="button primary" id="toggleIncidentForm" type="button">
+            Report incident
+          </button>
+        </div>
+
+        <form id="incidentForm" class="panel form-grid" hidden>
+          <h3 class="full-width">New incident report</h3>
+
+          <label>
+            Category
+            <select id="incidentCategory" required>
+              <option value="">Select category</option>
+            </select>
+          </label>
+
+          <label>
+            Location
+            <select id="incidentLocation" required>
+              <option value="">Select location</option>
+            </select>
+          </label>
+
+          <label>
+            Severity
+            <select id="incidentSeverity" required>
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </label>
+
+          <label>
+            Date and time
+            <input id="incidentDateTime" type="datetime-local" required>
+          </label>
+
+          <label class="full-width">
+            Description
+            <textarea id="incidentDescription" rows="4"
+                      placeholder="Describe what happened..." required></textarea>
+          </label>
+
+          <label class="checkbox-label full-width">
+            <input id="incidentAnonymous" type="checkbox">
+            Submit anonymously, if permitted
+          </label>
+
+          <div class="form-actions full-width">
+            <button class="button secondary" id="cancelIncidentForm" type="button">
+              Cancel
+            </button>
+            <button class="button primary" type="submit">Submit report</button>
+          </div>
+        </form>
+
+        <article class="panel">
+          <div class="toolbar">
+            <input id="incidentSearch" type="search"
+                   placeholder="Search reference, category or location">
+            <select id="incidentStatusFilter">
+              <option value="">All statuses</option>
+              <option>Submitted</option>
+              <option>Verified</option>
+              <option>In Progress</option>
+              <option>Resolved</option>
+              <option>Closed</option>
+              <option>Rejected</option>
+              <option>Duplicate</option>
+              <option>Escalated</option>
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="incidentsTable">
+                <tr><td colspan="6">Select Incident Monitoring to load reports.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- EMERGENCY -->
+      <section class="view" data-view-panel="emergency" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Emergency Centre</h2>
+            <p>Monitor emergency alerts and their current status.</p>
+          </div>
+          <button class="button secondary" id="refreshEmergency" type="button">
+            Refresh alerts
+          </button>
+        </div>
+
+        <article class="panel">
+          <div class="toolbar">
+            <input id="emergencySearch" type="search"
+                   placeholder="Search emergency alerts">
+            <select id="emergencyStatusFilter">
+              <option value="">All statuses</option>
+              <option>Submitted</option>
+              <option>Pending</option>
+              <option>In Progress</option>
+              <option>Resolved</option>
+              <option>Closed</option>
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Type</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="emergencyTable">
+                <tr><td colspan="5">Emergency alerts have not been loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- VISITORS -->
+      <section class="view" data-view-panel="visitors" hidden>
+        <div class="section-heading">
+          <div>
+            <h2>Campus Visitors</h2>
+            <p>View visitor records and campus entry status.</p>
+          </div>
+          <button class="button secondary" id="refreshVisitors" type="button">
+            Refresh visitors
+          </button>
+        </div>
+
+        <article class="panel">
+          <div class="toolbar">
+            <input id="visitorSearch" type="search"
+                   placeholder="Search visitor records">
+            <select id="visitorStatusFilter">
+              <option value="">All visitors</option>
+              <option value="on-campus">Currently on campus</option>
+              <option value="checked-out">Checked out</option>
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Visitor</th>
+                  <th>Purpose</th>
+                  <th>Host</th>
+                  <th>Check-in</th>
+                  <th>Check-out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="visitorsTable">
+                <tr><td colspan="6">Visitor records have not been loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        Campus Security and Reporting System · RP Musanze College
         <span id="lastUpdated"></span>
       </footer>
     </main>
   </div>
-
-  <script src="/config.js"></script>
-  <script src="/js/csrs.js"></script>
-  <script src="/dashboard.js" defer></script>
 </body>
 </html>
