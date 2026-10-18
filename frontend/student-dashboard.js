@@ -19,25 +19,64 @@
     logout,
     api,
     formatDate,
-    statusCell,
-    addCell,
-    emptyRow,
     setLoading,
     getDeviceLocation
   } = C;
+
+  if (!requireAuth()) return;
+
+  if (!isPortalRole()) {
+    window.location.replace(homePath());
+    return;
+  }
+
+  // --------------------------------------------------
+  // 1. SETUP
+  // --------------------------------------------------
+
+  const user = getUser() || {};
+  const role = roleOf(user);
+  const isStaff = role === "staff";
+
+  const VIEWS = {
+    overview: [
+      isStaff ? "Staff Portal" : "Student Dashboard",
+      "Your campus safety overview"
+    ],
+    reports: ["My Reports", "Track the incidents you have reported"],
+    emergency: ["Emergency Centre", "Request urgent help from campus security"],
+    "lost-found": ["Lost & Found", "Report lost items and check found property"],
+    profile: ["My Profile", "Your account details"]
+  };
+
+  let currentView = "overview";
+  let portalRequest = 0;
+
+  // --------------------------------------------------
+  // 2. HELPERS
+  // --------------------------------------------------
 
   const setText = (id, value) => {
     const element = $(id);
     if (element) element.textContent = value ?? "";
   };
 
-  const showMessage = (id, message, show = true) => {
-    const element = $(id);
-    if (!element) return;
+  function showMessage(message, type = "success") {
+    const box = $(type === "error" ? "errorBox" : "noticeBox");
+    const other = $(type === "error" ? "noticeBox" : "errorBox");
 
-    element.textContent = message;
-    element.hidden = !show;
-  };
+    if (other) other.hidden = true;
+
+    if (box) {
+      box.textContent = message;
+      box.hidden = false;
+    }
+  }
+
+  function clearMessage() {
+    if ($("errorBox")) $("errorBox").hidden = true;
+    if ($("noticeBox")) $("noticeBox").hidden = true;
+  }
 
   const safeArray = (data) => {
     if (Array.isArray(data)) return data;
@@ -47,240 +86,234 @@
     return null;
   };
 
-  if (!requireAuth()) return;
+  const slug = (value) =>
+    String(value ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
 
-  if (!isPortalRole()) {
-    window.location.replace(homePath());
-    return;
-  }
+  const timeOf = (value) => {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  };
 
-  initPortal();
-
-  function initPortal() {
-    const user = getUser() || {};
-    const role = roleOf(user);
-    const isStaff = role === "staff";
-
-    setText("welcome", `Welcome, ${user.username || "User"} · ${roleLabel(role)}`);
-    setText("portalHeading", isStaff ? "Staff portal" : "Student dashboard");
-    setText(
-      "portalBannerTitle",
-      isStaff
-        ? "Campus safety tools for staff"
-        : "Welcome to your campus safety portal"
+  const closedStatus = (status) =>
+    ["closed", "resolved", "rejected", "duplicate"].includes(
+      String(status || "").trim().toLowerCase()
     );
 
-    document.title = isStaff
-      ? "CSRS | Staff Portal"
-      : "CSRS | Student Dashboard";
+  function cell(row, text) {
+    const td = document.createElement("td");
+    td.textContent = text;
+    row.appendChild(td);
+    return td;
+  }
 
-    setText("profileUsername", user.username || "Not available");
-    setText("profileEmail", user.email || "Not available");
-    setText("profileRole", roleLabel(role));
+  function badgeCell(row, value) {
+    const td = document.createElement("td");
+    const text = String(value ?? "").trim();
 
-    // Hide anything this role may not use, and keep start-hidden panels closed.
-    document.querySelectorAll("[data-role-any]").forEach((element) => {
-      const allowed = element.dataset.roleAny
-        .split(",")
-        .map((value) => value.trim());
+    if (text) {
+      const span = document.createElement("span");
+      span.className = `badge ${slug(text)}`;
+      span.textContent = text;
+      td.appendChild(span);
+    } else {
+      td.textContent = "—";
+    }
 
-      if (!allowed.includes(role) || element.hasAttribute("data-start-hidden")) {
-        element.hidden = true;
+    row.appendChild(td);
+  }
+
+  function emptyRow(columns, message) {
+    const row = document.createElement("tr");
+    const td = document.createElement("td");
+
+    td.colSpan = columns;
+    td.className = "empty-cell";
+    td.textContent = message;
+    row.appendChild(td);
+
+    return row;
+  }
+
+  // --------------------------------------------------
+  // 3. SIDEBAR AND NAVIGATION (same behaviour as the security dashboard)
+  // --------------------------------------------------
+
+  const mobileQuery = window.matchMedia("(max-width: 760px)");
+
+  function setSidebar(open) {
+    const sidebar = $("sidebar");
+    if (!sidebar) return;
+
+    const isOpen = open && mobileQuery.matches;
+
+    sidebar.classList.toggle("open", isOpen);
+    // Keeps hidden links out of the keyboard tab order on small screens.
+    sidebar.inert = mobileQuery.matches && !isOpen;
+
+    if ($("sidebarBackdrop")) $("sidebarBackdrop").hidden = !isOpen;
+    if ($("menuButton")) {
+      $("menuButton").setAttribute("aria-expanded", String(isOpen));
+    }
+  }
+
+  // Frames load the first time their section is opened.
+  function loadFrame(id) {
+    const frame = $(id);
+    if (frame && !frame.getAttribute("src") && frame.dataset.src) {
+      frame.setAttribute("src", frame.dataset.src);
+    }
+  }
+
+  function showView(name, { focus = false } = {}) {
+    const view = Object.prototype.hasOwnProperty.call(VIEWS, name)
+      ? name
+      : "overview";
+
+    currentView = view;
+
+    document.querySelectorAll("[data-view-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.viewPanel !== view;
+    });
+
+    document.querySelectorAll(".nav-link[data-view]").forEach((link) => {
+      const active = link.dataset.view === view;
+
+      link.classList.toggle("active", active);
+
+      if (active) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
       }
     });
 
-    $("logoutLink")?.addEventListener("click", (event) => {
+    setText("pageTitle", VIEWS[view][0]);
+    setText("pageSubtitle", VIEWS[view][1]);
+    document.title = `CSRS | ${VIEWS[view][0]}`;
+
+    if (location.hash !== `#${view}`) {
+      history.replaceState(null, "", `#${view}`);
+    }
+
+    if ($("reportDetails")) $("reportDetails").hidden = true;
+    if (view === "lost-found") loadFrame("lostFoundFrame");
+
+    setSidebar(false);
+    clearMessage();
+
+    if (focus && $("main")) $("main").focus({ preventScroll: true });
+  }
+
+  document.querySelectorAll("[data-view]").forEach((link) => {
+    link.addEventListener("click", (event) => {
       event.preventDefault();
-      logout();
+      showView(link.dataset.view, { focus: true });
     });
+  });
 
-    $("refreshButton")?.addEventListener("click", () => loadPortal(true));
-    $("emergencyButton")?.addEventListener("click", submitEmergencyAlert);
+  window.addEventListener("hashchange", () => {
+    const view = location.hash.slice(1);
+    if (view !== currentView) showView(view);
+  });
 
-    $("closeReportDetails")?.addEventListener("click", () => {
-      const panel = $("report-details");
-      if (panel) panel.hidden = true;
-    });
+  $("menuButton")?.addEventListener("click", () => {
+    setSidebar(!$("sidebar")?.classList.contains("open"));
+  });
 
-    $("closeIncidentWorkspace")?.addEventListener("click", () => {
-      closeWorkspace($("incident-workspace"));
-    });
+  $("sidebarBackdrop")?.addEventListener("click", () => setSidebar(false));
 
-    document.querySelectorAll("[data-open-report]").forEach((element) => {
-      element.addEventListener("click", (event) => {
-        event.preventDefault();
-        openWorkspace($("incident-workspace"));
-      });
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-
-      const workspace = document.querySelector(".workspace-overlay:not([hidden])");
-      if (workspace) closeWorkspace(workspace);
-    });
-
-    setupSectionNav();
-
-    loadPortal();
-    loadProfile();
-  }
-
-  // --------------------------------------------------
-  // Navigation: updates the content area only.
-  // --------------------------------------------------
-
-  function setupSectionNav() {
-    const links = document.querySelectorAll(".nav-item[data-view]");
-    const views = document.querySelectorAll(
-      "[data-dashboard-view]:not([data-view-detail])"
-    );
-    const validViews = ["overview", "reports", "emergency", "lost-found", "profile"];
-
-    function showView(view, updateUrl = true) {
-      const selectedView = validViews.includes(view) ? view : "overview";
-
-      document.body.classList.toggle("lost-found-mode", selectedView === "lost-found");
-
-      // Close the report details panel when changing sections.
-      const details = $("report-details");
-      if (details) details.hidden = true;
-
-      views.forEach((element) => {
-        const selected = element.dataset.dashboardView === selectedView;
-
-        element.hidden = !selected;
-        element.classList.toggle("dashboard-view-hidden", !selected);
-      });
-
-      links.forEach((link) => {
-        const active = link.dataset.view === selectedView;
-
-        link.classList.toggle("active", active);
-
-        if (active) {
-          link.setAttribute("aria-current", "page");
-        } else {
-          link.removeAttribute("aria-current");
-        }
-      });
-
-      if (updateUrl) {
-        history.replaceState(null, "", `#${selectedView}`);
-      }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && $("sidebar")?.classList.contains("open")) {
+      setSidebar(false);
+      $("menuButton")?.focus();
     }
+  });
 
-    links.forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        showView(link.dataset.view);
-      });
-    });
+  mobileQuery.addEventListener("change", () => setSidebar(false));
 
-    window.addEventListener("hashchange", () => {
-      showView(window.location.hash.slice(1), false);
-    });
+  $("logoutButton")?.addEventListener("click", () => logout());
+  $("refreshButton")?.addEventListener("click", () => loadPortal(true));
 
-    showView(window.location.hash.slice(1), false);
+  // --------------------------------------------------
+  // 4. USER DETAILS
+  // --------------------------------------------------
+
+  function showUser(details) {
+    const name = String(details.full_name || details.username || "User");
+    const roleName = roleLabel(details.role || role);
+
+    setText("welcomeName", name);
+    setText("sidebarUsername", name);
+    setText("sidebarRole", roleName);
+    setText("userAvatar", name.charAt(0).toUpperCase());
+
+    setText("profileUsername", details.username || details.full_name || "Not available");
+    setText("profileEmail", details.email || "Not available");
+    setText("profileRole", roleName);
   }
-
-  // --------------------------------------------------
-  // Workspace handling
-  // --------------------------------------------------
-
-  function openWorkspace(workspace) {
-    if (!workspace) return;
-
-    workspace.classList.add("workspace-overlay");
-    workspace.hidden = false;
-    document.body.classList.add("workspace-open");
-  }
-
-  function closeWorkspace(workspace) {
-    if (!workspace) return;
-
-    workspace.hidden = true;
-    workspace.classList.remove("workspace-overlay");
-
-    if (!document.querySelector(".workspace-overlay:not([hidden])")) {
-      document.body.classList.remove("workspace-open");
-    }
-  }
-
-  // --------------------------------------------------
-  // Profile
-  // --------------------------------------------------
 
   async function loadProfile() {
     try {
       const me = await api("/api/auth/me");
-
-      setText("profileUsername", me.username || me.full_name || "Not available");
-      setText("profileEmail", me.email || "Not available");
-      setText("profileRole", roleLabel(me.role));
-
-      if (me.full_name) {
-        setText("welcome", `Welcome, ${me.full_name} · ${roleLabel(me.role)}`);
-      }
+      showUser({ ...user, ...me });
     } catch (error) {
       console.warn("Could not refresh profile information:", error);
     }
   }
 
   // --------------------------------------------------
-  // Dashboard refresh
+  // 5. PORTAL DATA
   // --------------------------------------------------
 
   async function loadPortal(manual = false) {
-    showMessage("errorBox", "", false);
-    showMessage("noticeBox", "", false);
-
+    const request = ++portalRequest;
     const button = $("refreshButton");
 
-    if (button) {
-      setLoading(button, true, "Refresh Dashboard", "Loading...");
-    }
+    clearMessage();
+
+    if (button) setLoading(button, true, "Refresh", "Refreshing...");
 
     const results = await Promise.allSettled([
-      loadMyReports(),
-      loadLostItemCount()
+      loadMyReports(request),
+      loadLostItemCount(request)
     ]);
 
-    const failed = results.filter((result) => result.status === "rejected");
+    if (request === portalRequest) {
+      const failed = results.filter((result) => result.status === "rejected");
 
-    if (failed.length) {
-      const message = failed
-        .map((result) => result.reason?.message)
-        .filter(Boolean)
-        .join(" ");
-
-      showMessage("errorBox", message || "Some dashboard information could not be loaded.");
-    } else if (manual) {
-      showMessage("noticeBox", "Your portal has been updated.");
+      if (failed.length) {
+        showMessage(
+          failed.map((result) => result.reason?.message).filter(Boolean).join(" ") ||
+            "Some dashboard information could not be loaded.",
+          "error"
+        );
+      } else {
+        if (manual) showMessage("Your portal has been updated.");
+        setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
+      }
     }
 
-    if (button) {
-      setLoading(button, false, "Refresh Dashboard");
-    }
+    if (button) setLoading(button, false, "Refresh");
   }
 
-  function closedStatus(status) {
-    return ["closed", "resolved", "rejected", "duplicate"].includes(
-      String(status || "").trim().toLowerCase()
-    );
-  }
+  async function loadMyReports(request) {
+    const reports = safeArray(await api("/api/incidents"));
 
-  // --------------------------------------------------
-  // Incident reports
-  // --------------------------------------------------
-
-  async function loadMyReports() {
-    const response = await api("/api/incidents");
-    const reports = safeArray(response);
+    if (request !== portalRequest) return;
 
     if (!reports) {
       throw new Error("The incidents API returned an unexpected response.");
     }
+
+    reports.sort(
+      (a, b) =>
+        timeOf(b.reported_datetime || b.incident_datetime || b.created_at) -
+        timeOf(a.reported_datetime || a.incident_datetime || a.created_at)
+    );
 
     setText("totalReports", reports.length.toLocaleString());
     setText(
@@ -288,10 +321,25 @@
       reports.filter((report) => !closedStatus(report.status)).length.toLocaleString()
     );
 
-    renderMyReports(reports);
+    renderReports(reports);
   }
 
-  function renderMyReports(reports) {
+  async function loadLostItemCount(request) {
+    try {
+      const items = safeArray(await api("/api/lost-found/lost"));
+
+      if (request !== portalRequest) return;
+
+      setText("lostItems", items ? items.length.toLocaleString() : "—");
+    } catch (error) {
+      if (request !== portalRequest) return;
+
+      setText("lostItems", "—");
+      console.warn("Could not load lost items:", error);
+    }
+  }
+
+  function renderReports(reports) {
     const body = $("reportsBody");
     if (!body) return;
 
@@ -305,13 +353,11 @@
     reports.forEach((report) => {
       const row = document.createElement("tr");
 
-      addCell(row, report.reference_no || report.id || "—");
-      addCell(row, report.category || report.category_name || "—");
-      addCell(row, report.severity || "—");
-
-      row.appendChild(statusCell(report.status));
-
-      addCell(
+      cell(row, report.reference_no || report.id || "—");
+      cell(row, report.category || report.category_name || "—");
+      badgeCell(row, report.severity);
+      badgeCell(row, report.status);
+      cell(
         row,
         formatDate(
           report.reported_datetime || report.incident_datetime || report.created_at,
@@ -323,7 +369,7 @@
       const button = document.createElement("button");
 
       button.type = "button";
-      button.className = "button";
+      button.className = "button secondary";
       button.textContent = "Track report";
       button.addEventListener("click", () => {
         loadReportDetails(report.id || report.incident_id);
@@ -335,13 +381,17 @@
     });
   }
 
+  // --------------------------------------------------
+  // 6. REPORT TRACKING
+  // --------------------------------------------------
+
   async function loadReportDetails(id) {
     if (!id) {
-      showMessage("errorBox", "This report has no available ID.");
+      showMessage("This report has no available ID.", "error");
       return;
     }
 
-    const panel = $("report-details");
+    const panel = $("reportDetails");
     const summary = $("reportDetailsSummary");
     const details = $("reportDetailsBody");
 
@@ -350,6 +400,7 @@
     panel.hidden = false;
     summary.textContent = "Loading report history...";
     details.replaceChildren();
+    panel.focus({ preventScroll: false });
 
     try {
       const report = await api("/api/incidents/" + encodeURIComponent(id));
@@ -365,7 +416,8 @@
         }`;
       details.appendChild(overview);
 
-      const heading = document.createElement("h3");
+      const heading = document.createElement("h4");
+      heading.className = "section-label";
       heading.textContent = "Status history";
       details.appendChild(heading);
 
@@ -405,22 +457,47 @@
     }
   }
 
+  $("closeReportDetails")?.addEventListener("click", () => {
+    if ($("reportDetails")) $("reportDetails").hidden = true;
+  });
+
   // --------------------------------------------------
-  // Lost items count (the Lost & Found page has its own workspace)
+  // 7. NEW INCIDENT REPORT
   // --------------------------------------------------
 
-  async function loadLostItemCount() {
-    try {
-      const items = safeArray(await api("/api/lost-found/lost"));
-      setText("lostItems", items ? items.length.toLocaleString() : "—");
-    } catch (error) {
-      setText("lostItems", "—");
-      console.warn("Could not load lost items:", error);
+  function setReportForm(open) {
+    const panel = $("reportFormPanel");
+    if (!panel) return;
+
+    panel.hidden = !open;
+    $("newReportButton")?.setAttribute("aria-expanded", String(open));
+
+    if (open) {
+      loadFrame("incidentFrame");
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // Pick up anything that was just submitted.
+      loadPortal();
     }
   }
 
+  $("newReportButton")?.addEventListener("click", () => {
+    setReportForm($("reportFormPanel")?.hidden !== false);
+  });
+
+  $("closeReportForm")?.addEventListener("click", () => {
+    setReportForm(false);
+    $("newReportButton")?.focus();
+  });
+
+  $("reportAction")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    showView("reports", { focus: true });
+    setReportForm(true);
+  });
+
   // --------------------------------------------------
-  // Emergency assistance
+  // 8. EMERGENCY ASSISTANCE
   // --------------------------------------------------
 
   async function submitEmergencyAlert() {
@@ -479,4 +556,16 @@
       setLoading(button, false, "Request Emergency Assistance");
     }
   }
+
+  $("emergencyButton")?.addEventListener("click", submitEmergencyAlert);
+
+  // --------------------------------------------------
+  // 9. START
+  // --------------------------------------------------
+
+  setSidebar(false);
+  showUser(user);
+  showView(location.hash.slice(1) || "overview");
+  loadPortal();
+  loadProfile();
 })();
