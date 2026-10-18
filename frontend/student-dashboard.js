@@ -1,4 +1,3 @@
-
 (() => {
   "use strict";
 
@@ -27,15 +26,13 @@
     getDeviceLocation
   } = C;
 
-  const get = (id) => $(id);
-
   const setText = (id, value) => {
-    const element = get(id);
+    const element = $(id);
     if (element) element.textContent = value ?? "";
   };
 
   const showMessage = (id, message, show = true) => {
-    const element = get(id);
+    const element = $(id);
     if (!element) return;
 
     element.textContent = message;
@@ -50,12 +47,7 @@
     return null;
   };
 
-  const escapeStatus = (value) =>
-    String(value || "").trim().toLowerCase();
-
-  if (!requireAuth()) {
-    return;
-  }
+  if (!requireAuth()) return;
 
   if (!isPortalRole()) {
     window.location.replace(homePath());
@@ -69,16 +61,8 @@
     const role = roleOf(user);
     const isStaff = role === "staff";
 
-    setText(
-      "welcome",
-      `Welcome, ${user.username || "User"} · ${roleLabel(role)}`
-    );
-
-    setText(
-      "portalHeading",
-      isStaff ? "Staff portal" : "Student dashboard"
-    );
-
+    setText("welcome", `Welcome, ${user.username || "User"} · ${roleLabel(role)}`);
+    setText("portalHeading", isStaff ? "Staff portal" : "Student dashboard");
     setText(
       "portalBannerTitle",
       isStaff
@@ -94,58 +78,45 @@
     setText("profileEmail", user.email || "Not available");
     setText("profileRole", roleLabel(role));
 
-    // Preserve the existing design and apply role restrictions.
+    // Hide anything this role may not use, and keep start-hidden panels closed.
     document.querySelectorAll("[data-role-any]").forEach((element) => {
       const allowed = element.dataset.roleAny
         .split(",")
         .map((value) => value.trim());
 
-      if (!allowed.includes(role)) {
-        element.hidden = true;
-      } else if (element.hasAttribute("data-start-hidden")) {
+      if (!allowed.includes(role) || element.hasAttribute("data-start-hidden")) {
         element.hidden = true;
       }
     });
 
-    get("logoutLink")?.addEventListener("click", (event) => {
+    $("logoutLink")?.addEventListener("click", (event) => {
       event.preventDefault();
       logout();
     });
 
-    get("refreshButton")?.addEventListener("click", loadPortal);
-    get("refreshItemsButton")?.addEventListener("click", loadLostAndFound);
-    get("emergencyButton")?.addEventListener("click", submitEmergencyAlert);
+    $("refreshButton")?.addEventListener("click", () => loadPortal(true));
+    $("emergencyButton")?.addEventListener("click", submitEmergencyAlert);
 
-    get("closeReportDetails")?.addEventListener("click", () => {
-      const panel = get("report-details");
+    $("closeReportDetails")?.addEventListener("click", () => {
+      const panel = $("report-details");
       if (panel) panel.hidden = true;
     });
 
-    get("closeIncidentWorkspace")?.addEventListener("click", () => {
-      closeWorkspace(get("incident-workspace"));
+    $("closeIncidentWorkspace")?.addEventListener("click", () => {
+      closeWorkspace($("incident-workspace"));
     });
 
     document.querySelectorAll("[data-open-report]").forEach((element) => {
       element.addEventListener("click", (event) => {
         event.preventDefault();
-        openWorkspace(get("incident-workspace"));
-      });
-    });
-
-    document.querySelectorAll("[data-open-module]").forEach((element) => {
-      element.addEventListener("click", (event) => {
-        event.preventDefault();
-        openModuleWorkspace(element.dataset.openModule);
+        openWorkspace($("incident-workspace"));
       });
     });
 
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
 
-      const workspace = document.querySelector(
-        ".workspace-overlay:not([hidden])"
-      );
-
+      const workspace = document.querySelector(".workspace-overlay:not([hidden])");
       if (workspace) closeWorkspace(workspace);
     });
 
@@ -157,43 +128,26 @@
 
   // --------------------------------------------------
   // Navigation: updates the content area only.
-  // Does not rebuild or replace the RP sidebar or header.
   // --------------------------------------------------
 
   function setupSectionNav() {
-    const links = document.querySelectorAll(
-      ".nav-item[data-view]"
-    );
-
+    const links = document.querySelectorAll(".nav-item[data-view]");
     const views = document.querySelectorAll(
       "[data-dashboard-view]:not([data-view-detail])"
     );
-
-    const validViews = [
-      "overview",
-      "reports",
-      "emergency",
-      "lost-found",
-      "profile"
-    ];
+    const validViews = ["overview", "reports", "emergency", "lost-found", "profile"];
 
     function showView(view, updateUrl = true) {
-      const selectedView = validViews.includes(view)
-        ? view
-        : "overview";
+      const selectedView = validViews.includes(view) ? view : "overview";
 
-      document.body.classList.toggle(
-        "lost-found-mode",
-        selectedView === "lost-found"
-      );
+      document.body.classList.toggle("lost-found-mode", selectedView === "lost-found");
 
       // Close the report details panel when changing sections.
-      const details = get("report-details");
+      const details = $("report-details");
       if (details) details.hidden = true;
 
       views.forEach((element) => {
-        const selected =
-          element.dataset.dashboardView === selectedView;
+        const selected = element.dataset.dashboardView === selectedView;
 
         element.hidden = !selected;
         element.classList.toggle("dashboard-view-hidden", !selected);
@@ -216,7 +170,6 @@
       }
     }
 
-    // Only sidebar navigation links control the main sections.
     links.forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
@@ -228,22 +181,12 @@
       showView(window.location.hash.slice(1), false);
     });
 
-    const initialView = window.location.hash.slice(1);
-    showView(initialView, false);
+    showView(window.location.hash.slice(1), false);
   }
 
   // --------------------------------------------------
   // Workspace handling
   // --------------------------------------------------
-
-  function openModuleWorkspace(path) {
-    const workspace =
-      path === "/lost-found.html"
-        ? get("lost-found-workspace")
-        : get("incident-workspace");
-
-    openWorkspace(workspace);
-  }
 
   function openWorkspace(workspace) {
     if (!workspace) return;
@@ -259,9 +202,7 @@
     workspace.hidden = true;
     workspace.classList.remove("workspace-overlay");
 
-    if (
-      !document.querySelector(".workspace-overlay:not([hidden])")
-    ) {
+    if (!document.querySelector(".workspace-overlay:not([hidden])")) {
       document.body.classList.remove("workspace-open");
     }
   }
@@ -274,18 +215,12 @@
     try {
       const me = await api("/api/auth/me");
 
-      setText(
-        "profileUsername",
-        me.username || me.full_name || "Not available"
-      );
+      setText("profileUsername", me.username || me.full_name || "Not available");
       setText("profileEmail", me.email || "Not available");
       setText("profileRole", roleLabel(me.role));
 
       if (me.full_name) {
-        setText(
-          "welcome",
-          `Welcome, ${me.full_name} · ${roleLabel(me.role)}`
-        );
+        setText("welcome", `Welcome, ${me.full_name} · ${roleLabel(me.role)}`);
       }
     } catch (error) {
       console.warn("Could not refresh profile information:", error);
@@ -296,11 +231,11 @@
   // Dashboard refresh
   // --------------------------------------------------
 
-  async function loadPortal() {
+  async function loadPortal(manual = false) {
     showMessage("errorBox", "", false);
     showMessage("noticeBox", "", false);
 
-    const button = get("refreshButton");
+    const button = $("refreshButton");
 
     if (button) {
       setLoading(button, true, "Refresh Dashboard", "Loading...");
@@ -308,12 +243,10 @@
 
     const results = await Promise.allSettled([
       loadMyReports(),
-      loadLostAndFound()
+      loadLostItemCount()
     ]);
 
-    const failed = results.filter(
-      (result) => result.status === "rejected"
-    );
+    const failed = results.filter((result) => result.status === "rejected");
 
     if (failed.length) {
       const message = failed
@@ -321,15 +254,9 @@
         .filter(Boolean)
         .join(" ");
 
-      showMessage(
-        "errorBox",
-        message || "Some dashboard information could not be loaded."
-      );
-    } else {
-      showMessage(
-        "noticeBox",
-        "Your portal has been updated."
-      );
+      showMessage("errorBox", message || "Some dashboard information could not be loaded.");
+    } else if (manual) {
+      showMessage("noticeBox", "Your portal has been updated.");
     }
 
     if (button) {
@@ -338,12 +265,9 @@
   }
 
   function closedStatus(status) {
-    return [
-      "closed",
-      "resolved",
-      "rejected",
-      "duplicate"
-    ].includes(escapeStatus(status));
+    return ["closed", "resolved", "rejected", "duplicate"].includes(
+      String(status || "").trim().toLowerCase()
+    );
   }
 
   // --------------------------------------------------
@@ -355,34 +279,26 @@
     const reports = safeArray(response);
 
     if (!reports) {
-      throw new Error(
-        "The incidents API returned an unexpected response."
-      );
+      throw new Error("The incidents API returned an unexpected response.");
     }
 
     setText("totalReports", reports.length.toLocaleString());
-
     setText(
       "openReports",
-      reports
-        .filter((report) => !closedStatus(report.status))
-        .length
-        .toLocaleString()
+      reports.filter((report) => !closedStatus(report.status)).length.toLocaleString()
     );
 
     renderMyReports(reports);
   }
 
   function renderMyReports(reports) {
-    const body = get("reportsBody");
+    const body = $("reportsBody");
     if (!body) return;
 
     body.replaceChildren();
 
     if (!reports.length) {
-      body.appendChild(
-        emptyRow(5, "You have not submitted any incident reports yet.")
-      );
+      body.appendChild(emptyRow(6, "You have not submitted any incident reports yet."));
       return;
     }
 
@@ -398,9 +314,7 @@
       addCell(
         row,
         formatDate(
-          report.reported_datetime ||
-          report.incident_datetime ||
-          report.created_at,
+          report.reported_datetime || report.incident_datetime || report.created_at,
           true
         )
       );
@@ -411,7 +325,6 @@
       button.type = "button";
       button.className = "button";
       button.textContent = "Track report";
-
       button.addEventListener("click", () => {
         loadReportDetails(report.id || report.incident_id);
       });
@@ -428,9 +341,9 @@
       return;
     }
 
-    const panel = get("report-details");
-    const summary = get("reportDetailsSummary");
-    const details = get("reportDetailsBody");
+    const panel = $("report-details");
+    const summary = $("reportDetailsSummary");
+    const details = $("reportDetailsBody");
 
     if (!panel || !summary || !details) return;
 
@@ -439,9 +352,7 @@
     details.replaceChildren();
 
     try {
-      const report = await api(
-        "/api/incidents/" + encodeURIComponent(id)
-      );
+      const report = await api("/api/incidents/" + encodeURIComponent(id));
 
       summary.textContent =
         `${report.reference_no || "Incident"} · ${report.status || "Status unavailable"}`;
@@ -450,27 +361,20 @@
       overview.className = "subtitle";
       overview.textContent =
         `Severity: ${report.severity || "Not set"} · Reported: ${
-          formatDate(
-            report.reported_datetime || report.incident_datetime,
-            true
-          )
+          formatDate(report.reported_datetime || report.incident_datetime, true)
         }`;
-
       details.appendChild(overview);
 
       const heading = document.createElement("h3");
       heading.textContent = "Status history";
       details.appendChild(heading);
 
-      const updates = Array.isArray(report.updates)
-        ? report.updates
-        : [];
+      const updates = Array.isArray(report.updates) ? report.updates : [];
 
       if (!updates.length) {
         const message = document.createElement("p");
         message.className = "subtitle";
-        message.textContent =
-          "No status updates have been recorded yet.";
+        message.textContent = "No status updates have been recorded yet.";
         details.appendChild(message);
         return;
       }
@@ -482,9 +386,9 @@
         const item = document.createElement("li");
 
         item.textContent =
-          `${formatDate(update.created_at, true)} · ${
-            update.new_status || "Update"
-          }${update.note ? " — " + update.note : ""}`;
+          `${formatDate(update.created_at, true)} · ${update.new_status || "Update"}${
+            update.note ? " — " + update.note : ""
+          }`;
 
         list.appendChild(item);
       });
@@ -497,145 +401,22 @@
       message.className = "message error";
       message.textContent =
         error.message || "An error occurred while loading this report.";
-
       details.appendChild(message);
     }
   }
 
   // --------------------------------------------------
-  // Lost and Found
+  // Lost items count (the Lost & Found page has its own workspace)
   // --------------------------------------------------
 
-  async function loadLostAndFound() {
-    const results = await Promise.allSettled([
-      api("/api/lost-found/lost"),
-      api("/api/lost-found/found")
-    ]);
-
-    const lostResult = results[0];
-    const foundResult = results[1];
-
-    if (lostResult.status === "fulfilled") {
-      const lostItems = safeArray(lostResult.value);
-
-      if (lostItems) {
-        setText("lostItems", lostItems.length.toLocaleString());
-        renderLostItems(lostItems);
-      } else {
-        showLostItemsError();
-      }
-    } else {
-      showLostItemsError();
+  async function loadLostItemCount() {
+    try {
+      const items = safeArray(await api("/api/lost-found/lost"));
+      setText("lostItems", items ? items.length.toLocaleString() : "—");
+    } catch (error) {
+      setText("lostItems", "—");
+      console.warn("Could not load lost items:", error);
     }
-
-    if (foundResult.status === "fulfilled") {
-      const foundItems = safeArray(foundResult.value);
-
-      if (foundItems) {
-        renderFoundItems(foundItems);
-      } else {
-        showFoundItemsError();
-      }
-    } else {
-      showFoundItemsError();
-    }
-
-    if (
-      lostResult.status === "rejected" ||
-      foundResult.status === "rejected"
-    ) {
-      console.warn(
-        "Lost and Found could not fully refresh. Check the API routes."
-      );
-    }
-  }
-
-  function showLostItemsError() {
-    setText("lostItems", "—");
-
-    const body = get("lostBody");
-    if (!body) return;
-
-    body.replaceChildren();
-    body.appendChild(
-      emptyRow(4, "Could not load lost items. Please try again.")
-    );
-  }
-
-  function showFoundItemsError() {
-    const body = get("foundBody");
-    if (!body) return;
-
-    body.replaceChildren();
-    body.appendChild(
-      emptyRow(4, "Could not load found items. Please try again.")
-    );
-  }
-
-  function renderLostItems(items) {
-    const body = get("lostBody");
-    if (!body) return;
-
-    body.replaceChildren();
-
-    if (!items.length) {
-      body.appendChild(
-        emptyRow(4, "You have not reported any lost items.")
-      );
-      return;
-    }
-
-    items.forEach((item) => {
-      const row = document.createElement("tr");
-
-      addCell(row, item.item_name || item.title || "—");
-      addCell(
-        row,
-        item.location_lost || item.location_text || "—"
-      );
-      addCell(
-        row,
-        formatDate(item.date_lost || item.event_date)
-      );
-      row.appendChild(statusCell(item.status));
-
-      body.appendChild(row);
-    });
-  }
-
-  function renderFoundItems(items) {
-    const body = get("foundBody");
-    if (!body) return;
-
-    body.replaceChildren();
-
-    if (!items.length) {
-      body.appendChild(
-        emptyRow(4, "No found items are currently available.")
-      );
-      return;
-    }
-
-    items.forEach((item) => {
-      const row = document.createElement("tr");
-
-      addCell(row, item.item_name || item.title || "—");
-      addCell(
-        row,
-        item.description || "—",
-        "description"
-      );
-      addCell(
-        row,
-        item.location_found || item.location_text || "—"
-      );
-      addCell(
-        row,
-        formatDate(item.date_found || item.event_date)
-      );
-
-      body.appendChild(row);
-    });
   }
 
   // --------------------------------------------------
@@ -643,9 +424,9 @@
   // --------------------------------------------------
 
   async function submitEmergencyAlert() {
-    const button = get("emergencyButton");
-    const result = get("emergencyResult");
-    const messageField = get("emergencyMessage");
+    const button = $("emergencyButton");
+    const result = $("emergencyResult");
+    const messageField = $("emergencyMessage");
 
     if (!button || !result || !messageField) return;
 
@@ -657,13 +438,7 @@
       return;
     }
 
-    setLoading(
-      button,
-      true,
-      "Request Emergency Assistance",
-      "Sending Alert..."
-    );
-
+    setLoading(button, true, "Request Emergency Assistance", "Sending Alert...");
     result.textContent = "Sending alert...";
 
     try {
@@ -676,9 +451,7 @@
       }
 
       const payload = {
-        message:
-          messageField.value.trim() ||
-          "Emergency assistance requested"
+        message: messageField.value.trim() || "Emergency assistance requested"
       };
 
       if (coords) {
@@ -701,14 +474,9 @@
 
       messageField.value = "";
     } catch (error) {
-      result.textContent =
-        error.message || "Unable to send the emergency alert.";
+      result.textContent = error.message || "Unable to send the emergency alert.";
     } finally {
-      setLoading(
-        button,
-        false,
-        "Request Emergency Assistance"
-      );
+      setLoading(button, false, "Request Emergency Assistance");
     }
   }
 })();
