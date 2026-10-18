@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#14243a">
   <title>CSRS | Security Dashboard</title>
   <link rel="stylesheet" href="/dashboard.css">
   <script src="/config.js"></script>
@@ -11,10 +11,12 @@
   <script src="/dashboard.js" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <div class="brand-icon">C</div>
+        <div class="brand-icon" aria-hidden="true">C</div>
         <div>
           <strong>CSRS</strong>
           <small>RP Musanze College</small>
@@ -24,22 +26,22 @@
       <div class="nav-label">WORKSPACE</div>
       <nav class="navigation" aria-label="Main navigation">
         <a href="#overview" data-view="overview" class="nav-link active">
-          <span>▦</span> Security Dashboard
+          <span aria-hidden="true">▦</span> Security Dashboard
         </a>
         <a href="#incidents" data-view="incidents" class="nav-link">
-          <span>⚑</span> Incident Monitoring
+          <span aria-hidden="true">⚑</span> Incident Monitoring
         </a>
         <a href="#emergency" data-view="emergency" class="nav-link">
-          <span>!</span> Emergency Alerts
+          <span aria-hidden="true">!</span> Emergency Alerts
         </a>
         <a href="#visitors" data-view="visitors" class="nav-link">
-          <span>♙</span> Campus Visitors
+          <span aria-hidden="true">♙</span> Campus Visitors
         </a>
       </nav>
 
       <div class="sidebar-bottom">
         <div class="user-info">
-          <div class="avatar" id="userAvatar">U</div>
+          <div class="avatar" id="userAvatar" aria-hidden="true">U</div>
           <div>
             <strong id="sidebarUsername">User</strong>
             <small id="sidebarRole">Staff</small>
@@ -51,10 +53,13 @@
       </div>
     </aside>
 
-    <main class="main">
+    <div class="backdrop" id="sidebarBackdrop" hidden></div>
+
+    <main class="main" id="main" tabindex="-1">
       <header class="topbar">
         <button id="menuButton" class="menu-button" type="button"
-                aria-label="Toggle navigation" aria-expanded="false">
+                aria-label="Toggle navigation" aria-controls="sidebar"
+                aria-expanded="false">
           ☰
         </button>
         <div>
@@ -90,7 +95,7 @@
           <article class="stat-card">
             <span>Total incidents</span>
             <strong id="totalIncidents">—</strong>
-            <small>Reported incidents</small>
+            <small>Reported in this period</small>
           </article>
           <article class="stat-card">
             <span>Emergency alerts</span>
@@ -133,10 +138,10 @@
           <div class="table-scroll">
             <table>
               <thead>
-                <tr><th>Location</th><th>Incidents</th></tr>
+                <tr><th scope="col">Location</th><th scope="col">Incidents</th></tr>
               </thead>
               <tbody id="hotspotsTable">
-                <tr><td colspan="2">Loading locations...</td></tr>
+                <tr><td colspan="2" class="empty-cell">Loading locations...</td></tr>
               </tbody>
             </table>
           </div>
@@ -150,7 +155,8 @@
             <h2>Incident Monitoring</h2>
             <p>Review and report incidents on campus.</p>
           </div>
-          <button class="button primary" id="toggleIncidentForm" type="button">
+          <button class="button primary" id="toggleIncidentForm" type="button"
+                  aria-controls="incidentForm" aria-expanded="false">
             Report incident
           </button>
         </div>
@@ -189,11 +195,11 @@
 
           <label class="full-width">
             Description
-            <textarea id="incidentDescription" rows="4"
+            <textarea id="incidentDescription" rows="4" maxlength="2000"
                       placeholder="Describe what happened..." required></textarea>
           </label>
 
-          <label class="checkbox-label full-width">
+          <label class="checkbox-label full-width" id="anonymousLabel">
             <input id="incidentAnonymous" type="checkbox">
             Submit anonymously, if permitted
           </label>
@@ -209,8 +215,9 @@
         <article class="panel">
           <div class="toolbar">
             <input id="incidentSearch" type="search"
-                   placeholder="Search reference, category or location">
-            <select id="incidentStatusFilter">
+                   aria-label="Search incidents"
+                   placeholder="Search reference, category, location or description">
+            <select id="incidentStatusFilter" aria-label="Filter incidents by status">
               <option value="">All statuses</option>
               <option>Submitted</option>
               <option>Verified</option>
@@ -227,16 +234,16 @@
             <table>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  <th>Severity</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">Severity</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date</th>
                 </tr>
               </thead>
               <tbody id="incidentsTable">
-                <tr><td colspan="6">Select Incident Monitoring to load reports.</td></tr>
+                <tr><td colspan="6" class="empty-cell">Select Incident Monitoring to load reports.</td></tr>
               </tbody>
             </table>
           </div>
@@ -258,8 +265,9 @@
         <article class="panel">
           <div class="toolbar">
             <input id="emergencySearch" type="search"
+                   aria-label="Search emergency alerts"
                    placeholder="Search emergency alerts">
-            <select id="emergencyStatusFilter">
+            <select id="emergencyStatusFilter" aria-label="Filter alerts by status">
               <option value="">All statuses</option>
               <option>Submitted</option>
               <option>Pending</option>
@@ -273,15 +281,15 @@
             <table>
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Type</th>
-                  <th>Location</th>
-                  <th>Status</th>
-                  <th>Date</th>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date</th>
                 </tr>
               </thead>
               <tbody id="emergencyTable">
-                <tr><td colspan="5">Emergency alerts have not been loaded.</td></tr>
+                <tr><td colspan="5" class="empty-cell">Emergency alerts have not been loaded.</td></tr>
               </tbody>
             </table>
           </div>
@@ -303,8 +311,9 @@
         <article class="panel">
           <div class="toolbar">
             <input id="visitorSearch" type="search"
-                   placeholder="Search visitor records">
-            <select id="visitorStatusFilter">
+                   aria-label="Search visitor records"
+                   placeholder="Search visitor, purpose or host">
+            <select id="visitorStatusFilter" aria-label="Filter visitors by status">
               <option value="">All visitors</option>
               <option value="on-campus">Currently on campus</option>
               <option value="checked-out">Checked out</option>
@@ -315,16 +324,16 @@
             <table>
               <thead>
                 <tr>
-                  <th>Visitor</th>
-                  <th>Purpose</th>
-                  <th>Host</th>
-                  <th>Check-in</th>
-                  <th>Check-out</th>
-                  <th>Status</th>
+                  <th scope="col">Visitor</th>
+                  <th scope="col">Purpose</th>
+                  <th scope="col">Host</th>
+                  <th scope="col">Check-in</th>
+                  <th scope="col">Check-out</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody id="visitorsTable">
-                <tr><td colspan="6">Visitor records have not been loaded.</td></tr>
+                <tr><td colspan="6" class="empty-cell">Visitor records have not been loaded.</td></tr>
               </tbody>
             </table>
           </div>

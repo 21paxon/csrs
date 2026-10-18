@@ -1,4 +1,3 @@
-
 (() => {
   "use strict";
 
@@ -11,20 +10,65 @@
   const config = window.CSRS_CONFIG || {};
   const API_BASE = String(config.apiBaseUrl || "").replace(/\/+$/, "");
 
+  // Every route can be overridden from config.js, for example:
+  //   window.CSRS_CONFIG = {
+  //     apiBaseUrl: "https://api.example.com",
+  //     emergencyPath: "/api/emergency-alerts",
+  //     visitorsPath: "/api/gate/visitors",
+  //     visitorsIncludeCheckedOut: true,   // set when visitorsPath returns history
+  //     allowAnonymous: true,              // false hides the anonymous checkbox
+  //     loginPath: "/index.html"
+  //   };
+  const PATHS = {
+    dashboard: config.dashboardPath || "/api/dashboard",
+    incidents: config.incidentsPath || "/api/incidents",
+    categories: config.categoriesPath || "/api/incident-categories",
+    locations: config.locationsPath || "/api/locations",
+    emergency: config.emergencyPath || "/api/emergency",
+    visitors: config.visitorsPath || "/api/gate/on-campus"
+  };
+  const LOGIN_PATH = config.loginPath || "/index.html";
+  const VISITORS_INCLUDE_HISTORY = config.visitorsIncludeCheckedOut === true;
+  const ALLOW_ANONYMOUS = config.allowAnonymous !== false;
+
+  const VIEWS = {
+    overview: ["Security Dashboard", "Campus security overview"],
+    incidents: ["Incident Monitoring", "Review and report incidents"],
+    emergency: ["Emergency Centre", "Monitor emergency alerts"],
+    visitors: ["Campus Visitors", "Review visitor activity"]
+  };
+
   let incidents = [];
   let emergencies = [];
   let visitors = [];
-  let categories = [];
-  let locations = [];
   let currentView = "overview";
   let requestInProgress = false;
 
+  // Guards against slow, older responses overwriting newer ones.
+  const latestRequest = {};
+  const beginRequest = key => (latestRequest[key] = (latestRequest[key] || 0) + 1);
+  const isStale = (key, id) => latestRequest[key] !== id;
+
+  // --------------------------------------------------
+  // 2. HELPERS
+  // --------------------------------------------------
+
   function getUser() {
     try {
-      return JSON.parse(sessionStorage.getItem("csrs_user") || "{}");
+      return JSON.parse(sessionStorage.getItem("csrs_user") || "{}") || {};
     } catch {
       return {};
     }
+  }
+
+  function clearSession() {
+    sessionStorage.removeItem("csrs_token");
+    sessionStorage.removeItem("csrs_user");
+  }
+
+  function redirectToLogin() {
+    clearSession();
+    window.location.replace(LOGIN_PATH);
   }
 
   function escapeHTML(value) {
@@ -37,6 +81,26 @@
     })[character]);
   }
 
+  // Safe to place inside a class attribute.
+  function slug(value) {
+    return String(value ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  }
+
+  function badge(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "—";
+    return `<span class="badge ${slug(text)}">${escapeHTML(text)}</span>`;
+  }
+
+  function formatNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString() : "0";
+  }
+
   function setText(id, value) {
     const element = $(id);
     if (element) element.textContent = value ?? "";
@@ -45,6 +109,10 @@
   function setHTML(id, value) {
     const element = $(id);
     if (element) element.innerHTML = value;
+  }
+
+  function emptyRow(columns, message) {
+    return `<tr><td colspan="${columns}" class="empty-cell">${escapeHTML(message)}</td></tr>`;
   }
 
   function showMessage(message, type = "success") {
@@ -68,11 +136,69 @@
 
   function showError(error) {
     console.error("CSRS:", error);
-    showMessage(error.message || "Something went wrong.", "error");
+    showMessage(error?.message || "Something went wrong.", "error");
+  }
+
+  function setBusy(button, busy, busyLabel) {
+    if (!button) return;
+
+    if (busy) {
+      button.dataset.label = button.textContent;
+      button.disabled = true;
+      if (busyLabel) button.textContent = busyLabel;
+    } else {
+      button.disabled = false;
+      if (button.dataset.label) {
+        button.textContent = button.dataset.label;
+        delete button.dataset.label;
+      }
+    }
+  }
+
+  function displayDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? "—"
+      : date.toLocaleString();
+  }
+
+  function timeOf(value) {
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+  }
+
+  function valueOf(object, ...keys) {
+    for (const key of keys) {
+      if (object && object[key] !== undefined && object[key] !== null) {
+        return object[key];
+      }
+    }
+
+    return "";
+  }
+
+  function rowsFrom(data, keys = []) {
+    if (Array.isArray(data)) return data;
+    if (!data || typeof data !== "object") return [];
+
+    for (const key of keys) {
+      if (Array.isArray(data[key])) return data[key];
+    }
+
+    return [];
+  }
+
+  // Value for a datetime-local input, in the user's local time.
+  function localInputValue(date = new Date()) {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
   }
 
   // --------------------------------------------------
-  // 2. API REQUESTS
+  // 3. API REQUESTS
   // --------------------------------------------------
 
   async function api(path, options = {}) {
@@ -89,18 +215,12 @@
     };
 
     const token = sessionStorage.getItem("csrs_token");
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) headers.Authorization = `Bearer ${token}`;
 
     let response;
 
     try {
-      response = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers
-      });
+      response = await fetch(`${API_BASE}${path}`, { ...options, headers });
     } catch {
       throw new Error(
         "Cannot connect to the CSRS backend. Check your internet connection and backend URL."
@@ -108,19 +228,17 @@
     }
 
     const contentType = response.headers.get("content-type") || "";
-    let data;
-
-    if (contentType.includes("application/json")) {
-      data = await response.json().catch(() => ({}));
-    } else {
-      data = await response.text().catch(() => "");
-    }
+    const data = contentType.includes("application/json")
+      ? await response.json().catch(() => ({}))
+      : await response.text().catch(() => "");
 
     if (response.status === 401) {
-      sessionStorage.removeItem("csrs_token");
-      sessionStorage.removeItem("csrs_user");
-      window.location.replace("/index.html");
+      redirectToLogin();
       throw new Error("Your session has expired. Please sign in again.");
+    }
+
+    if (response.status === 403) {
+      throw new Error("You do not have permission to view this information.");
     }
 
     if (!response.ok) {
@@ -137,51 +255,33 @@
     return data;
   }
 
-  function rowsFrom(data, keys = []) {
-    if (Array.isArray(data)) return data;
-
-    if (!data || typeof data !== "object") return [];
-
-    for (const key of keys) {
-      if (Array.isArray(data[key])) return data[key];
-    }
-
-    return [];
-  }
-
-  function displayDate(value) {
-    if (!value) return "—";
-
-    const date = new Date(value);
-
-    return Number.isNaN(date.getTime())
-      ? "—"
-      : date.toLocaleString();
-  }
-
-  function valueOf(object, ...keys) {
-    for (const key of keys) {
-      if (object && object[key] !== undefined && object[key] !== null) {
-        return object[key];
-      }
-    }
-
-    return "";
-  }
-
   // --------------------------------------------------
-  // 3. NAVIGATION
+  // 4. NAVIGATION AND SIDEBAR
   // --------------------------------------------------
 
-  function showView(name) {
-    const allowedViews = [
-      "overview",
-      "incidents",
-      "emergency",
-      "visitors"
-    ];
+  const mobileQuery = window.matchMedia("(max-width: 760px)");
 
-    const view = allowedViews.includes(name) ? name : "overview";
+  function setSidebar(open) {
+    const sidebar = $("sidebar");
+    if (!sidebar) return;
+
+    const isOpen = open && mobileQuery.matches;
+
+    sidebar.classList.toggle("open", isOpen);
+    // Keeps hidden links out of the keyboard tab order on small screens.
+    sidebar.inert = mobileQuery.matches && !isOpen;
+
+    if ($("sidebarBackdrop")) $("sidebarBackdrop").hidden = !isOpen;
+    if ($("menuButton")) {
+      $("menuButton").setAttribute("aria-expanded", String(isOpen));
+    }
+  }
+
+  function showView(name, { focus = false } = {}) {
+    const view = Object.prototype.hasOwnProperty.call(VIEWS, name)
+      ? name
+      : "overview";
+
     currentView = view;
 
     document.querySelectorAll("[data-view-panel]").forEach(panel => {
@@ -200,49 +300,34 @@
       }
     });
 
-    const titles = {
-      overview: [
-        "Security Dashboard",
-        "Campus security overview"
-      ],
-      incidents: [
-        "Incident Monitoring",
-        "Review and report incidents"
-      ],
-      emergency: [
-        "Emergency Centre",
-        "Monitor emergency alerts"
-      ],
-      visitors: [
-        "Campus Visitors",
-        "Review visitor activity"
-      ]
-    };
-
-    setText("pageTitle", titles[view][0]);
-    setText("pageSubtitle", titles[view][1]);
+    setText("pageTitle", VIEWS[view][0]);
+    setText("pageSubtitle", VIEWS[view][1]);
+    document.title = `CSRS | ${VIEWS[view][0]}`;
 
     if (location.hash !== `#${view}`) {
       history.replaceState(null, "", `#${view}`);
     }
 
-    if ($("sidebar")) $("sidebar").classList.remove("open");
-    if ($("menuButton")) {
-      $("menuButton").setAttribute("aria-expanded", "false");
-    }
-
+    setSidebar(false);
     clearMessage();
 
-    if (view === "overview") loadDashboard();
-    if (view === "incidents") loadIncidents();
-    if (view === "emergency") loadEmergencies();
-    if (view === "visitors") loadVisitors();
+    if (focus && $("main")) $("main").focus({ preventScroll: true });
+
+    loadView(view);
+  }
+
+  function loadView(view) {
+    if (view === "overview") return loadDashboard();
+    if (view === "incidents") return loadIncidents();
+    if (view === "emergency") return loadEmergencies();
+    if (view === "visitors") return loadVisitors();
+    return Promise.resolve();
   }
 
   document.querySelectorAll("[data-view]").forEach(link => {
     link.addEventListener("click", event => {
       event.preventDefault();
-      showView(link.dataset.view);
+      showView(link.dataset.view, { focus: true });
     });
   });
 
@@ -253,23 +338,36 @@
 
   if ($("menuButton")) {
     $("menuButton").addEventListener("click", () => {
-      const open = $("sidebar")?.classList.toggle("open") || false;
-
-      $("menuButton").setAttribute("aria-expanded", String(open));
+      setSidebar(!$("sidebar")?.classList.contains("open"));
     });
   }
 
+  if ($("sidebarBackdrop")) {
+    $("sidebarBackdrop").addEventListener("click", () => setSidebar(false));
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && $("sidebar")?.classList.contains("open")) {
+      setSidebar(false);
+      $("menuButton")?.focus();
+    }
+  });
+
+  mobileQuery.addEventListener("change", () => setSidebar(false));
+
   if ($("logoutButton")) {
-    $("logoutButton").addEventListener("click", () => {
-      sessionStorage.removeItem("csrs_token");
-      sessionStorage.removeItem("csrs_user");
-      window.location.replace("/index.html");
-    });
+    $("logoutButton").addEventListener("click", redirectToLogin);
   }
 
   if ($("refreshButton")) {
-    $("refreshButton").addEventListener("click", () => {
-      showView(currentView);
+    $("refreshButton").addEventListener("click", async () => {
+      const button = $("refreshButton");
+      setBusy(button, true, "Refreshing...");
+      try {
+        await loadView(currentView);
+      } finally {
+        setBusy(button, false);
+      }
     });
   }
 
@@ -278,15 +376,21 @@
   }
 
   if ($("refreshEmergency")) {
-    $("refreshEmergency").addEventListener("click", loadEmergencies);
+    $("refreshEmergency").addEventListener("click", async () => {
+      setBusy($("refreshEmergency"), true, "Refreshing...");
+      try { await loadEmergencies(); } finally { setBusy($("refreshEmergency"), false); }
+    });
   }
 
   if ($("refreshVisitors")) {
-    $("refreshVisitors").addEventListener("click", loadVisitors);
+    $("refreshVisitors").addEventListener("click", async () => {
+      setBusy($("refreshVisitors"), true, "Refreshing...");
+      try { await loadVisitors(); } finally { setBusy($("refreshVisitors"), false); }
+    });
   }
 
   // --------------------------------------------------
-  // 4. DASHBOARD OVERVIEW
+  // 5. DASHBOARD OVERVIEW
   // --------------------------------------------------
 
   function drawBars(elementId, entries) {
@@ -294,44 +398,52 @@
     if (!element) return;
 
     const values = (Array.isArray(entries) ? entries : []).map(item => ({
-      label: valueOf(
+      label: String(valueOf(
         item,
         "label",
         "name",
         "status",
         "category",
+        "category_name",
+        "severity",
+        "date",
+        "day",
         "location_name"
-      ) || "Other",
+      ) || "Other"),
       value: Number(valueOf(item, "count", "total", "value") || 0)
     }));
 
     if (!values.length) {
-      element.innerHTML =
-        '<p class="empty-cell">No data available.</p>';
+      element.innerHTML = '<p class="empty-cell">No data available.</p>';
       return;
     }
 
     const max = Math.max(1, ...values.map(item => item.value));
 
     element.innerHTML = values.map(item => {
-      const width = Math.max(
-        0,
-        Math.min(100, (item.value / max) * 100)
-      );
+      const width = Math.max(0, Math.min(100, (item.value / max) * 100));
 
       return `
         <div class="chart-row">
-          <span>${escapeHTML(item.label)}</span>
-          <div class="chart-track">
+          <span title="${escapeHTML(item.label)}">${escapeHTML(item.label)}</span>
+          <div class="chart-track" role="img"
+               aria-label="${escapeHTML(item.label)}: ${escapeHTML(item.value)}">
             <div class="chart-fill" style="width:${width}%"></div>
           </div>
-          <span class="chart-value">${escapeHTML(item.value)}</span>
+          <span class="chart-value">${escapeHTML(formatNumber(item.value))}</span>
         </div>
       `;
     }).join("");
   }
 
+  function resetStats() {
+    ["totalIncidents", "pendingAlerts", "visitors", "highSeverity"]
+      .forEach(id => setText(id, "—"));
+  }
+
   async function loadDashboard() {
+    const request = beginRequest("dashboard");
+
     if (!API_BASE) {
       showError(new Error("Missing backend URL in config.js."));
       return;
@@ -339,50 +451,27 @@
 
     try {
       const days = encodeURIComponent($("period")?.value || "30");
-      const data = await api(`/api/dashboard?days=${days}`);
+      const data = await api(`${PATHS.dashboard}?days=${days}`);
+
+      if (isStale("dashboard", request)) return;
 
       const totals = data.incidents || data.stats || {};
 
-      setText(
-        "totalIncidents",
-        Number(valueOf(
-          totals,
-          "total",
-          "count",
-          "total_incidents",
-          "total_incident"
-        ) || 0).toLocaleString()
-      );
+      setText("totalIncidents", formatNumber(valueOf(
+        totals, "total", "count", "total_incidents", "total_incident"
+      )));
 
-      setText(
-        "pendingAlerts",
-        Number(valueOf(
-          data,
-          "pending_emergency_alerts",
-          "open_alerts",
-          "pending_alerts"
-        ) || 0).toLocaleString()
-      );
+      setText("pendingAlerts", formatNumber(valueOf(
+        data, "pending_emergency_alerts", "open_alerts", "pending_alerts"
+      )));
 
-      setText(
-        "visitors",
-        Number(valueOf(
-          data,
-          "visitors_on_campus",
-          "active_visitors",
-          "current_visitors"
-        ) || 0).toLocaleString()
-      );
+      setText("visitors", formatNumber(valueOf(
+        data, "visitors_on_campus", "active_visitors", "current_visitors"
+      )));
 
-      setText(
-        "highSeverity",
-        Number(valueOf(
-          totals,
-          "open_critical",
-          "critical",
-          "critical_incidents"
-        ) || 0).toLocaleString()
-      );
+      setText("highSeverity", formatNumber(valueOf(
+        totals, "open_critical", "critical", "critical_incidents"
+      )));
 
       drawBars("severityChart", data.by_severity);
       drawBars("statusChart", data.by_status);
@@ -396,34 +485,26 @@
         hotspots.length
           ? hotspots.map(item => `
               <tr>
-                <td>${escapeHTML(valueOf(
-                  item,
-                  "location",
-                  "location_name",
-                  "name"
-                ) || "Unknown")}</td>
-                <td>${escapeHTML(valueOf(item, "count", "total") || 0)}</td>
+                <td>${escapeHTML(valueOf(item, "location", "location_name", "name") || "Unknown")}</td>
+                <td>${escapeHTML(formatNumber(valueOf(item, "count", "total")))}</td>
               </tr>
             `).join("")
-          : '<tr><td colspan="2" class="empty-cell">No incident hotspots found.</td></tr>'
+          : emptyRow(2, "No incident hotspots found.")
       );
 
       updateUserDisplay();
-
-      setText(
-        "lastUpdated",
-        `Updated ${new Date().toLocaleTimeString()}`
-      );
-
+      setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
       if ($("errorBox")) $("errorBox").hidden = true;
     } catch (error) {
+      if (isStale("dashboard", request)) return;
+      resetStats();
       showError(error);
     }
   }
 
   function updateUserDisplay() {
     const user = getUser();
-    const username = user.username || user.full_name || "User";
+    const username = String(user.username || user.full_name || "User");
     const role = user.role || "Staff";
 
     setText("welcomeName", username);
@@ -433,52 +514,62 @@
   }
 
   // --------------------------------------------------
-  // 5. INCIDENT MONITORING
+  // 6. INCIDENT MONITORING
   // --------------------------------------------------
 
   async function loadIncidents() {
+    const request = beginRequest("incidents");
+
+    setHTML("incidentsTable", emptyRow(6, "Loading incidents..."));
+
     try {
       const results = await Promise.all([
-        api("/api/incidents"),
-        api("/api/incident-categories").catch(() => []),
-        api("/api/locations").catch(() => [])
+        api(PATHS.incidents),
+        api(PATHS.categories).catch(() => []),
+        api(PATHS.locations).catch(() => [])
       ]);
 
-      incidents = rowsFrom(results[0], ["incidents", "data", "items"]);
-      categories = rowsFrom(results[1], ["categories", "data", "items"]);
-      locations = rowsFrom(results[2], ["locations", "data", "items"]);
+      if (isStale("incidents", request)) return;
+
+      incidents = rowsFrom(results[0], ["incidents", "data", "items"])
+        .slice()
+        .sort((a, b) =>
+          timeOf(valueOf(b, "incident_datetime", "created_at")) -
+          timeOf(valueOf(a, "incident_datetime", "created_at"))
+        );
 
       populateSelect(
         "incidentCategory",
-        categories,
+        rowsFrom(results[1], ["categories", "data", "items"]),
         "category_id",
-        "category_name"
+        "category_name",
+        "Select category"
       );
 
       populateSelect(
         "incidentLocation",
-        locations,
+        rowsFrom(results[2], ["locations", "data", "items"]),
         "location_id",
-        "location_name"
+        "location_name",
+        "Select location"
       );
 
       renderIncidents();
+      setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
     } catch (error) {
+      if (isStale("incidents", request)) return;
       showError(error);
-      setHTML(
-        "incidentsTable",
-        `<tr><td colspan="6" class="empty-cell">${escapeHTML(error.message)}</td></tr>`
-      );
+      setHTML("incidentsTable", emptyRow(6, error.message));
     }
   }
 
-  function populateSelect(elementId, records, idKey, labelKey) {
+  function populateSelect(elementId, records, idKey, labelKey, placeholder) {
     const select = $(elementId);
     if (!select) return;
 
     const previousValue = select.value;
 
-    select.innerHTML = '<option value="">Select an option</option>';
+    select.innerHTML = `<option value="">${escapeHTML(placeholder)}</option>`;
 
     records.forEach(item => {
       const id = valueOf(item, idKey, "id");
@@ -523,25 +614,50 @@
               <td>${escapeHTML(valueOf(item, "reference_no", "id") || "—")}</td>
               <td>${escapeHTML(valueOf(item, "category_name", "category") || "—")}</td>
               <td>${escapeHTML(valueOf(item, "location_name", "location") || "—")}</td>
-              <td>
-                <span class="badge ${escapeHTML(
-                  String(item.severity || "").toLowerCase()
-                )}">
-                  ${escapeHTML(item.severity || "—")}
-                </span>
-              </td>
-              <td>
-                <span class="badge ${escapeHTML(
-                  String(item.status || "").toLowerCase().replace(/\s+/g, "-")
-                )}">
-                  ${escapeHTML(item.status || "—")}
-                </span>
-              </td>
+              <td>${badge(item.severity)}</td>
+              <td>${badge(item.status)}</td>
               <td>${escapeHTML(displayDate(item.incident_datetime))}</td>
             </tr>
           `).join("")
-        : '<tr><td colspan="6" class="empty-cell">No matching incidents found.</td></tr>'
+        : emptyRow(6, "No matching incidents found.")
     );
+  }
+
+  function resetIncidentForm() {
+    const form = $("incidentForm");
+    if (!form) return;
+
+    form.reset();
+
+    if ($("incidentDateTime")) {
+      $("incidentDateTime").max = localInputValue();
+      $("incidentDateTime").value = localInputValue();
+    }
+  }
+
+  function setIncidentForm(open) {
+    const form = $("incidentForm");
+    if (!form) return;
+
+    form.hidden = !open;
+
+    if ($("toggleIncidentForm")) {
+      $("toggleIncidentForm").setAttribute("aria-expanded", String(open));
+    }
+
+    if (open) {
+      if ($("incidentDateTime")) {
+        $("incidentDateTime").max = localInputValue();
+        if (!$("incidentDateTime").value) {
+          $("incidentDateTime").value = localInputValue();
+        }
+      }
+      $("incidentCategory")?.focus();
+    }
+  }
+
+  if ($("anonymousLabel") && !ALLOW_ANONYMOUS) {
+    $("anonymousLabel").hidden = true;
   }
 
   if ($("incidentSearch")) {
@@ -554,14 +670,15 @@
 
   if ($("toggleIncidentForm") && $("incidentForm")) {
     $("toggleIncidentForm").addEventListener("click", () => {
-      $("incidentForm").hidden = !$("incidentForm").hidden;
+      setIncidentForm($("incidentForm").hidden);
     });
   }
 
   if ($("cancelIncidentForm") && $("incidentForm")) {
     $("cancelIncidentForm").addEventListener("click", () => {
-      $("incidentForm").reset();
-      $("incidentForm").hidden = true;
+      resetIncidentForm();
+      setIncidentForm(false);
+      $("toggleIncidentForm")?.focus();
     });
   }
 
@@ -593,31 +710,33 @@
         return;
       }
 
+      if (date.getTime() > Date.now() + 60000) {
+        showMessage("The incident date and time cannot be in the future.", "error");
+        return;
+      }
+
       const payload = {
         category_id: Number(categoryId),
         location_id: Number(locationId),
         severity: $("incidentSeverity")?.value || "Medium",
         incident_datetime: date.toISOString(),
         description,
-        is_anonymous: Boolean($("incidentAnonymous")?.checked)
+        is_anonymous: ALLOW_ANONYMOUS && Boolean($("incidentAnonymous")?.checked)
       };
 
       requestInProgress = true;
 
-      const submitButton = $("incidentForm").querySelector(
-        'button[type="submit"]'
-      );
-
-      if (submitButton) submitButton.disabled = true;
+      const submitButton = $("incidentForm").querySelector('button[type="submit"]');
+      setBusy(submitButton, true, "Submitting...");
 
       try {
-        await api("/api/incidents", {
+        await api(PATHS.incidents, {
           method: "POST",
           body: JSON.stringify(payload)
         });
 
-        $("incidentForm").reset();
-        $("incidentForm").hidden = true;
+        resetIncidentForm();
+        setIncidentForm(false);
 
         showMessage("Incident report submitted successfully.");
 
@@ -626,33 +745,38 @@
         showError(error);
       } finally {
         requestInProgress = false;
-        if (submitButton) submitButton.disabled = false;
+        setBusy(submitButton, false);
       }
     });
   }
 
   // --------------------------------------------------
-  // 6. EMERGENCY ALERTS
+  // 7. EMERGENCY ALERTS
   // --------------------------------------------------
 
   async function loadEmergencies() {
-    try {
-      // Change this path if your backend uses another route.
-      const data = await api("/api/emergency");
+    const request = beginRequest("emergency");
 
-      emergencies = rowsFrom(
-        data,
-        ["emergencies", "alerts", "data", "items"]
-      );
+    setHTML("emergencyTable", emptyRow(5, "Loading emergency alerts..."));
+
+    try {
+      const data = await api(PATHS.emergency);
+
+      if (isStale("emergency", request)) return;
+
+      emergencies = rowsFrom(data, ["emergencies", "alerts", "data", "items"])
+        .slice()
+        .sort((a, b) =>
+          timeOf(valueOf(b, "created_at", "created_on")) -
+          timeOf(valueOf(a, "created_at", "created_on"))
+        );
 
       renderEmergencies();
+      setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
     } catch (error) {
+      if (isStale("emergency", request)) return;
       showError(error);
-
-      setHTML(
-        "emergencyTable",
-        `<tr><td colspan="5" class="empty-cell">${escapeHTML(error.message)}</td></tr>`
-      );
+      setHTML("emergencyTable", emptyRow(5, error.message));
     }
   }
 
@@ -682,11 +806,11 @@
               <td>${escapeHTML(valueOf(item, "reference_no", "id") || "—")}</td>
               <td>${escapeHTML(valueOf(item, "type", "title", "description") || "—")}</td>
               <td>${escapeHTML(valueOf(item, "location_name", "location") || "—")}</td>
-              <td>${escapeHTML(item.status || "—")}</td>
+              <td>${badge(item.status)}</td>
               <td>${escapeHTML(displayDate(valueOf(item, "created_at", "created_on")))}</td>
             </tr>
           `).join("")
-        : '<tr><td colspan="5" class="empty-cell">No emergency alerts found.</td></tr>'
+        : emptyRow(5, "No emergency alerts found.")
     );
   }
 
@@ -699,27 +823,35 @@
   }
 
   // --------------------------------------------------
-  // 7. CAMPUS VISITORS
+  // 8. CAMPUS VISITORS
   // --------------------------------------------------
 
-  async function loadVisitors() {
-    try {
-      // Change this path if your backend uses another route.
-      const data = await api("/api/gate/on-campus");
+  const checkoutOf = item =>
+    valueOf(item, "check_out_time", "checked_out_at", "checkout_time");
 
-      visitors = rowsFrom(
-        data,
-        ["visitors", "records", "data", "items"]
-      );
+  async function loadVisitors() {
+    const request = beginRequest("visitors");
+
+    setHTML("visitorsTable", emptyRow(6, "Loading visitor records..."));
+
+    try {
+      const data = await api(PATHS.visitors);
+
+      if (isStale("visitors", request)) return;
+
+      visitors = rowsFrom(data, ["visitors", "records", "data", "items"])
+        .slice()
+        .sort((a, b) =>
+          timeOf(valueOf(b, "check_in_time", "checked_in_at", "checkin_time")) -
+          timeOf(valueOf(a, "check_in_time", "checked_in_at", "checkin_time"))
+        );
 
       renderVisitors();
+      setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
     } catch (error) {
+      if (isStale("visitors", request)) return;
       showError(error);
-
-      setHTML(
-        "visitorsTable",
-        `<tr><td colspan="6" class="empty-cell">${escapeHTML(error.message)}</td></tr>`
-      );
+      setHTML("visitorsTable", emptyRow(6, error.message));
     }
   }
 
@@ -728,14 +860,7 @@
     const status = $("visitorStatusFilter")?.value || "";
 
     const filtered = visitors.filter(item => {
-      const checkout = valueOf(
-        item,
-        "check_out_time",
-        "checked_out_at",
-        "checkout_time"
-      );
-
-      const checkedOut = Boolean(checkout);
+      const checkedOut = Boolean(checkoutOf(item));
 
       const text = [
         item.visitor_name,
@@ -760,23 +885,20 @@
               <td>${escapeHTML(item.purpose || "—")}</td>
               <td>${escapeHTML(valueOf(item, "host_name", "host") || "—")}</td>
               <td>${escapeHTML(displayDate(valueOf(item, "check_in_time", "checked_in_at", "checkin_time")))}</td>
-              <td>${escapeHTML(displayDate(valueOf(item, "check_out_time", "checked_out_at", "checkout_time")))}</td>
-              <td>${checkedOutLabel(item)}</td>
+              <td>${escapeHTML(displayDate(checkoutOf(item)))}</td>
+              <td>${badge(checkoutOf(item) ? "Checked out" : "On campus")}</td>
             </tr>
           `).join("")
-        : '<tr><td colspan="6" class="empty-cell">No matching visitor records found.</td></tr>'
+        : emptyRow(6, "No matching visitor records found.")
     );
   }
 
-  function checkedOutLabel(item) {
-    const checkout = valueOf(
-      item,
-      "check_out_time",
-      "checked_out_at",
-      "checkout_time"
-    );
-
-    return checkout ? "Checked out" : "On campus";
+  // The default endpoint only lists people still on campus, so the
+  // "Checked out" filter would always be empty. Hide it unless the
+  // configured endpoint is known to include past visitors.
+  if (!VISITORS_INCLUDE_HISTORY && $("visitorStatusFilter")) {
+    const option = $("visitorStatusFilter").querySelector('option[value="checked-out"]');
+    if (option) option.remove();
   }
 
   if ($("visitorSearch")) {
@@ -788,19 +910,20 @@
   }
 
   // --------------------------------------------------
-  // 8. START APPLICATION
+  // 9. START APPLICATION
   // --------------------------------------------------
 
   function start() {
     if (!sessionStorage.getItem("csrs_token")) {
-      window.location.replace("/index.html");
+      redirectToLogin();
       return;
     }
 
+    setSidebar(false);
     updateUserDisplay();
+    resetIncidentForm();
 
-    const initialView = location.hash.slice(1) || "overview";
-    showView(initialView);
+    showView(location.hash.slice(1) || "overview");
   }
 
   if (document.readyState === "loading") {
