@@ -147,7 +147,15 @@
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(apiUrl(url), { ...options, headers, body });
+    let response;
+    try {
+      response = await fetch(apiUrl(url), { ...options, headers, body });
+    } catch (networkError) {
+      throw new Error(
+        "Cannot reach the server. It may be starting up — wait about 30 seconds and try again."
+      );
+    }
+
     const data = await response.json().catch(() => ({}));
 
     if (response.status === 401 && token) {
@@ -156,9 +164,13 @@
     }
 
     if (!response.ok) {
-      throw new Error(
-        data.error || data.message || "Request failed (HTTP " + response.status + ")."
-      );
+      const message =
+        data.error ||
+        data.message ||
+        (response.status >= 500
+          ? "Server is starting or unavailable. Wait 30 seconds and try again."
+          : "Request failed (HTTP " + response.status + ").");
+      throw new Error(message);
     }
 
     return data;
@@ -244,15 +256,15 @@
   }
 
   function navItems(role, loggedIn) {
-  if (!loggedIn) {
-    return [
-      { id: "home", href: "/home.html", label: "Home" },
-      { id: "incidents", href: "/incidents.html", label: "Report incident" },
-      { id: "emergency", href: "/emergency.html", label: "Emergency" },
-      { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
-      { id: "register", href: "/register.html", label: "Register" }
-    ];
-  }
+    if (!loggedIn) {
+      return [
+        { id: "home", href: "/home.html", label: "Home" },
+        { id: "incidents", href: "/incidents.html", label: "Report incident" },
+        { id: "emergency", href: "/emergency.html", label: "Emergency" },
+        { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
+        { id: "register", href: "/register.html", label: "Register" }
+      ];
+    }
 
     const items = [
       {
@@ -331,6 +343,22 @@
     });
   }
 
+  /* Floating Emergency button (SRS: reachable from every main screen) */
+  function mountEmergencyFab() {
+    if (document.getElementById("csrsEmergencyFab")) return;
+
+    const path = String(window.location.pathname || "");
+    if (path.includes("emergency.html")) return;
+
+    const link = document.createElement("a");
+    link.id = "csrsEmergencyFab";
+    link.className = "csrs-fab-emergency";
+    link.href = "/emergency.html";
+    link.setAttribute("aria-label", "Open emergency centre");
+    link.innerHTML = '<span aria-hidden="true">!</span><span>Emergency</span>';
+    document.body.appendChild(link);
+  }
+
   window.CSRS = {
     ROLES,
     $,
@@ -359,6 +387,11 @@
     statusCell,
     navItems,
     mountShell,
-    getDeviceLocation
+    getDeviceLocation,
+    mountEmergencyFab
   };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    mountEmergencyFab();
+  });
 })();
