@@ -17,7 +17,7 @@
   //     visitorsPath: "/api/gate/visitors",
   //     visitorsIncludeCheckedOut: true,   // set when visitorsPath returns history
   //     allowAnonymous: true,              // false hides the anonymous checkbox
-  //     loginPath: "/index.html"
+  //     loginPath: "/home.html"
   //   };
   const PATHS = {
     dashboard: config.dashboardPath || "/api/dashboard",
@@ -27,7 +27,7 @@
     emergency: config.emergencyPath || "/api/emergency",
     visitors: config.visitorsPath || "/api/gate/on-campus"
   };
-  const LOGIN_PATH = config.loginPath || "/index.html";
+  const LOGIN_PATH = config.loginPath || "/home.html";
   const VISITORS_INCLUDE_HISTORY = config.visitorsIncludeCheckedOut === true;
   const ALLOW_ANONYMOUS = config.allowAnonymous !== false;
 
