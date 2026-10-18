@@ -563,6 +563,30 @@
   // 9. START
   // --------------------------------------------------
 
+  // Embedded pages talk to the dashboard through messages: they announce
+  // data changes (so the counts stay correct) and report their content height
+  // (so the frame fits without a second scrollbar).
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+
+    const data = event.data;
+
+    if (data?.type === "csrs:lost-found-updated") {
+      loadPortal();
+    }
+
+    if (data?.type === "csrs:frame-height") {
+      const frame = [$("incidentFrame"), $("lostFoundFrame")].find(
+        (item) => item?.contentWindow === event.source
+      );
+      const height = Number(data.height);
+
+      if (frame && Number.isFinite(height) && height > 0) {
+        frame.style.height = `${Math.ceil(height)}px`;
+      }
+    }
+  });
+
   setSidebar(false);
   showUser(user);
   showView(location.hash.slice(1) || "overview");

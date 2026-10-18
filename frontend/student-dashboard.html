@@ -39,7 +39,8 @@
     .action-card span { color: var(--muted); font-size: 12px; line-height: 1.6; }
 
     .frame-panel { padding: 0; overflow: hidden; }
-    .frame-panel iframe { display: block; width: 100%; min-height: 900px; border: 0; background: #f4f7fb; }
+    /* Height is set by the embedded page once it reports its content size. */
+    .frame-panel iframe { display: block; width: 100%; height: 900px; min-height: 480px; border: 0; background: #fff; }
     .frame-header {
       display: flex;
       align-items: center;

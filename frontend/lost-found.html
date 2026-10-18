@@ -6,8 +6,21 @@
   <meta name="theme-color" content="#123b70">
   <meta name="description" content="Report lost property, browse found items, and help reunite campus community members with their belongings at Rwanda Polytechnic Musanze College.">
   <title>Lost &amp; Found | CSRS</title>
+  <!-- Runs before the page paints, so an embedded page never flashes its own header. -->
+  <script>
+    if (window.self !== window.top) document.documentElement.classList.add("embedded");
+  </script>
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    /* When shown inside the student dashboard, the dashboard supplies the
+       header, navigation and card, so this page shows only its content. */
+    html.embedded body { background: transparent; }
+    html.embedded .app-top,
+    html.embedded .app-nav { display: none !important; }
+    html.embedded .app-main { padding: 20px; margin: 0; max-width: none; }
+    html.embedded .panel { border: 0; box-shadow: none; padding: 0; background: transparent; }
+  </style>
 </head>
 <body class="lost-found-page">
   <header class="app-top">
@@ -31,6 +44,10 @@
   <nav id="appNav" class="app-nav" aria-label="Main navigation"></nav>
 
   <main class="app-main">
+    <noscript>
+      <div class="message error" role="alert">JavaScript is required to use Lost &amp; Found. Please enable it and reload.</div>
+    </noscript>
+
     <section class="panel">
       <p class="muted">Report items you have lost, review your reports, and browse items found on campus. Security officers can register found items and match reports.</p>
       <div id="pageMessage" class="message" role="status"></div>
@@ -61,7 +78,7 @@
             </div>
             <div>
               <label for="lostPhone">Contact phone</label>
-              <input id="lostPhone" name="contact_phone" maxlength="50">
+              <input id="lostPhone" name="contact_phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="50">
             </div>
             <div>
               <label for="lostPhoto">Photo (optional)</label>
@@ -81,11 +98,11 @@
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Category</th>
-                <th>Location</th>
-                <th>Date</th>
-                <th>Status</th>
+                <th scope="col">Item</th>
+                <th scope="col">Category</th>
+                <th scope="col">Location</th>
+                <th scope="col">Date</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody id="lostRows"></tbody>
@@ -131,11 +148,11 @@
           <form id="matchForm" class="grid">
             <div>
               <label for="matchLostId">Lost report ID</label>
-              <input id="matchLostId" name="lost_id" type="number" min="1" required>
+              <input id="matchLostId" name="lost_id" type="number" min="1" step="1" required>
             </div>
             <div>
               <label for="matchFoundId">Found item ID</label>
-              <input id="matchFoundId" name="found_id" type="number" min="1" required>
+              <input id="matchFoundId" name="found_id" type="number" min="1" step="1" required>
             </div>
             <div>
               <label>&nbsp;</label>
@@ -150,11 +167,11 @@
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Category</th>
-                <th>Location</th>
-                <th>Date found</th>
-                <th>Description</th>
+                <th scope="col">Item</th>
+                <th scope="col">Category</th>
+                <th scope="col">Location</th>
+                <th scope="col">Date found</th>
+                <th scope="col">Description</th>
               </tr>
             </thead>
             <tbody id="foundRows"></tbody>
