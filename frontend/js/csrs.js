@@ -244,14 +244,15 @@
   }
 
   function navItems(role, loggedIn) {
-    if (!loggedIn) {
-      return [
-        { id: "home", href: "/home.html", label: "Home" },
-        { id: "incidents", href: "/incidents.html", label: "Report incident" },
-        { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
-        { id: "register", href: "/register.html", label: "Student registration" }
-      ];
-    }
+  if (!loggedIn) {
+    return [
+      { id: "home", href: "/home.html", label: "Home" },
+      { id: "incidents", href: "/incidents.html", label: "Report incident" },
+      { id: "emergency", href: "/emergency.html", label: "Emergency" },
+      { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
+      { id: "register", href: "/register.html", label: "Register" }
+    ];
+  }
 
     const items = [
       {
