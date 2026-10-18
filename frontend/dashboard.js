@@ -525,18 +525,39 @@
     try {
       const results = await Promise.all([
         api(PATHS.incidents),
-        api(PATHS.categories).catch(() => []),
-        api(PATHS.locations).catch(() => [])
+        api(PATHS.categories).catch(error => {
+          console.warn("CSRS: could not load categories:", error.message);
+          return [];
+        }),
+        api(PATHS.locations).catch(error => {
+          console.warn("CSRS: could not load locations:", error.message);
+          return [];
+        })
       ]);
 
       if (isStale("incidents", request)) return;
 
-      incidents = rowsFrom(results[0], ["incidents", "data", "items"])
+      const raw = results[0];
+
+      incidents = rowsFrom(raw, ["incidents", "data", "items", "rows", "results"])
         .slice()
         .sort((a, b) =>
           timeOf(valueOf(b, "incident_datetime", "created_at")) -
           timeOf(valueOf(a, "incident_datetime", "created_at"))
         );
+
+      // Diagnostics: shows what the backend actually returned.
+      console.info("CSRS: GET", PATHS.incidents, "->", raw);
+
+      if (!incidents.length && raw && typeof raw === "object" && !Array.isArray(raw)) {
+        console.warn("CSRS: response has no list of incidents. Keys found:", Object.keys(raw));
+        showMessage(
+          `The server replied, but no incident list was found (keys: ${Object.keys(raw).join(", ") || "none"}).`,
+          "error"
+        );
+      } else if (incidents.length) {
+        console.info("CSRS: first incident fields:", Object.keys(incidents[0]));
+      }
 
       populateSelect(
         "incidentCategory",
