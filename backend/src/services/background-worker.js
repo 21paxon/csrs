@@ -1,4 +1,6 @@
 const db = require('../db');
+const crypto = require('crypto');
+const appConfig = require('../config');
 const { notifyRoles, notifyOnDutyOfficers } = require('../utils/notify');
 const { ROLES } = require('../middleware/auth');
 
@@ -6,6 +8,15 @@ const RETRY_LIMIT = 10;
 const BATCH_SIZE = 20;
 
 async function deliver(job) {
+  let payload = job.payload;
+  if (payload?.encrypted) {
+    const key = crypto.createHash('sha256').update(appConfig.jwtSecret).digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(payload.iv, 'base64'));
+    decipher.setAuthTag(Buffer.from(payload.tag, 'base64'));
+    payload = JSON.parse(Buffer.concat([
+      decipher.update(Buffer.from(payload.data, 'base64')), decipher.final()
+    ]).toString('utf8'));
+  }
   const config = {
     email: ['EMAIL_API_URL', 'EMAIL_API_KEY'],
     sms: ['SMS_API_URL', 'SMS_API_KEY'],
@@ -23,7 +34,7 @@ async function deliver(job) {
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ channel: job.channel, to: job.recipient, ...job.payload }),
+    body: JSON.stringify({ channel: job.channel, to: job.recipient, ...payload }),
     signal: AbortSignal.timeout(10000)
   });
   if (!response.ok) throw new Error(`${job.channel} provider returned HTTP ${response.status}`);
