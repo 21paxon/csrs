@@ -99,7 +99,7 @@
         </div>
       </div>
 
-      <div class="nav-label">WORKSPACE</div>
+      <div class="nav-label" data-i18n="workspace">WORKSPACE</div>
       <nav class="navigation" aria-label="Main navigation">
         <a href="#overview" data-view="overview" class="nav-link active">
           <span aria-hidden="true">▦</span> Dashboard
@@ -115,7 +115,7 @@
         </a>
       </nav>
 
-      <div class="nav-label spaced">ACCOUNT</div>
+      <div class="nav-label spaced" data-i18n="account">ACCOUNT</div>
       <nav class="navigation" aria-label="Account navigation">
         <a href="#profile" data-view="profile" class="nav-link">
           <span aria-hidden="true">♙</span> My Profile
@@ -299,29 +299,29 @@
       <section class="view" data-view-panel="lost-found" hidden>
         <div class="section-heading">
           <div>
-            <h2>Lost &amp; Found</h2>
-            <p>Report a lost item or check items that were found on campus.</p>
+          <h2 data-i18n="dashboard_lost_found">Lost &amp; Found</h2>
+          <p data-i18n="dashboard_lost_found_description">Report a lost item or check items that were found on campus.</p>
           </div>
         </div>
 
         <article class="panel">
           <div class="dashboard-tabs" role="tablist" aria-label="Lost and found items">
-            <button class="button secondary" id="lostItemsTab" type="button" role="tab" aria-selected="true" aria-controls="studentLostPanel">Lost items</button>
-            <button class="button secondary" id="foundItemsTab" type="button" role="tab" aria-selected="false" aria-controls="studentFoundPanel">Found items</button>
-            <button class="button secondary" id="refreshLostFound" type="button">Refresh</button>
+            <button class="button secondary" id="lostItemsTab" type="button" role="tab" aria-selected="true" aria-controls="studentLostPanel" data-i18n="lost_item">Lost items</button>
+            <button class="button secondary" id="foundItemsTab" type="button" role="tab" aria-selected="false" aria-controls="studentFoundPanel" data-i18n="found_item">Found items</button>
+            <button class="button secondary" id="refreshLostFound" type="button" data-i18n="refresh">Refresh</button>
           </div>
           <p id="lostFoundMessage" class="subtitle" role="status"></p>
           <div id="studentLostPanel" role="tabpanel">
-            <h3>Report a lost item</h3>
+            <h3 data-i18n="report_lost_item">Report a lost item</h3>
             <form id="dashboardLostForm" class="dashboard-form">
-              <div><label for="lostItemName">Item name</label><input id="lostItemName" name="item_name" maxlength="180" required></div>
-              <div><label for="lostItemCategory">Category</label><input id="lostItemCategory" name="category" maxlength="100"></div>
-              <div><label for="lostItemLocation">Where was it lost?</label><input id="lostItemLocation" name="location_lost" maxlength="200"></div>
-              <div><label for="lostItemDate">Date lost</label><input id="lostItemDate" name="date_lost" type="date"></div>
-              <div><label for="lostItemPhone">Contact phone</label><input id="lostItemPhone" name="contact_phone" type="tel" maxlength="50" autocomplete="tel"></div>
-              <div><label for="lostItemPhoto">Photo (optional)</label><input id="lostItemPhoto" name="photo" type="file" accept="image/*"></div>
-              <div class="full"><label for="lostItemDescription">Description</label><textarea id="lostItemDescription" name="description" maxlength="2000"></textarea></div>
-              <div class="full"><button class="button primary" id="lostItemSubmit" type="submit">Submit lost-item report</button></div>
+              <div><label for="lostItemName" data-i18n="item_name">Item name</label><input id="lostItemName" name="item_name" maxlength="180" required></div>
+              <div><label for="lostItemCategory" data-i18n="category">Category</label><input id="lostItemCategory" name="category" maxlength="100"></div>
+              <div><label for="lostItemLocation" data-i18n="lost_location">Where was it lost?</label><input id="lostItemLocation" name="location_lost" maxlength="200"></div>
+              <div><label for="lostItemDate" data-i18n="date_lost">Date lost</label><input id="lostItemDate" name="date_lost" type="date"></div>
+              <div><label for="lostItemPhone" data-i18n="contact_phone">Contact phone</label><input id="lostItemPhone" name="contact_phone" type="tel" maxlength="50" autocomplete="tel"></div>
+              <div><label for="lostItemPhoto" data-i18n="photo_optional">Photo (optional)</label><input id="lostItemPhoto" name="photo" type="file" accept="image/*"></div>
+              <div class="full"><label for="lostItemDescription" data-i18n="description">Description</label><textarea id="lostItemDescription" name="description" maxlength="2000"></textarea></div>
+              <div class="full"><button class="button primary" id="lostItemSubmit" type="submit" data-i18n="submit_lost_report">Submit lost-item report</button></div>
             </form>
             <h3>My lost-item reports</h3>
             <div class="table-scroll"><table><thead><tr><th>Item</th><th>Category</th><th>Location</th><th>Date</th><th>Status</th></tr></thead><tbody id="studentLostRows"></tbody></table></div>

@@ -57,7 +57,9 @@
       pushButton.disabled = true;
     } catch (error) {
       pushButton.dataset.state = 'error';
-      pushButton.textContent = error.message;
+      pushButton.dataset.error = error.message || 'Push alerts could not be enabled';
+      updatePushLabel('push_unavailable', 'Push alerts could not be enabled');
+      pushButton.title = pushButton.dataset.error;
     }
   });
 
@@ -81,6 +83,10 @@
         element.textContent = value;
       }
     });
+    document.querySelectorAll('[data-i18n-text]').forEach((element) => {
+      const value = strings[element.dataset.i18nText];
+      if (value) element.textContent = value;
+    });
     document.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
       const value = strings[element.dataset.i18nPlaceholder];
       if (value) element.setAttribute('placeholder', value);
@@ -95,6 +101,7 @@
     else if (pushButton.dataset.state === 'error') updatePushLabel('push_unavailable', 'Push alerts could not be enabled');
     else updatePushLabel('push_enable', 'Enable push alerts');
     localStorage.setItem(languageKey, safeLanguage);
+    window.dispatchEvent(new CustomEvent('csrs:language-changed', { detail: { language: safeLanguage } }));
   }
 
   button.addEventListener('click', () => {
