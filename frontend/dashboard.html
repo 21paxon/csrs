@@ -3,437 +3,313 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CSRS | Administrator Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSRS | RP Musanze College</title>
+
   <style>
     :root {
       --navy: #10243a;
-      --navy-light: #1b3855;
       --blue: #2563eb;
-      --bg: #f3f6fa;
-      --white: #ffffff;
-      --text: #182536;
-      --muted: #64748b;
+      --background: #f3f6fa;
       --border: #e2e8f0;
-      --red: #dc2626;
-      --green: #15803d;
-      --orange: #c2410c;
+      --muted: #64748b;
+      --text: #182536;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
+      font-family: Arial, sans-serif;
       color: var(--text);
+      background: var(--background);
     }
 
-    button, input, select {
-      font: inherit;
-    }
-
+    button, input { font: inherit; }
     button { cursor: pointer; }
 
     .layout {
-      min-height: 100vh;
       display: grid;
-      grid-template-columns: 250px minmax(0, 1fr);
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 100vh;
     }
 
-    .sidebar {
+    aside {
       background: var(--navy);
       color: white;
-      padding: 24px 14px;
+      padding: 22px 14px;
     }
 
     .brand {
-      padding: 0 12px 24px;
+      padding: 0 10px 22px;
       border-bottom: 1px solid #34495e;
     }
 
-    .brand h2 {
-      margin: 0 0 8px;
-      font-size: 21px;
+    .brand h2 { margin: 0 0 7px; }
+    .brand p { color: #bdcddd; font-size: 12px; line-height: 1.5; }
+
+    .nav {
+      display: grid;
+      gap: 5px;
+      margin-top: 20px;
     }
 
-    .brand p {
-      margin: 0;
-      color: #bdcddd;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .nav-label {
-      margin: 23px 12px 9px;
-      color: #9fb2c7;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .nav-btn {
-      display: flex;
-      width: 100%;
+    .nav button {
       padding: 12px;
-      margin: 4px 0;
       border: 0;
       border-radius: 7px;
       background: transparent;
       color: #e5edf6;
       text-align: left;
-      gap: 10px;
+    }
+
+    .nav button:hover, .nav button.active {
+      background: #1b3855;
+    }
+
+    main { min-width: 0; }
+
+    header {
+      display: flex;
       align-items: center;
-    }
-
-    .nav-btn:hover, .nav-btn.active {
-      background: var(--navy-light);
-      color: white;
-    }
-
-    .main { min-width: 0; }
-
-    .topbar {
+      justify-content: space-between;
+      gap: 15px;
+      padding: 18px 25px;
       background: white;
       border-bottom: 1px solid var(--border);
-      padding: 18px 28px;
+    }
+
+    header h1 { margin: 0; font-size: 22px; }
+    header p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .account { position: relative; }
+
+    .account-toggle {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      gap: 10px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 8px;
+      padding: 8px 12px;
     }
 
-    .topbar h1 {
-      font-size: 22px;
-      margin: 0;
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      background: var(--navy);
+      color: white;
+      border-radius: 50%;
+      font-weight: bold;
     }
 
-    .topbar p {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 13px;
+    .account-name { text-align: left; }
+    .account-name small { display: block; margin-top: 4px; color: var(--muted); }
+
+    .dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 190px;
+      padding: 6px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px #0002;
+      z-index: 5;
     }
 
-    .user {
-      font-size: 13px;
-      text-align: right;
+    .dropdown[hidden] { display: none; }
+
+    .dropdown button {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      text-align: left;
+      border: 0;
+      border-radius: 5px;
+      background: white;
     }
 
-    .content { padding: 26px; }
+    .dropdown button:hover { background: var(--background); }
+    .dropdown .logout { color: #b91c1c; }
 
-    .section { display: none; }
-    .section.active { display: block; }
+    .content { padding: 24px; }
+    .page { display: none; }
+    .page.active { display: block; }
 
-    .section-heading {
+    .heading {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
+      align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
       margin-bottom: 20px;
     }
 
-    .section-heading h2 {
-      margin: 0;
-      font-size: 20px;
-    }
+    .heading h2 { margin: 0; font-size: 20px; }
+    .heading p { color: var(--muted); font-size: 13px; }
 
-    .section-heading p {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-
-    .card, .panel {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      padding: 20px;
-      min-width: 0;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .metric {
-      margin: 12px 0 8px;
-      font-size: 30px;
-      font-weight: 700;
-    }
-
-    .metric-note {
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .panel { margin-bottom: 20px; }
-
-    .panel h3 {
-      font-size: 16px;
-      margin: 0 0 18px;
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    input, select {
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 7px;
-      background: white;
-      color: var(--text);
-      min-width: 0;
-    }
-
-    .toolbar input { flex: 1; min-width: 150px; }
-
-    .btn {
+    .button {
       border: 0;
       border-radius: 7px;
       padding: 10px 14px;
       background: var(--blue);
       color: white;
-      font-weight: 600;
     }
 
-    .btn:hover { opacity: .9; }
-    .btn.secondary { background: #e8eef7; color: var(--navy); }
-    .btn.danger { background: var(--red); }
-    .btn.small { padding: 7px 10px; font-size: 12px; }
+    .button.secondary { background: #e8eef7; color: var(--navy); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .card, .panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .card .label { color: var(--muted); font-size: 13px; }
+    .card .number { font-size: 30px; font-weight: bold; margin: 12px 0; }
+    .card .hint { color: var(--muted); font-size: 12px; }
+
+    .panel { margin-bottom: 20px; }
+    .panel h3 { margin-top: 0; font-size: 16px; }
 
     .table-wrap { overflow-x: auto; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      white-space: nowrap;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #f8fafc; color: #475569; }
 
-    th, td {
-      padding: 13px 12px;
-      border-bottom: 1px solid var(--border);
-      text-align: left;
-    }
+    .message { padding: 14px; border-radius: 7px; margin-bottom: 16px; }
+    .error { background: #fff1f2; color: #9f1239; }
+    .info { background: #eff6ff; color: #1e40af; }
+    .empty { text-align: center; padding: 24px; color: var(--muted); }
 
-    th {
-      background: #f8fafc;
-      color: #475569;
-      font-weight: 600;
-    }
-
-    .status {
-      display: inline-block;
-      border-radius: 20px;
-      padding: 5px 9px;
-      background: #e2e8f0;
-      color: #334155;
-      font-size: 11px;
-    }
-
-    .status.critical, .status.emergency {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .status.open, .status.active {
-      background: #ffedd5;
-      color: #9a3412;
-    }
-
-    .status.resolved, .status.closed {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .empty {
-      padding: 30px;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    .feature-grid {
+    .form-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 15px;
     }
 
-    .feature {
-      padding: 18px;
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      background: #fff;
+    .field { display: grid; gap: 7px; }
+    .field label { font-size: 13px; font-weight: bold; }
+
+    .field input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
     }
 
-    .feature h3 { margin: 0 0 8px; font-size: 15px; }
-    .feature p { color: var(--muted); font-size: 13px; line-height: 1.6; }
-    .feature button { margin-top: 5px; }
+    .actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+    #notice { color: var(--muted); font-size: 13px; margin-top: 12px; }
 
-    .alert-box {
-      padding: 15px;
-      border: 1px solid #fecaca;
-      background: #fff1f2;
-      color: #991b1b;
-      border-radius: 8px;
-      margin-bottom: 15px;
+    @media (max-width: 1000px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
-    .bars { display: grid; gap: 15px; }
-
-    .bar-label {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 13px;
-      margin-bottom: 7px;
-    }
-
-    .bar-track {
-      height: 9px;
-      background: #e2e8f0;
-      border-radius: 9px;
-      overflow: hidden;
-    }
-
-    .bar-fill {
-      height: 100%;
-      width: 0;
-      background: var(--blue);
-      border-radius: 9px;
-    }
-
-    .footer {
-      color: var(--muted);
-      text-align: center;
-      padding: 18px;
-      font-size: 12px;
-    }
-
-    #message {
-      display: none;
-      position: fixed;
-      right: 20px;
-      bottom: 20px;
-      padding: 14px 18px;
-      background: var(--navy);
-      color: white;
-      border-radius: 8px;
-      box-shadow: 0 5px 20px #0002;
-      max-width: 350px;
-      z-index: 10;
-    }
-
-    @media (max-width: 1100px) {
-      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-
-    @media (max-width: 720px) {
+    @media (max-width: 700px) {
       .layout { grid-template-columns: 1fr; }
-      .sidebar { padding: 14px; }
-      .brand { padding-bottom: 14px; }
-      .nav-label { margin-top: 15px; }
-      .nav-list {
-        display: flex;
-        overflow-x: auto;
-        gap: 6px;
-      }
-      .nav-btn {
-        width: auto;
-        flex-shrink: 0;
-        white-space: nowrap;
-      }
-      .topbar { padding: 16px; }
+      .nav { display: flex; overflow-x: auto; }
+      .nav button { flex-shrink: 0; white-space: nowrap; }
+      header { padding: 15px; }
       .content { padding: 15px; }
-      .grid, .feature-grid { grid-template-columns: 1fr; }
-      .topbar h1 { font-size: 18px; }
+      .account-name { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
+
 <body>
 <div class="layout">
-  <aside class="sidebar">
+  <aside>
     <div class="brand">
       <h2>CSRS</h2>
       <p>Campus Security and Reporting System<br>RP Musanze College</p>
     </div>
 
-    <div class="nav-label">Main</div>
-    <div class="nav-list">
-      <button class="nav-btn active" data-page="overview">▦ Dashboard</button>
-      <button class="nav-btn" data-page="incidents">⚑ Incidents</button>
-      <button class="nav-btn" data-page="emergency">⚠ Emergency alerts</button>
-      <button class="nav-btn" data-page="gate">⇄ Gate and visitors</button>
-      <button class="nav-btn" data-page="patrol">⌖ Patrol management</button>
-      <button class="nav-btn" data-page="lostfound">□ Lost and found</button>
-      <button class="nav-btn" data-page="notifications">✉ Notifications</button>
-      <button class="nav-btn" data-page="analytics">▥ Analytics and reports</button>
-      <button class="nav-btn" data-page="users">♙ Users and roles</button>
-      <button class="nav-btn" data-page="audit">▤ Audit logs</button>
-    </div>
+    <nav class="nav" aria-label="Dashboard navigation">
+      <button class="active" data-page="dashboard">Dashboard</button>
+      <button data-page="incidents">Incidents</button>
+      <button data-page="emergency">Emergency alerts</button>
+      <button data-page="gate">Gate management</button>
+      <button data-page="patrol">Patrol management</button>
+      <button data-page="lostfound">Lost and found</button>
+      <button data-page="profile">Profile management</button>
+    </nav>
   </aside>
 
-  <main class="main">
-    <header class="topbar">
+  <main>
+    <header>
       <div>
         <h1 id="page-title">Administrator Dashboard</h1>
-        <p>Campus Security and Reporting System</p>
+        <p>Campus security monitoring</p>
       </div>
-      <div class="user">
-        <strong id="admin-name">Administrator</strong>
-        <p id="today"></p>
+
+      <div class="account">
+        <button class="account-toggle" id="account-toggle"
+                aria-expanded="false" type="button">
+          <span class="avatar" id="avatar">U</span>
+          <span class="account-name">
+            <strong id="user-name">Loading account...</strong>
+            <small id="user-role">Account</small>
+          </span>
+          <span>▾</span>
+        </button>
+
+        <div class="dropdown" id="account-dropdown" hidden>
+          <button type="button" data-open-profile>My profile</button>
+          <button type="button" data-open-profile>Manage profile</button>
+          <button type="button" class="logout" id="logout-button">Log out</button>
+        </div>
       </div>
     </header>
 
     <div class="content">
-      <section class="section active" id="overview">
-        <div class="section-heading">
+      <div id="global-error" class="message error" hidden></div>
+
+      <section class="page active" id="page-dashboard">
+        <div class="heading">
           <div>
             <h2>Security overview</h2>
-            <p>Monitor incidents and campus security operations.</p>
+            <p>Live statistics retrieved from your CSRS backend.</p>
           </div>
-          <button class="btn" onclick="refreshDashboard()">Refresh data</button>
+          <button class="button" id="refresh-button">Refresh data</button>
         </div>
 
-        <div class="grid">
-          <div class="card">
-            <div class="metric-label">Open incidents</div>
-            <div class="metric" id="stat-open">—</div>
-            <div class="metric-note">Cases awaiting action</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Active incidents</div>
-            <div class="metric" id="stat-active">—</div>
-            <div class="metric-note">Cases in progress</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Resolved this month</div>
-            <div class="metric" id="stat-resolved">—</div>
-            <div class="metric-note">Successfully resolved cases</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Registered users</div>
-            <div class="metric" id="stat-users">—</div>
-            <div class="metric-note">Accounts registered in CSRS</div>
-          </div>
-        </div>
+        <div id="dashboard-error" class="message error" hidden></div>
 
-        <div class="alert-box">
-          <strong>Emergency monitoring:</strong>
-          <span id="emergency-summary">Connect the alerts API to display active emergency alerts.</span>
+        <div class="stats">
+          <article class="card">
+            <div class="label">Open incidents</div>
+            <div class="number" id="stat-open">—</div>
+            <div class="hint">Cases awaiting action</div>
+          </article>
+          <article class="card">
+            <div class="label">Active incidents</div>
+            <div class="number" id="stat-active">—</div>
+            <div class="hint">Cases being handled</div>
+          </article>
+          <article class="card">
+            <div class="label">Resolved this month</div>
+            <div class="number" id="stat-resolved">—</div>
+            <div class="hint">Cases resolved this month</div>
+          </article>
+          <article class="card">
+            <div class="label">Registered users</div>
+            <div class="number" id="stat-users">—</div>
+            <div class="hint">Registered CSRS accounts</div>
+          </article>
         </div>
 
         <div class="panel">
@@ -447,511 +323,438 @@
                 </tr>
               </thead>
               <tbody id="recent-incidents">
-                <tr><td colspan="6" class="empty">Loading incident data...</td></tr>
+                <tr><td colspan="6" class="empty">Waiting for database data...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <section class="section" id="incidents">
-        <div class="section-heading">
-          <div>
-            <h2>Incident management</h2>
-            <p>Review reports and monitor case progress.</p>
-          </div>
-          <button class="btn" onclick="loadIncidents()">Reload incidents</button>
+      <section class="page" id="page-incidents">
+        <div class="heading">
+          <div><h2>Incident management</h2><p>Search incidents returned by your API.</p></div>
+          <button class="button" id="incident-refresh">Reload incidents</button>
         </div>
         <div class="panel">
-          <div class="toolbar">
-            <input id="incident-search" placeholder="Search reference, category or location">
-            <select id="incident-status">
-              <option value="">All statuses</option>
-              <option>Submitted</option><option>Verified</option>
-              <option>In Progress</option><option>Resolved</option>
-              <option>Closed</option><option>Escalated</option>
-              <option>Rejected</option><option>Duplicate</option>
-            </select>
+          <div class="field">
+            <label for="incident-search">Search by reference, category or location</label>
+            <input id="incident-search" placeholder="Type to search">
           </div>
-          <div class="table-wrap">
+          <div class="table-wrap" style="margin-top:16px">
             <table>
               <thead><tr>
                 <th>Reference</th><th>Category</th><th>Location</th>
                 <th>Severity</th><th>Status</th><th>Date</th>
               </tr></thead>
               <tbody id="incident-rows">
-                <tr><td colspan="6" class="empty">Connect the incidents endpoint to load cases.</td></tr>
+                <tr><td colspan="6" class="empty">Loading incidents...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
       </section>
 
-      <section class="section" id="emergency">
-        <div class="section-heading">
-          <div><h2>Emergency alerts</h2><p>Monitor emergency notifications and response.</p></div>
-          <button class="btn" onclick="loadAlerts()">Reload alerts</button>
-        </div>
+      <section class="page" id="page-emergency">
+        <div class="heading"><div><h2>Emergency alerts</h2><p>Active and recorded alerts.</p></div>
+          <button class="button" id="alerts-refresh">Refresh alerts</button></div>
         <div class="panel">
-          <div class="alert-box">Urgent alerts must be acknowledged and handled using your authorized emergency response procedure.</div>
           <div class="table-wrap"><table>
-            <thead><tr><th>Alert</th><th>Location</th><th>Reported</th><th>Status</th></tr></thead>
-            <tbody id="alert-rows"><tr><td colspan="4" class="empty">Connect the alerts API to display records.</td></tr></tbody>
+            <thead><tr><th>Alert</th><th>Location</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody id="alert-rows"><tr><td colspan="4" class="empty">Not loaded.</td></tr></tbody>
           </table></div>
         </div>
       </section>
 
-      <section class="section" id="gate">
-        <div class="section-heading"><div><h2>Gate and visitor management</h2><p>Visitor registration and entry/exit records.</p></div>
-          <button class="btn" onclick="loadGateLogs()">Reload records</button>
-        </div>
-        <div class="panel"><div class="table-wrap"><table>
-          <thead><tr><th>Visitor</th><th>Purpose</th><th>Entry</th><th>Exit</th><th>Officer</th></tr></thead>
-          <tbody id="gate-rows"><tr><td colspan="5" class="empty">Connect the gate logs endpoint to load records.</td></tr></tbody>
-        </table></div></div>
-      </section>
-
-      <section class="section" id="patrol">
-        <div class="section-heading"><div><h2>Patrol management</h2><p>Patrol assignments, routes, checkpoints and shifts.</p></div>
-          <button class="btn" onclick="loadPatrols()">Reload patrols</button>
-        </div>
-        <div class="panel"><div class="table-wrap"><table>
-          <thead><tr><th>Officer</th><th>Route</th><th>Shift</th><th>Start time</th><th>Status</th></tr></thead>
-          <tbody id="patrol-rows"><tr><td colspan="5" class="empty">Connect the patrol endpoint to load assignments.</td></tr></tbody>
-        </table></div></div>
-      </section>
-
-      <section class="section" id="lostfound">
-        <div class="section-heading"><div><h2>Lost and found</h2><p>Manage lost items, found items and claims.</p></div>
-          <button class="btn" onclick="loadLostFound()">Reload items</button>
-        </div>
-        <div class="panel"><div class="table-wrap"><table>
-          <thead><tr><th>Item</th><th>Type</th><th>Location</th><th>Date</th><th>Status</th></tr></thead>
-          <tbody id="lostfound-rows"><tr><td colspan="5" class="empty">Connect the lost-and-found endpoint to load items.</td></tr></tbody>
-        </table></div></div>
-      </section>
-
-      <section class="section" id="notifications">
-        <div class="section-heading"><div><h2>Notifications and announcements</h2><p>Review and manage communications supported by your system.</p></div></div>
-        <div class="feature-grid">
-          <div class="feature"><h3>In-app notifications</h3><p>Show incident updates and alerts inside CSRS.</p><button class="btn secondary" onclick="showMessage('Connect the notification API to view messages.')">View notifications</button></div>
-          <div class="feature"><h3>Campus announcements</h3><p>Publish authorized campus safety announcements.</p><button class="btn secondary" onclick="showMessage('Announcement creation requires a configured backend endpoint.')">Manage announcements</button></div>
-          <div class="feature"><h3>Email and SMS</h3><p>Monitor delivery through configured email or SMS providers.</p><button class="btn secondary" onclick="showMessage('Email and SMS require provider credentials and backend integration.')">Delivery settings</button></div>
+      <section class="page" id="page-gate">
+        <div class="heading"><div><h2>Gate management</h2><p>Visitor entry and exit records.</p></div>
+          <button class="button" id="gate-refresh">Refresh records</button></div>
+        <div class="panel">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Visitor</th><th>Purpose</th><th>Entry</th><th>Exit</th></tr></thead>
+            <tbody id="gate-rows"><tr><td colspan="4" class="empty">Not loaded.</td></tr></tbody>
+          </table></div>
         </div>
       </section>
 
-      <section class="section" id="analytics">
-        <div class="section-heading"><div><h2>Analytics and reports</h2><p>Review case distribution and export the currently loaded incident list.</p></div></div>
-        <div class="grid">
-          <div class="card"><div class="metric-label">Loaded incidents</div><div class="metric" id="analytics-total">—</div></div>
-          <div class="card"><div class="metric-label">Critical incidents</div><div class="metric" id="analytics-critical">—</div></div>
-          <div class="card"><div class="metric-label">Resolved cases</div><div class="metric" id="analytics-resolved">—</div></div>
-          <div class="card"><div class="metric-label">Distinct categories</div><div class="metric" id="analytics-categories">—</div></div>
-        </div>
-        <div class="panel"><h3>Incidents by category</h3><div id="category-bars" class="bars"><p class="empty">Load incident data to calculate category totals.</p></div></div>
-        <div class="toolbar">
-          <button class="btn" onclick="exportIncidentsCSV()">Export incidents to CSV (Excel compatible)</button>
-          <button class="btn secondary" onclick="window.print()">Print / Save as PDF</button>
+      <section class="page" id="page-patrol">
+        <div class="heading"><div><h2>Patrol management</h2><p>Patrol assignments and checkpoints.</p></div>
+          <button class="button" id="patrol-refresh">Refresh patrols</button></div>
+        <div class="panel">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Officer</th><th>Route</th><th>Shift</th><th>Status</th></tr></thead>
+            <tbody id="patrol-rows"><tr><td colspan="4" class="empty">Not loaded.</td></tr></tbody>
+          </table></div>
         </div>
       </section>
 
-      <section class="section" id="users">
-        <div class="section-heading"><div><h2>Users and roles</h2><p>View registered users using your existing admin API.</p></div>
-          <button class="btn" onclick="loadUsers()">Reload users</button>
+      <section class="page" id="page-lostfound">
+        <div class="heading"><div><h2>Lost and found</h2><p>Lost items, found items and claims.</p></div>
+          <button class="button" id="lostfound-refresh">Refresh items</button></div>
+        <div class="panel">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Item</th><th>Type</th><th>Location</th><th>Status</th></tr></thead>
+            <tbody id="lostfound-rows"><tr><td colspan="4" class="empty">Not loaded.</td></tr></tbody>
+          </table></div>
         </div>
-        <div class="panel"><div class="table-wrap"><table>
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-          <tbody id="user-rows"><tr><td colspan="4" class="empty">Connect the user-management endpoint to load accounts.</td></tr></tbody>
-        </table></div></div>
       </section>
 
-      <section class="section" id="audit">
-        <div class="section-heading"><div><h2>Audit logs</h2><p>Review traceable actions performed in the system.</p></div>
-          <button class="btn" onclick="loadAuditLogs()">Reload logs</button>
+      <section class="page" id="page-profile">
+        <div class="heading"><div><h2>Profile management</h2><p>Your account details.</p></div></div>
+        <div class="panel">
+          <h3>Personal information</h3>
+          <div id="profile-error" class="message error" hidden></div>
+          <form id="profile-form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="profile-name">Full name</label>
+                <input id="profile-name" autocomplete="name" required>
+              </div>
+              <div class="field">
+                <label for="profile-email">Email</label>
+                <input id="profile-email" type="email" autocomplete="email" required>
+              </div>
+              <div class="field">
+                <label for="profile-phone">Phone</label>
+                <input id="profile-phone" type="tel" autocomplete="tel">
+              </div>
+              <div class="field">
+                <label for="profile-role">Role</label>
+                <input id="profile-role" disabled>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="button" type="submit">Save profile</button>
+              <button class="button secondary" type="button" id="cancel-profile">Cancel</button>
+            </div>
+            <p id="notice" role="status"></p>
+          </form>
         </div>
-        <div class="panel"><div class="table-wrap"><table>
-          <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
-          <tbody id="audit-rows"><tr><td colspan="5" class="empty">Connect the audit-log endpoint to load records.</td></tr></tbody>
-        </table></div></div>
       </section>
     </div>
-    <div class="footer">CSRS · RP Musanze College · Campus Security and Reporting System</div>
   </main>
 </div>
 
-<div id="message" role="status"></div>
-
 <script>
-/*
- * LOCAL DASHBOARD TEMPLATE
- * Keep your existing authentication and API helper if you already have them.
- * Set API_BASE to your actual backend address when testing locally.
- */
-const API_BASE = "http://localhost:3000";
+(() => {
+  "use strict";
 
-const state = {
-  incidents: [],
-  alerts: [],
-  gateLogs: [],
-  patrols: [],
-  lostFound: [],
-  users: [],
-  auditLogs: []
-};
+  /*
+   * Uses the existing CSRS client. Do not remove its authentication checks.
+   */
+  const C = window.CSRS;
 
-const titles = {
-  overview: "Administrator Dashboard",
-  incidents: "Incident Management",
-  emergency: "Emergency Alerts",
-  gate: "Gate and Visitor Management",
-  patrol: "Patrol Management",
-  lostfound: "Lost and Found",
-  notifications: "Notifications and Announcements",
-  analytics: "Analytics and Reports",
-  users: "User and Role Management",
-  audit: "Audit Logs"
-};
-
-document.getElementById("today").textContent =
-  new Date().toLocaleDateString(undefined, {
-    weekday: "short", year: "numeric", month: "short", day: "numeric"
-  });
-
-document.querySelectorAll(".nav-btn").forEach(button => {
-  button.addEventListener("click", () => {
-    const page = button.dataset.page;
-    document.querySelectorAll(".nav-btn").forEach(item => item.classList.remove("active"));
-    document.querySelectorAll(".section").forEach(item => item.classList.remove("active"));
-    button.classList.add("active");
-    document.getElementById(page).classList.add("active");
-    document.getElementById("page-title").textContent = titles[page];
-  });
-});
-
-function showMessage(message) {
-  const box = document.getElementById("message");
-  box.textContent = message;
-  box.style.display = "block";
-  clearTimeout(showMessage.timer);
-  showMessage.timer = setTimeout(() => box.style.display = "none", 3500);
-}
-
-function escapeHTML(value) {
-  return String(value ?? "").replace(/[&<>"']/g, character => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;",
-    '"': "&quot;", "'": "&#39;"
-  })[character]);
-}
-
-function pick(object, keys, fallback = "—") {
-  for (const key of keys) {
-    if (object && object[key] !== undefined && object[key] !== null && object[key] !== "") {
-      return object[key];
-    }
-  }
-  return fallback;
-}
-
-function normalisePayload(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== "object") return [];
-  for (const key of ["data", "results", "items", "incidents", "alerts", "users", "logs", "records"]) {
-    if (Array.isArray(payload[key])) return payload[key];
-    if (payload[key] && typeof payload[key] === "object") {
-      for (const nested of ["data", "items", "rows", "results"]) {
-        if (Array.isArray(payload[key][nested])) return payload[key][nested];
-      }
-    }
-  }
-  return [];
-}
-
-/*
- * The endpoint paths below are examples, not guaranteed to match your API.
- * Change them to the routes your server actually exposes.
- * Do not remove your existing requireAuth()/CSRS authentication checks.
- */
-async function apiGet(path) {
-  const response = await fetch(API_BASE + path, {
-    method: "GET",
-    credentials: "include",
-    headers: { "Accept": "application/json" }
-  });
-
-  if (!response.ok) {
-    throw new Error("Request failed (" + response.status + ") for " + path);
-  }
-  return response.json();
-}
-
-async function tryEndpoints(paths) {
-  let lastError;
-  for (const path of paths) {
-    try {
-      return await apiGet(path);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError || new Error("No compatible endpoint configured.");
-}
-
-function dateText(value) {
-  if (!value || value === "—") return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
-}
-
-function statusClass(value) {
-  const status = String(value || "").toLowerCase();
-  if (status.includes("critical") || status.includes("emergency")) return "critical";
-  if (status.includes("resolve") || status.includes("closed") || status.includes("complete")) return "resolved";
-  if (status.includes("progress") || status.includes("open") || status.includes("active") || status.includes("pending")) return "open";
-  return "";
-}
-
-function cell(value) {
-  return "<td>" + escapeHTML(value) + "</td>";
-}
-
-function statusCell(value) {
-  return '<td><span class="status ' + statusClass(value) + '">' +
-    escapeHTML(value) + "</span></td>";
-}
-
-function renderIncidents(incidents, targetId) {
-  const body = document.getElementById(targetId);
-  if (!incidents.length) {
-    body.innerHTML = '<tr><td colspan="6" class="empty">No incident records returned by the API.</td></tr>';
+  if (!C) {
+    document.getElementById("global-error").hidden = false;
+    document.getElementById("global-error").textContent =
+      "CSRS shared JavaScript is not loaded. Include your existing script that defines window.CSRS before this script.";
     return;
   }
 
-  body.innerHTML = incidents.map(item => {
-    const ref = pick(item, ["reference_no", "referenceNo", "incident_reference", "id", "incident_id"]);
-    const category = pick(item, ["category_name", "category", "name"]);
-    const location = pick(item, ["location_name", "location"]);
-    const severity = pick(item, ["severity", "priority"]);
-    const status = pick(item, ["status", "incident_status"]);
-    const date = dateText(pick(item, ["incident_datetime", "created_at", "reported_at"], ""));
-    return "<tr>" + cell(ref) + cell(category) + cell(location) +
-      statusCell(severity) + statusCell(status) + cell(date) + "</tr>";
-  }).join("");
-}
+  const { $, requireAuth, getUser, logout, api } = C;
 
-async function loadIncidents() {
-  const body = document.getElementById("incident-rows");
-  body.innerHTML = '<tr><td colspan="6" class="empty">Loading incidents...</td></tr>';
+  if (typeof requireAuth === "function" && !requireAuth()) return;
 
-  try {
-    const payload = await tryEndpoints(["/api/incidents", "/api/admin/incidents"]);
-    state.incidents = normalisePayload(payload);
-    renderIncidents(state.incidents, "incident-rows");
-    renderIncidents(state.incidents.slice(0, 8), "recent-incidents");
-    renderAnalytics();
-  } catch (error) {
-    body.innerHTML = '<tr><td colspan="6" class="empty">Unable to load incidents. Check your actual route and authentication.</td></tr>';
-    console.error("Incident API:", error);
-  }
-}
+  const byId = id => document.getElementById(id);
+  const state = { incidents: [], user: null };
 
-function renderAnalytics() {
-  const items = state.incidents;
-  const critical = items.filter(item =>
-    String(pick(item, ["severity"], "")).toLowerCase() === "critical"
-  ).length;
-  const resolved = items.filter(item =>
-    ["resolved", "closed"].includes(String(pick(item, ["status"], "")).toLowerCase())
-  ).length;
-  const categories = {};
-
-  items.forEach(item => {
-    const category = String(pick(item, ["category_name", "category"], "Uncategorised"));
-    categories[category] = (categories[category] || 0) + 1;
-  });
-
-  document.getElementById("analytics-total").textContent = items.length;
-  document.getElementById("analytics-critical").textContent = critical;
-  document.getElementById("analytics-resolved").textContent = resolved;
-  document.getElementById("analytics-categories").textContent = Object.keys(categories).length;
-
-  const max = Math.max(1, ...Object.values(categories));
-  document.getElementById("category-bars").innerHTML = Object.keys(categories).length
-    ? Object.entries(categories).sort((a, b) => b[1] - a[1]).map(([name, count]) =>
-      '<div><div class="bar-label"><span>' + escapeHTML(name) +
-      '</span><strong>' + count + '</strong></div><div class="bar-track"><div class="bar-fill" style="width:' +
-      (count / max * 100) + '%"></div></div></div>').join("")
-    : '<p class="empty">No category data is available.</p>';
-}
-
-async function refreshDashboard() {
-  showMessage("Refreshing dashboard data...");
-  try {
-    const payload = await tryEndpoints(["/api/admin/dashboard", "/api/dashboard"]);
-    const stats = payload.stats || payload.data || payload;
-    document.getElementById("stat-open").textContent =
-      pick(stats, ["open_incidents", "openIncidents"], "—");
-    document.getElementById("stat-active").textContent =
-      pick(stats, ["active_incidents", "activeIncidents"], "—");
-    document.getElementById("stat-resolved").textContent =
-      pick(stats, ["resolved_this_month", "resolvedThisMonth"], "—");
-    document.getElementById("stat-users").textContent =
-      pick(stats, ["registered_users", "registeredUsers", "total_users"], "—");
-  } catch (error) {
-    showMessage("Dashboard statistics API is unavailable. Check your backend route.");
-    console.error("Dashboard API:", error);
-  }
-  await loadIncidents();
-}
-
-async function loadAlerts() {
-  const body = document.getElementById("alert-rows");
-  body.innerHTML = '<tr><td colspan="4" class="empty">Loading alerts...</td></tr>';
-  try {
-    const payload = await tryEndpoints(["/api/alerts", "/api/admin/alerts"]);
-    state.alerts = normalisePayload(payload);
-    body.innerHTML = state.alerts.length ? state.alerts.map(item =>
-      "<tr>" + cell(pick(item, ["alert_type", "title", "type", "id"])) +
-      cell(pick(item, ["location_name", "location"])) +
-      cell(dateText(pick(item, ["created_at", "triggered_at", "createdAt"], ""))) +
-      statusCell(pick(item, ["status", "state"])) + "</tr>"
-    ).join("") : '<tr><td colspan="4" class="empty">No alerts returned.</td></tr>';
-    document.getElementById("emergency-summary").textContent =
-      state.alerts.filter(a => !["resolved", "closed", "dismissed"].includes(
-        String(pick(a, ["status", "state"], "")).toLowerCase()
-      )).length + " active or unresolved alert records returned.";
-  } catch (error) {
-    body.innerHTML = '<tr><td colspan="4" class="empty">Unable to load alerts. Verify the alerts endpoint.</td></tr>';
-    console.error(error);
-  }
-}
-
-async function loadGateLogs() {
-  await loadGenericTable(
-    ["/api/gate", "/api/gate/logs", "/api/admin/gate"],
-    "gate-rows", 5,
-    item => "<tr>" + cell(pick(item, ["visitor_name", "name", "visitor"])) +
-      cell(pick(item, ["purpose", "visit_purpose"])) +
-      cell(dateText(pick(item, ["entry_time", "check_in", "created_at"], ""))) +
-      cell(dateText(pick(item, ["exit_time", "check_out"], ""))) +
-      cell(pick(item, ["officer_name", "officer", "recorded_by"])) + "</tr>"
-  );
-}
-
-async function loadPatrols() {
-  await loadGenericTable(
-    ["/api/patrol", "/api/patrols", "/api/admin/patrol"],
-    "patrol-rows", 5,
-    item => "<tr>" + cell(pick(item, ["officer_name", "officer"])) +
-      cell(pick(item, ["route_name", "route"])) +
-      cell(pick(item, ["shift", "shift_name"])) +
-      cell(dateText(pick(item, ["start_time", "started_at"], ""))) +
-      statusCell(pick(item, ["status"])) + "</tr>"
-  );
-}
-
-async function loadLostFound() {
-  await loadGenericTable(
-    ["/api/lostfound", "/api/lost-found", "/api/admin/lostfound"],
-    "lostfound-rows", 5,
-    item => "<tr>" + cell(pick(item, ["item_name", "title", "description"])) +
-      cell(pick(item, ["type", "item_type", "report_type"])) +
-      cell(pick(item, ["location_name", "location"])) +
-      cell(dateText(pick(item, ["created_at", "reported_at"], ""))) +
-      statusCell(pick(item, ["status"])) + "</tr>"
-  );
-}
-
-async function loadUsers() {
-  await loadGenericTable(
-    ["/api/admin/users", "/api/users"],
-    "user-rows", 4,
-    item => "<tr>" + cell(pick(item, ["full_name", "name", "username"])) +
-      cell(pick(item, ["email"])) + cell(pick(item, ["role", "role_name"])) +
-      statusCell(pick(item, ["status", "account_status"], "Registered")) + "</tr>"
-  );
-}
-
-async function loadAuditLogs() {
-  await loadGenericTable(
-    ["/api/admin/audit-logs", "/api/audit-logs", "/api/admin/audit"],
-    "audit-rows", 5,
-    item => "<tr>" + cell(dateText(pick(item, ["created_at", "timestamp", "action_time"], ""))) +
-      cell(pick(item, ["user_name", "username", "actor"])) +
-      cell(pick(item, ["action", "event_type"])) +
-      cell(pick(item, ["entity_type", "resource"])) +
-      cell(pick(item, ["details", "description", "message"])) + "</tr>"
-  );
-}
-
-async function loadGenericTable(paths, targetId, columns, renderRow) {
-  const body = document.getElementById(targetId);
-  body.innerHTML = '<tr><td colspan="' + columns + '" class="empty">Loading...</td></tr>';
-  try {
-    const payload = await tryEndpoints(paths);
-    const items = normalisePayload(payload);
-    body.innerHTML = items.length ? items.map(renderRow).join("") :
-      '<tr><td colspan="' + columns + '" class="empty">No records returned.</td></tr>';
-  } catch (error) {
-    body.innerHTML = '<tr><td colspan="' + columns + '" class="empty">This endpoint is not yet connected or the route is different.</td></tr>';
-    console.error(targetId, error);
-  }
-}
-
-function exportIncidentsCSV() {
-  if (!state.incidents.length) {
-    showMessage("No incident records are loaded. Load incidents before exporting.");
-    return;
-  }
-
-  const headers = ["Reference", "Category", "Location", "Severity", "Status", "Date"];
-  const rows = state.incidents.map(item => [
-    pick(item, ["reference_no", "referenceNo", "incident_reference", "id", "incident_id"]),
-    pick(item, ["category_name", "category", "name"]),
-    pick(item, ["location_name", "location"]),
-    pick(item, ["severity", "priority"]),
-    pick(item, ["status", "incident_status"]),
-    pick(item, ["incident_datetime", "created_at", "reported_at"])
-  ]);
-
-  const csvValue = value => {
-    let text = String(value ?? "");
-    // Prevent spreadsheet formula injection in exported text cells.
-    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
-    return '"' + text.replace(/"/g, '""') + '"';
+  const titles = {
+    dashboard: "Administrator Dashboard",
+    incidents: "Incident Management",
+    emergency: "Emergency Alerts",
+    gate: "Gate Management",
+    patrol: "Patrol Management",
+    lostfound: "Lost and Found",
+    profile: "Profile Management"
   };
 
-  const csv = [headers, ...rows].map(row => row.map(csvValue).join(",")).join("\r\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "csrs-incidents.csv";
-  link.click();
-  URL.revokeObjectURL(url);
-}
+  function safe(value) {
+    return String(value ?? "—").replace(/[&<>"']/g, char => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;",
+      '"': "&quot;", "'": "&#39;"
+    })[char]);
+  }
 
-document.getElementById("incident-search").addEventListener("input", filterIncidents);
-document.getElementById("incident-status").addEventListener("change", filterIncidents);
+  function value(object, keys, fallback = "—") {
+    for (const key of keys) {
+      if (object && object[key] !== null && object[key] !== undefined &&
+          object[key] !== "") return object[key];
+    }
+    return fallback;
+  }
 
-function filterIncidents() {
-  const query = document.getElementById("incident-search").value.toLowerCase();
-  const status = document.getElementById("incident-status").value.toLowerCase();
+  function rowsFrom(result) {
+    if (Array.isArray(result)) return result;
+    if (!result || typeof result !== "object") return [];
 
-  const filtered = state.incidents.filter(item => {
-    const searchable = [
-      pick(item, ["reference_no", "referenceNo", "incident_reference", "id", "incident_id"], ""),
-      pick(item, ["category_name", "category"], ""),
-      pick(item, ["location_name", "location"], "")
-    ].join(" ").toLowerCase();
-    return searchable.includes(query) &&
-      (!status || String(pick(item, ["status", "incident_status"], "")).toLowerCase() === status);
+    for (const key of ["data", "incidents", "items", "results", "rows", "records"]) {
+      if (Array.isArray(result[key])) return result[key];
+      if (result[key] && typeof result[key] === "object") {
+        for (const nested of ["items", "rows", "results"]) {
+          if (Array.isArray(result[key][nested])) return result[key][nested];
+        }
+      }
+    }
+    return [];
+  }
+
+  function dateValue(input) {
+    if (!input || input === "—") return "—";
+    const date = new Date(input);
+    return Number.isNaN(date.getTime()) ? String(input) : date.toLocaleString();
+  }
+
+  function showError(id, message) {
+    const element = byId(id);
+    element.textContent = message;
+    element.hidden = !message;
+  }
+
+  function showPage(page) {
+    document.querySelectorAll(".page").forEach(element =>
+      element.classList.toggle("active", element.id === "page-" + page)
+    );
+    document.querySelectorAll(".nav button").forEach(button =>
+      button.classList.toggle("active", button.dataset.page === page)
+    );
+    byId("page-title").textContent = titles[page] || "CSRS";
+    byId("account-dropdown").hidden = true;
+
+    if (page === "profile") loadProfile();
+    if (page === "incidents") loadIncidents();
+    if (page === "emergency") loadAlerts();
+    if (page === "gate") loadGate();
+    if (page === "patrol") loadPatrols();
+    if (page === "lostfound") loadLostFound();
+  }
+
+  document.querySelectorAll(".nav button").forEach(button => {
+    button.addEventListener("click", () => showPage(button.dataset.page));
   });
 
-  renderIncidents(filtered, "incident-rows");
-}
+  byId("account-toggle").addEventListener("click", () => {
+    const dropdown = byId("account-dropdown");
+    dropdown.hidden = !dropdown.hidden;
+    byId("account-toggle").setAttribute("aria-expanded", String(!dropdown.hidden));
+  });
 
-// Initial load. Adapt this to your existing authenticated dashboard flow.
-refreshDashboard();
+  document.querySelectorAll("[data-open-profile]").forEach(button => {
+    button.addEventListener("click", () => showPage("profile"));
+  });
+
+  document.addEventListener("click", event => {
+    if (!event.target.closest(".account")) {
+      byId("account-dropdown").hidden = true;
+      byId("account-toggle").setAttribute("aria-expanded", "false");
+    }
+  });
+
+  byId("logout-button").addEventListener("click", () => {
+    if (confirm("Are you sure you want to log out?") && typeof logout === "function") {
+      logout();
+    }
+  });
+
+  /*
+   * IMPORTANT:
+   * These paths are candidates based on the project history, not verified
+   * route definitions. The actual backend routes must be checked if they fail.
+   * The shared api() helper should handle your existing session/token.
+   */
+  async function request(paths) {
+    let lastError;
+
+    for (const path of paths) {
+      try {
+        const result = await api(path);
+        if (result && result.success === false) {
+          throw new Error(result.message || "The API reported a failure.");
+        }
+        return result;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error("No API endpoint could be reached.");
+  }
+
+  function displayUser(user) {
+    if (!user) return;
+    state.user = user;
+
+    const name = value(user, ["full_name", "name", "username"], "User");
+    const role = value(user, ["role", "role_name"], "Account");
+
+    byId("user-name").textContent = name;
+    byId("user-role").textContent = role;
+    byId("avatar").textContent = name.charAt(0).toUpperCase();
+
+    byId("profile-name").value = value(user, ["full_name", "name"], "");
+    byId("profile-email").value = value(user, ["email"], "");
+    byId("profile-phone").value = value(user, ["phone", "phone_number"], "");
+    byId("profile-role").value = role;
+  }
+
+  function loadProfile() {
+    try {
+      const user = typeof getUser === "function" ? getUser() : null;
+      if (user && typeof user.then !== "function") displayUser(user);
+    } catch (error) {
+      console.error("Could not read current user:", error);
+    }
+  }
+
+  function renderIncidents(items, targetId) {
+    const body = byId(targetId);
+
+    if (!items.length) {
+      body.innerHTML = '<tr><td colspan="6" class="empty">No incident records returned by the API.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = items.map(item => {
+      const reference = value(item, ["reference_no", "referenceNo", "incident_id", "id"]);
+      const category = value(item, ["category_name", "category"]);
+      const location = value(item, ["location_name", "location"]);
+      const severity = value(item, ["severity", "priority"]);
+      const status = value(item, ["status", "incident_status"]);
+      const date = dateValue(value(item, ["incident_datetime", "created_at", "reported_at"], ""));
+      return "<tr>" +
+        "<td>" + safe(reference) + "</td>" +
+        "<td>" + safe(category) + "</td>" +
+        "<td>" + safe(location) + "</td>" +
+        "<td>" + safe(severity) + "</td>" +
+        "<td>" + safe(status) + "</td>" +
+        "<td>" + safe(date) + "</td></tr>";
+    }).join("");
+  }
+
+  async function loadIncidents() {
+    byId("incident-rows").innerHTML =
+      '<tr><td colspan="6" class="empty">Loading incidents...</td></tr>';
+
+    try {
+      const result = await request(["/admin/incidents", "/api/admin/incidents", "/incidents", "/api/incidents"]);
+      state.incidents = rowsFrom(result);
+      renderIncidents(state.incidents, "incident-rows");
+      renderIncidents(state.incidents.slice(0, 8), "recent-incidents");
+      if (!state.incidents.length) {
+        byId("recent-incidents").innerHTML =
+          '<tr><td colspan="6" class="empty">The endpoint returned no incident rows.</td></tr>';
+      }
+    } catch (error) {
+      byId("incident-rows").innerHTML =
+        '<tr><td colspan="6" class="empty">Could not load incidents. Check the endpoint and API response.</td></tr>';
+      byId("recent-incidents").innerHTML =
+        '<tr><td colspan="6" class="empty">Incident data is unavailable.</td></tr>';
+      console.error("CSRS incident request failed:", error);
+    }
+  }
+
+  async function loadDashboard() {
+    showError("dashboard-error", "");
+    try {
+      const result = await request(["/admin/dashboard", "/api/admin/dashboard", "/dashboard", "/api/dashboard"]);
+      const stats = result.stats || result.data || result;
+
+      byId("stat-open").textContent =
+        value(stats, ["open_incidents", "openIncidents"]);
+      byId("stat-active").textContent =
+        value(stats, ["active_incidents", "activeIncidents"]);
+      byId("stat-resolved").textContent =
+        value(stats, ["resolved_this_month", "resolvedThisMonth"]);
+      byId("stat-users").textContent =
+        value(stats, ["registered_users", "registeredUsers", "total_users"]);
+
+    } catch (error) {
+      showError("dashboard-error",
+        "Dashboard statistics could not be loaded. Check the actual route, authentication and server logs.");
+      console.error("CSRS dashboard request failed:", error);
+    }
+
+    await loadIncidents();
+  }
+
+  async function loadTable(paths, targetId, colspan, mapper) {
+    const body = byId(targetId);
+    body.innerHTML = '<tr><td colspan="' + colspan + '" class="empty">Loading records...</td></tr>';
+
+    try {
+      const result = await request(paths);
+      const items = rowsFrom(result);
+      body.innerHTML = items.length ? items.map(mapper).join("") :
+        '<tr><td colspan="' + colspan + '" class="empty">No records returned.</td></tr>';
+    } catch (error) {
+      body.innerHTML = '<tr><td colspan="' + colspan + '" class="empty">Could not load records. Verify this feature’s actual backend route.</td></tr>';
+      console.error(targetId + " request failed:", error);
+    }
+  }
+
+  async function loadAlerts() {
+    await loadTable(["/alerts", "/api/alerts", "/admin/alerts", "/api/admin/alerts"],
+      "alert-rows", 4, item => "<tr>" +
+      "<td>" + safe(value(item, ["alert_type", "title", "type", "id"])) + "</td>" +
+      "<td>" + safe(value(item, ["location_name", "location"])) + "</td>" +
+      "<td>" + safe(dateValue(value(item, ["created_at", "triggered_at"], ""))) + "</td>" +
+      "<td>" + safe(value(item, ["status", "state"])) + "</td></tr>");
+  }
+
+  async function loadGate() {
+    await loadTable(["/gate", "/api/gate", "/gate/logs", "/api/gate/logs"],
+      "gate-rows", 4, item => "<tr>" +
+      "<td>" + safe(value(item, ["visitor_name", "name", "visitor"])) + "</td>" +
+      "<td>" + safe(value(item, ["purpose", "visit_purpose"])) + "</td>" +
+      "<td>" + safe(dateValue(value(item, ["entry_time", "check_in"], ""))) + "</td>" +
+      "<td>" + safe(dateValue(value(item, ["exit_time", "check_out"], ""))) + "</td></tr>");
+  }
+
+  async function loadPatrols() {
+    await loadTable(["/patrol", "/api/patrol", "/patrols", "/api/patrols"],
+      "patrol-rows", 4, item => "<tr>" +
+      "<td>" + safe(value(item, ["officer_name", "officer"])) + "</td>" +
+      "<td>" + safe(value(item, ["route_name", "route"])) + "</td>" +
+      "<td>" + safe(value(item, ["shift", "shift_name"])) + "</td>" +
+      "<td>" + safe(value(item, ["status"])) + "</td></tr>");
+  }
+
+  async function loadLostFound() {
+    await loadTable(["/lostfound", "/api/lostfound", "/lost-found", "/api/lost-found"],
+      "lostfound-rows", 4, item => "<tr>" +
+      "<td>" + safe(value(item, ["item_name", "title", "description"])) + "</td>" +
+      "<td>" + safe(value(item, ["type", "item_type", "report_type"])) + "</td>" +
+      "<td>" + safe(value(item, ["location_name", "location"])) + "</td>" +
+      "<td>" + safe(value(item, ["status"])) + "</td></tr>");
+  }
+
+  byId("refresh-button").addEventListener("click", loadDashboard);
+  byId("incident-refresh").addEventListener("click", loadIncidents);
+  byId("alerts-refresh").addEventListener("click", loadAlerts);
+  byId("gate-refresh").addEventListener("click", loadGate);
+  byId("patrol-refresh").addEventListener("click", loadPatrols);
+  byId("lostfound-refresh").addEventListener("click", loadLostFound);
+
+  byId("incident-search").addEventListener("input", event => {
+    const query = event.target.value.toLowerCase();
+    const filtered = state.incidents.filter(item => [
+      value(item, ["reference_no", "referenceNo", "incident_id", "id"], ""),
+      value(item, ["category_name", "category"], ""),
+      value(item, ["location_name", "location"], "")
+    ].join(" ").toLowerCase().includes(query));
+
+    renderIncidents(filtered, "incident-rows");
+  });
+
+  byId("cancel-profile").addEventListener("click", loadProfile);
+
+  byId("profile-form").addEventListener("submit", event => {
+    event.preventDefault();
+    showError("profile-error",
+      "Profile updates are not enabled in this template. Connect this form to your existing authenticated profile-update route before saving.");
+  });
+
+  loadProfile();
+  loadDashboard();
+})();
 </script>
 </body>
 </html>
