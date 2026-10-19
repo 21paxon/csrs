@@ -121,6 +121,18 @@ In development, email, SMS, and subscribed push deliveries are written to the se
 
 For local offline-shell development, the service worker registers on the home and signed-in dashboard pages. It caches app files only; incident and account data are never stored for offline use. Production service-worker installation requires HTTPS.
 
+### Database and evidence backups
+
+Install PostgreSQL client tools (`pg_dump`, `pg_restore`) on the backend host. Run `npm run db:backup` daily from `backend/`, or schedule it with the host's cron/Task Scheduler. Backups contain a custom-format database dump, the private `uploads/` evidence directory, and a manifest; they are written to `CSRS_BACKUP_DIR` or `backend/backups/` and pruned after `BACKUP_RETENTION_DAYS` (default 30). Keep the backup directory on encrypted storage with access limited to administrators.
+
+Restore only to the intended database after verifying `DATABASE_URL` and placing the backup's evidence into an empty uploads directory. The restore command requires the explicit `RESTORE_CONFIRM=I_UNDERSTAND_THIS_REPLACES_DATABASE` environment value because `pg_restore --clean` replaces database objects:
+
+```bash
+RESTORE_CONFIRM=I_UNDERSTAND_THIS_REPLACES_DATABASE npm run db:restore -- /secure/backups/csrs-YYYY-MM-DDTHH-MM-SS-sssZ
+```
+
+On PowerShell, set `$env:RESTORE_CONFIRM` to the same value before running the command. A restore drill against a disposable database has not yet been run; verify the recovered database and evidence before relying on a backup.
+
 **Who sees which incidents:** Admin, HoS, CM and Dean see all; a Security Officer sees cases assigned to them; everyone else sees only their own reports. Anonymous reports store no reporter, and the access code is stored only as a hash.
 
 ## Checking that everything works
