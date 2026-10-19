@@ -22,13 +22,14 @@ async function loadUser(req) {
   const payload = jwt.verify(token, config.jwtSecret);
 
   const { rows } = await db.query(
-    `SELECT id, username, role
+    `SELECT id, username, role, auth_version
        FROM users
       WHERE id = $1 AND is_active = TRUE`,
     [payload.sub]
   );
 
   if (!rows[0]) return null;
+  if (Number(rows[0].auth_version || 0) !== Number(payload.ver || 0)) return null;
 
   return {
     id: rows[0].id,

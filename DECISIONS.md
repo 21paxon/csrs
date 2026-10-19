@@ -12,6 +12,7 @@
 - Anonymous incident audit events retain the action and incident record reference, but omit actor username and IP. The report row itself does not retain reporter identity for anonymous submissions.
 - The current roster schema has no expected time per checkpoint. A checkpoint is marked missed after its roster's shift end, then notified once per roster/checkpoint pair.
 - Email, SMS and browser-push delivery are implemented behind configurable HTTP provider adapters; production credentials and a gateway implementing the documented JSON contract are deployment requirements. Local development logs simulated sends.
+- Password reset mail is queued with encrypted outbox payloads, while reset token hashes are stored in the reset table. The local fake prints the one-hour link to the developer console for manual testing.
 - The initial Kinyarwanda translations are limited to core flows and need fluent review. Untranslated screens stay in English.
 - Requirements remain unchecked until they have been verified. No application, database or browser tests were run during this review.
 

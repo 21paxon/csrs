@@ -250,7 +250,8 @@ router.post('/:id/reset-password', async (req, res, next) => {
           SET password_hash = $1,
               must_change_password = TRUE,
               failed_attempts = 0,
-              locked_until = NULL
+              locked_until = NULL,
+              auth_version = auth_version + 1
         WHERE id = $2
         RETURNING id, username, email, role`,
       [passwordHash, id]

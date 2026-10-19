@@ -5,6 +5,8 @@ const role = roleOf();
 const canReview = ["admin", "head_security", "security_officer"].includes(role);
 const canAssign = ["admin", "head_security"].includes(role);
 let selectedIncident = null;
+let incidentMap;
+let mapMarker;
 
 mountShell({ current: "incidents" });
 
@@ -183,12 +185,62 @@ async function loadReferenceData() {
     ]);
     addOptions($("category"), categories, "Select category");
     addOptions($("location"), locations, "Select location");
-    if (!categories.length || !locations.length) {
-      showMessage($("formMessage"), "Some categories or locations have not been configured yet.", "error");
+    if (!categories.length) {
+      showMessage($("formMessage"), "Incident categories have not been configured yet.", "error");
     }
+    initializeIncidentMap(locations);
   } catch (error) {
     showMessage($("formMessage"), "Could not load categories and locations: " + error.message, "error");
   }
+}
+
+function initializeIncidentMap(locations) {
+  if (!window.L || !$('incidentMap')) return;
+  const mapped = locations.filter((location) => Number.isFinite(Number(location.lat)) && Number.isFinite(Number(location.lng)));
+  const center = mapped.length
+    ? [Number(mapped[0].lat), Number(mapped[0].lng)]
+    : [-1.5, 29.6];
+  incidentMap = L.map('incidentMap').setView(center, mapped.length ? 15 : 9);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(incidentMap);
+  mapped.forEach((location) => L.marker([Number(location.lat), Number(location.lng)])
+    .bindPopup(location.name).addTo(incidentMap));
+  incidentMap.on('click', (event) => setMapPoint(event.latlng.lat, event.latlng.lng));
+  $('location').addEventListener('change', () => {
+    $('mapLat').value = '';
+    $('mapLng').value = '';
+    $('mapLocationStatus').textContent = $('location').value
+      ? 'Configured campus location selected.'
+      : 'Choose a configured campus location or tap the map.';
+    if (mapMarker) { incidentMap.removeLayer(mapMarker); mapMarker = null; }
+  });
+  $('useCurrentLocation').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      $('mapLocationStatus').textContent = 'This browser does not provide location access.';
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        incidentMap.setView([latitude, longitude], 17);
+        setMapPoint(latitude, longitude);
+      },
+      () => { $('mapLocationStatus').textContent = 'Location was not available. Choose a point on the map or select a campus location.'; },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  });
+  window.setTimeout(() => incidentMap.invalidateSize(), 0);
+}
+
+function setMapPoint(lat, lng) {
+  $('location').value = '';
+  $('mapLat').value = String(lat);
+  $('mapLng').value = String(lng);
+  $('mapLocationStatus').textContent = `Map point selected: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  if (mapMarker) incidentMap.removeLayer(mapMarker);
+  mapMarker = L.marker([lat, lng]).addTo(incidentMap).bindPopup('Selected incident location');
 }
 
 async function loadIncidents() {
@@ -248,8 +300,10 @@ $("incidentForm").addEventListener("submit", async (event) => {
 
     const categoryId = $("category").value;
     const locationId = $("location").value;
+    const lat = $("mapLat").value;
+    const lng = $("mapLng").value;
     const description = $("description").value.trim();
-    if (!categoryId || !locationId) throw new Error("Please select a category and location.");
+    if (!categoryId || (!locationId && (!lat || !lng))) throw new Error("Please select a category and a campus location or map point.");
     if (!description) throw new Error("Please enter an incident description.");
 
     const files = $("evidence").files;
@@ -259,6 +313,7 @@ $("incidentForm").addEventListener("submit", async (event) => {
       const form = new FormData();
       form.append("category_id", categoryId);
       form.append("location_id", locationId);
+      if (lat && lng) { form.append("lat", lat); form.append("lng", lng); form.append("location_text", "Map pin"); }
       form.append("incident_datetime", new Date(dateValue).toISOString());
       form.append("severity", $("severity").value);
       form.append("description", description);
@@ -271,6 +326,7 @@ $("incidentForm").addEventListener("submit", async (event) => {
         body: JSON.stringify({
           category_id: Number(categoryId),
           location_id: Number(locationId),
+          ...(lat && lng ? { lat: Number(lat), lng: Number(lng), location_text: "Map pin" } : {}),
           incident_datetime: new Date(dateValue).toISOString(),
           severity: $("severity").value,
           description,

@@ -99,8 +99,15 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
     const locationId = toInt(b.location_id);
     const severity = b.severity || 'Medium';
 
-    if (!categoryId || !locationId || !b.description || !isDate(b.incident_datetime)) {
-      throw new HttpError(400, 'category_id, location_id, description and a valid incident_datetime are required');
+    const lat = b.lat == null || b.lat === '' ? null : Number(b.lat);
+    const lng = b.lng == null || b.lng === '' ? null : Number(b.lng);
+    const hasValidCoordinates = Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+      Number.isFinite(lng) && lng >= -180 && lng <= 180;
+    if (!categoryId || (!locationId && !hasValidCoordinates) || !b.description || !isDate(b.incident_datetime)) {
+      throw new HttpError(400, 'Select a category, choose a campus location or map point, enter a description and provide a valid incident time.');
+    }
+    if ((lat !== null || lng !== null) && !hasValidCoordinates) {
+      throw new HttpError(400, 'The map location is invalid. Select a valid point on the map.');
     }
     if (!SEVERITIES.includes(severity)) {
       throw new HttpError(400, `severity must be one of: ${SEVERITIES.join(', ')}`);
@@ -111,7 +118,7 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
       ? crypto.randomBytes(5).toString('hex').toUpperCase()
       : null;
     const accessHash = accessCode ? await bcrypt.hash(accessCode, 10) : null;
-    const dueHours = { Critical: 4, High: 12, Medium: 48, Low: 168 }[severity] || 48;
+    const dueMinutes = { Critical: 5, High: 30, Medium: 240, Low: 2880 }[severity] || 240;
 
     const client = await db.pool.connect();
     let incident;
@@ -124,16 +131,17 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
 
       const ins = await client.query(
         `INSERT INTO incidents
-          (reference_no, category_id, location_id, description,
+          (reference_no, category_id, location_id, location_text, lat, lng, description,
            incident_datetime, reporter_id, is_anonymous,
            access_code_hash, severity, status, due_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Submitted',
-                 CURRENT_TIMESTAMP + make_interval(hours => $10))
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Submitted',
+                 CURRENT_TIMESTAMP + make_interval(mins => $13))
          RETURNING id, reference_no, severity, status, due_at`,
         [
-          ref, categoryId, locationId, b.description,
-          b.incident_datetime, anonymous ? null : req.user.id,
-          anonymous, accessHash, severity, dueHours
+          ref, categoryId, locationId || null, b.location_text || (hasValidCoordinates ? 'Map pin' : null),
+          hasValidCoordinates ? lat : null, hasValidCoordinates ? lng : null,
+          b.description, b.incident_datetime, anonymous ? null : req.user.id,
+          anonymous, accessHash, severity, dueMinutes
         ]
       );
 

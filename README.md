@@ -153,6 +153,7 @@ It creates test users and walks through every module (about 60 checks) and print
 ### Remaining implementation and deployment work
 
 - Email/SMS and push delivery use retryable provider adapters. Configure the college's real provider endpoints and VAPID/web-push gateway before production; development uses a console fake.
+- Password reset links use a hashed, one-hour token and invalidate existing sessions. The development email fake prints reset links to the backend console; production needs `EMAIL_API_URL` and `PUBLIC_APP_URL` configured.
 - The PWA caches its app shell only. Offline incident submission and background data sync are intentionally not enabled.
 - The language switcher translates the main reporting and emergency flows; other screens still contain English text. Kinyarwanda strings need fluent review.
 - The original SRS document, a real PostgreSQL migration/restore run, cross-browser acceptance, accessibility review, performance/load results and security test results remain outstanding.

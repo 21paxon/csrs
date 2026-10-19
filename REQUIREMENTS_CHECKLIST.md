@@ -45,5 +45,6 @@ Source: supplied CSRS Codex build prompt (the SRS and its original `schema.sql` 
 - Added PDF/XLSX export and report types for individual incidents, summaries, emergency alerts, response time, disciplinary referrals, and officer performance. Spreadsheet strings are protected from formula execution.
 - Added a service-worker app shell, manifest, and an initial English/Kinyarwanda switch for core reporting/emergency flows.
 - Added database/evidence backup and guarded restore scripts, retention pruning, backup status records and an Admin status view.
+- Added public password-reset request and completion pages; reset tokens are hashed, one-hour/one-use, email payloads are encrypted in the outbox, and reset/admin password changes revoke prior JWT sessions.
 
 These changes have not been test-run against PostgreSQL or in a browser; the corresponding requirement boxes remain unchecked. JavaScript syntax checks and `git diff --check` passed. `npm install` added the export libraries and reported two moderate dependency advisories.

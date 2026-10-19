@@ -37,7 +37,7 @@ if (requireAuth()) {
       }
 
       const user = getUser();
-      setSession(window.CSRS.getToken(), { ...user, mustChangePassword: false });
+      setSession(data.token || window.CSRS.getToken(), { ...user, mustChangePassword: false });
       message.textContent = "Password updated successfully.";
       message.className = "form-message success";
       window.setTimeout(() => {

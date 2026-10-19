@@ -4,11 +4,13 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 const db = require('../db');
 const config = require('../config');
 const { authenticate } = require('../middleware/auth');
 const { audit } = require('../utils/audit');
+const { queueSensitiveEmail } = require('../utils/notify');
 
 const router = express.Router();
 const MAX_FAILED_ATTEMPTS = 5;
@@ -51,6 +53,13 @@ const registerLimiter = rateLimit({
   message: {
     error: 'Too many registration attempts. Please try again later.'
   }
+});
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset attempts. Try again later.' }
 });
 
 // ==================================================
@@ -171,6 +180,106 @@ router.post('/register', registerLimiter, async (req, res, next) => {
 // LOGIN
 // POST /api/auth/login
 // ==================================================
+router.post('/forgot-password', passwordResetLimiter, async (req, res, next) => {
+  try {
+    const identifier = String(req.body?.identifier || req.body?.email || '').trim();
+    const { rows } = await db.query(
+      `SELECT id, email FROM users
+        WHERE is_active = TRUE AND (email = $1 OR username = $1 OR reg_no = $1)
+        LIMIT 1`,
+      [identifier]
+    );
+    if (rows[0] && identifier) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const client = await db.pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          `UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND used_at IS NULL`,
+          [rows[0].id]
+        );
+        await client.query(
+          `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+           VALUES ($1, $2, CURRENT_TIMESTAMP + INTERVAL '1 hour')`,
+          [rows[0].id, tokenHash]
+        );
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+      const appUrl = String(process.env.PUBLIC_APP_URL || config.frontendOrigins[0] || '').replace(/\/$/, '');
+      await queueSensitiveEmail(
+        rows[0].id,
+        'Reset your CSRS password',
+        `Use this one-time link within one hour: ${appUrl}/reset-password.html#token=${token}`
+      );
+    }
+    await audit(req, { action: 'REQUEST PASSWORD RESET', targetTable: 'users', status: 'Accepted' });
+    return res.json({ message: 'If the account is active, a password reset link will be sent to its registered email address.' });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
+  const token = String(req.body?.token || '').trim();
+  const password = req.body?.password;
+  if (!/^[a-f0-9]{64}$/i.test(token) || typeof password !== 'string' || password.length < 12 || password.length > 128) {
+    return res.status(400).json({ error: 'Enter a valid reset link and a password of 12 to 128 characters.' });
+  }
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  let client;
+  try {
+    const passwordHash = await bcrypt.hash(password, 12);
+    client = await db.pool.connect();
+    await client.query('BEGIN');
+    const result = await client.query(
+      `SELECT id, user_id FROM password_reset_tokens
+        WHERE token_hash = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+        FOR UPDATE`,
+      [tokenHash]
+    );
+    if (!result.rows[0]) throw new Error('Invalid reset token');
+    const reset = result.rows[0];
+    await client.query(
+      `UPDATE users SET password_hash = $1, must_change_password = FALSE,
+                         failed_attempts = 0, locked_until = NULL,
+                         auth_version = auth_version + 1
+        WHERE id = $2
+        RETURNING auth_version`,
+      [passwordHash, reset.user_id]
+    );
+    await client.query(
+      `UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1 AND used_at IS NULL`,
+      [reset.user_id]
+    );
+    await client.query('COMMIT');
+    await audit(req, {
+      userId: reset.user_id,
+      action: 'RESET PASSWORD',
+      targetTable: 'users',
+      recordId: reset.user_id
+    });
+    return res.json({ message: 'Password updated. Sign in with your new password.' });
+  } catch (err) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+    }
+    if (err.message === 'Invalid reset token') {
+      return res.status(400).json({ error: 'This reset link is invalid or has expired. Request a new link.' });
+    }
+    return next(err);
+  } finally {
+    client?.release();
+  }
+});
+
 router.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const { username, password } = req.body || {};
@@ -190,8 +299,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
     const { rows } = await db.query(
       `SELECT id, full_name, username, email, reg_no, password_hash, is_active, role,
-              failed_attempts, locked_until, must_change_password
-       FROM users
+              failed_attempts, locked_until, must_change_password, auth_version
+      FROM users
        WHERE username = $1 OR email = $1 OR reg_no = $1
        LIMIT 1`,
       [loginName]
@@ -249,7 +358,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       {
         sub: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        ver: Number(user.auth_version || 0)
       },
       config.jwtSecret,
       {
@@ -367,14 +477,23 @@ router.post('/change-password', authenticate, async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await db.query(
+    const update = await db.query(
       `UPDATE users
           SET password_hash = $1,
               must_change_password = FALSE,
               failed_attempts = 0,
-              locked_until = NULL
-        WHERE id = $2`,
+              locked_until = NULL,
+              auth_version = auth_version + 1
+        WHERE id = $2
+        RETURNING auth_version`,
       [passwordHash, req.user.id]
+    );
+
+    const token = jwt.sign(
+      { sub: req.user.id, username: req.user.username, role: req.user.role,
+        ver: Number(update.rows?.[0]?.auth_version || 0) },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
     );
 
     await audit(req, {
@@ -385,7 +504,8 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     });
 
     return res.json({
-      message: 'Password updated successfully.'
+      message: 'Password updated successfully.',
+      token
     });
   } catch (err) {
     return next(err);
