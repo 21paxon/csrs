@@ -1092,7 +1092,10 @@ async function submitLostFound(event) {
     showMessage("Property record saved.");
     await loadLostFound();
   } catch (error) {
-    showMessage(`Unable to save record: ${error.message}`, "error");
+    const detail = error.message === "Not found"
+      ? `The live server is missing POST ${route}. Deploy the latest backend code, then retry.`
+      : error.message;
+    showMessage(`Unable to save record: ${detail}`, "error");
   }
 }
 
