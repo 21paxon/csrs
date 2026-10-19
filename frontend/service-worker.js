@@ -1,4 +1,4 @@
-const CACHE_NAME = 'csrs-shell-v1';
+const CACHE_NAME = 'csrs-shell-v2';
 const SHELL = [
   '/home.html', '/incidents.html', '/emergency.html', '/forgot-password.html', '/reset-password.html',
   '/student-dashboard.html', '/dashboard.html',
@@ -35,7 +35,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
+  // Prefer the deployed asset while online; old cache-first entries kept
+  // dashboard fixes and language resources stale for returning users.
+  event.respondWith(fetch(request).then((response) => {
+    if (response.ok) {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+    }
+    return response;
+  }).catch(async () => (await caches.match(request)) || Response.error()));
 });
 
 self.addEventListener('push', (event) => {

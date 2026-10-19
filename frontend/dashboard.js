@@ -47,6 +47,24 @@ const PAGE_INFO = {
   profile: ["My Profile", "View account information"]
 };
 
+const PAGE_I18N = {
+  overview: ["dashboard_overview", "dashboard_overview_description"],
+  users: ["dashboard_users", "dashboard_users_description"],
+  incidents: ["dashboard_incidents", "dashboard_incidents_description"],
+  "lost-found": ["dashboard_lost_found", "dashboard_lost_found_description"],
+  emergency: ["dashboard_emergency", "dashboard_emergency_description"],
+  gate: ["dashboard_gate", "dashboard_gate_description"],
+  visitors: ["dashboard_visitors", "dashboard_visitors_description"],
+  patrols: ["dashboard_patrols", "dashboard_patrols_description"],
+  reports: ["dashboard_reports", "dashboard_reports_description"],
+  "audit-logs": ["dashboard_audit_logs", "dashboard_audit_logs_description"],
+  profile: ["dashboard_profile", "dashboard_profile_description"]
+};
+
+function translated(key, fallback) {
+  return window.CSRS_TRANSLATIONS?.[key] || fallback;
+}
+
 const PAGE_ENDPOINTS = {
   dashboard: ROUTES.dashboard || "/api/dashboard",
   incidents: ROUTES.incidents || "/api/incidents",
@@ -364,12 +382,13 @@ function showPage(page, updateHash = true) {
   });
 
   const [title, subtitle] = PAGE_INFO[page];
+  const [titleKey, subtitleKey] = PAGE_I18N[page] || [];
 
-  if ($("pageTitle")) $("pageTitle").textContent = title;
-  if ($("breadcrumbPage")) $("breadcrumbPage").textContent = title;
+  if ($("pageTitle")) $("pageTitle").textContent = translated(titleKey, title);
+  if ($("breadcrumbPage")) $("breadcrumbPage").textContent = translated(titleKey, title);
 
   const description = document.querySelector(`#page-${page} .page-description`);
-  if (description && subtitle) description.textContent = subtitle;
+  if (description && subtitle) description.textContent = translated(subtitleKey, subtitle);
 
   closeMobileSidebar();
 
