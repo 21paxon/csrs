@@ -1,4 +1,6 @@
 const db = require('../db');
+const crypto = require('crypto');
+const config = require('../config');
 
 const CHANNELS = [
   { channel: 'email', endpoint: 'EMAIL_API_URL', token: 'EMAIL_API_KEY', field: 'email' },
@@ -116,4 +118,34 @@ async function notifyOnDutyOfficers(title, message, type = 'emergency', link = n
   return rows.length;
 }
 
-module.exports = { notify, notifyRoles, notifyOnDutyOfficers };
+function encryptSensitivePayload(payload) {
+  const key = crypto.createHash('sha256').update(config.jwtSecret).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()
+  ]);
+  return {
+    encrypted: true,
+    iv: iv.toString('base64'),
+    tag: cipher.getAuthTag().toString('base64'),
+    data: encrypted.toString('base64')
+  };
+}
+
+async function queueSensitiveEmail(userId, title, message) {
+  const { rows } = await db.query(
+    'SELECT email FROM users WHERE id = $1 AND is_active = TRUE',
+    [userId]
+  );
+  if (!rows[0]?.email) return;
+  await db.query(
+    `INSERT INTO notification_queue (channel, recipient, payload)
+     VALUES ('email', $1, $2::jsonb)`,
+    [rows[0].email, JSON.stringify(encryptSensitivePayload({
+      title, message, type: 'account', user_id: userId, sensitive: true
+    }))]
+  );
+}
+
+module.exports = { notify, notifyRoles, notifyOnDutyOfficers, queueSensitiveEmail, encryptSensitivePayload };
