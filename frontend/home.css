@@ -1178,7 +1178,12 @@ h1, h2 {
 .response-step strong, .response-step small { display: block; }
 .response-step strong { color: var(--rp-blue-dark); font-size: 13px; }
 .response-step small { color: var(--muted); font-size: 11px; }
-.nav-links .csrs-header-controls { margin-left: 2px; }
+.header-container .csrs-header-controls {
+  margin-left: auto;
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+.header-container .csrs-header-controls button { box-shadow: none; }
 
 @media (max-width: 760px) {
   .hero-container { min-height: auto; padding-top: 48px; padding-bottom: 48px; }
@@ -1187,5 +1192,11 @@ h1, h2 {
   .response-step { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
   .response-step:last-child { padding-bottom: 0; border-bottom: 0; }
   .security-panel, .module-card { padding: 22px; }
-  .nav-links .csrs-header-controls { margin-left: 0; }
+  .header-container .csrs-header-controls {
+    width: 100%;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 4px 0 0;
+    border: 0;
+  }
 }

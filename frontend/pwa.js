@@ -6,7 +6,7 @@
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'csrsLanguageToggle';
-  button.style.cssText = 'border:1px solid #d9e2ef;border-radius:8px;padding:.55rem .8rem;background:#fff;color:#123b70;font:600 13px system-ui;cursor:pointer';
+  button.style.cssText = 'border:1px solid #cbd7e5;border-radius:7px;padding:.48rem .72rem;background:#fff;color:#123b70;font:600 12px system-ui;cursor:pointer;min-height:36px';
   button.setAttribute('aria-label', 'Change language');
   document.body.appendChild(button);
 
@@ -28,10 +28,10 @@
   pushStatus.style.cssText = 'display:none;grid-column:1/-1;max-width:340px;color:#8f1d18;font:500 12px/1.4 system-ui';
   controls.appendChild(pushStatus);
   const dashboardHeader = document.querySelector('.topbar-right');
-  const siteNavigation = document.querySelector('.header-container .nav-links');
+  const siteHeader = document.querySelector('.header-container');
   const dashboardTopbar = document.querySelector('.topbar');
   if (dashboardHeader) dashboardHeader.prepend(controls);
-  else if (siteNavigation) siteNavigation.appendChild(controls);
+  else if (siteHeader) siteHeader.appendChild(controls);
   else if (dashboardTopbar) dashboardTopbar.appendChild(controls);
   else {
     controls.style.cssText += ';position:fixed;left:1rem;bottom:1rem;z-index:9999;padding:.35rem;background:#f4f7fb;border-radius:10px;box-shadow:0 2px 12px #0003';
