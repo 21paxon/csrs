@@ -9,6 +9,38 @@ const { audit } = require('../utils/audit');
 const router = express.Router();
 router.use(authenticate);
 
+router.post('/push-subscriptions', wrap(async (req, res) => {
+  const subscription = req.body?.subscription || req.body;
+  const endpoint = String(subscription?.endpoint || '').trim();
+  const p256dh = String(subscription?.keys?.p256dh || '').trim();
+  const auth = String(subscription?.keys?.auth || '').trim();
+  let parsed;
+  try { parsed = new URL(endpoint); } catch (_) {
+    throw new HttpError(400, 'A valid push subscription endpoint is required');
+  }
+  if (parsed.protocol !== 'https:' || !p256dh || !auth || endpoint.length > 2048) {
+    throw new HttpError(400, 'A secure push endpoint and subscription keys are required');
+  }
+  await db.query(
+    `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (endpoint) DO UPDATE
+       SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+    [req.user.id, endpoint, p256dh, auth]
+  );
+  res.status(201).json({ subscribed: true });
+}));
+
+router.delete('/push-subscriptions', wrap(async (req, res) => {
+  const endpoint = String(req.body?.endpoint || '').trim();
+  if (!endpoint) throw new HttpError(400, 'endpoint is required');
+  const result = await db.query(
+    'DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2',
+    [req.user.id, endpoint]
+  );
+  res.json({ removed: result.rowCount > 0 });
+}));
+
 router.get('/', wrap(async (req, res) => {
   const { limit, offset } = paging(req);
   const unreadOnly = toBool(req.query.unread);

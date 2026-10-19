@@ -18,7 +18,7 @@ async function persistNotifications(recipients, title, message, type, link) {
     );
 
     for (const channel of CHANNELS) {
-      if (!process.env[channel.endpoint]) continue;
+      if (!process.env[channel.endpoint] && process.env.NODE_ENV === 'production') continue;
       const eligible = recipients.filter((u) => u[channel.field]);
       if (!eligible.length) continue;
       const values = [];
@@ -36,7 +36,7 @@ async function persistNotifications(recipients, title, message, type, link) {
         params
       );
     }
-    if (process.env.PUSH_API_URL) {
+    if (process.env.PUSH_API_URL || process.env.NODE_ENV !== 'production') {
       const { rows: subscriptions } = await client.query(
         `SELECT user_id, endpoint, p256dh, auth
            FROM push_subscriptions WHERE user_id = ANY($1::int[])`,
@@ -103,4 +103,17 @@ async function notifyRoles(roleNames, title, message, type = 'info', link = null
   await persistNotifications(rows, title, message, type, link);
 }
 
-module.exports = { notify, notifyRoles };
+async function notifyOnDutyOfficers(title, message, type = 'emergency', link = null) {
+  const { rows } = await db.query(
+    `SELECT DISTINCT u.id, u.email, u.phone
+       FROM users u
+       JOIN duty_rosters d ON d.officer_id = u.id
+      WHERE u.role = $1 AND u.is_active = TRUE
+        AND d.start_at <= CURRENT_TIMESTAMP AND d.end_at >= CURRENT_TIMESTAMP`,
+    ['security_officer']
+  );
+  await persistNotifications(rows, title, message, type, link);
+  return rows.length;
+}
+
+module.exports = { notify, notifyRoles, notifyOnDutyOfficers };

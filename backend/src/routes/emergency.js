@@ -13,7 +13,7 @@ const {
   paging,
   HttpError
 } = require('../utils/helpers');
-const { notifyRoles } = require('../utils/notify');
+const { notifyRoles, notifyOnDutyOfficers } = require('../utils/notify');
 const { audit } = require('../utils/audit');
 
 const router = express.Router();
@@ -63,9 +63,14 @@ router.post(
     await notifyRoles(
       [
         ROLES.ADMIN,
-        ROLES.HEAD_OF_SECURITY,
-        ROLES.SECURITY_OFFICER
+        ROLES.HEAD_OF_SECURITY
       ],
+      'EMERGENCY ALERT',
+      `Panic alert #${alert.id} from ${req.user.username}.${location}`,
+      'emergency',
+      `/emergency/${alert.id}`
+    );
+    await notifyOnDutyOfficers(
       'EMERGENCY ALERT',
       `Panic alert #${alert.id} from ${req.user.username}.${location}`,
       'emergency',

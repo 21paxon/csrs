@@ -1,0 +1,19 @@
+{
+  "name": "Campus Security and Reporting System",
+  "short_name": "CSRS",
+  "description": "Campus safety reporting and emergency response for Rwanda Polytechnic Musanze College.",
+  "lang": "en",
+  "start_url": "/home.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#123b70",
+  "icons": [
+    {
+      "src": "/icons/csrs-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

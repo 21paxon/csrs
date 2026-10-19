@@ -1,5 +1,5 @@
 const db = require('../db');
-const { notifyRoles } = require('../utils/notify');
+const { notifyRoles, notifyOnDutyOfficers } = require('../utils/notify');
 const { ROLES } = require('../middleware/auth');
 
 const RETRY_LIMIT = 10;
@@ -13,6 +13,10 @@ async function deliver(job) {
   }[job.channel];
   const [urlKey, tokenKey] = config;
   const endpoint = process.env[urlKey];
+  if (!endpoint && process.env.NODE_ENV !== 'production') {
+    console.log(`[CSRS ${job.channel} fake] ${job.recipient}: ${job.payload.title} — ${job.payload.message}`);
+    return;
+  }
   if (!endpoint) throw new Error(`${job.channel} delivery is not configured`);
   const headers = { 'content-type': 'application/json' };
   if (process.env[tokenKey]) headers.authorization = `Bearer ${process.env[tokenKey]}`;
@@ -83,7 +87,13 @@ async function repeatUnacknowledgedAlerts() {
       ? 'Location is unknown.'
       : `Location: ${alert.lat}, ${alert.lng}.`;
     await notifyRoles(
-      [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY, ROLES.SECURITY_OFFICER],
+      [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY],
+      'UNACKNOWLEDGED EMERGENCY ALERT',
+      `Emergency alert #${alert.id} remains unacknowledged. ${position}`,
+      'emergency',
+      `/emergency/${alert.id}`
+    );
+    await notifyOnDutyOfficers(
       'UNACKNOWLEDGED EMERGENCY ALERT',
       `Emergency alert #${alert.id} remains unacknowledged. ${position}`,
       'emergency',
