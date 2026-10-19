@@ -27,6 +27,7 @@ async function deliver(job) {
   if (!endpoint && process.env.NODE_ENV !== 'production') {
     if (payload.sensitive) {
       console.log(`[CSRS DEV ONLY ${job.channel} fake] ${job.recipient}: ${payload.message}`);
+      return;
     }
     console.log(`[CSRS ${job.channel} fake] ${job.recipient}: ${job.payload.title} — ${job.payload.message}`);
     return;
