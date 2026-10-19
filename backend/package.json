@@ -8,6 +8,8 @@
     "dev": "node --watch src/server.js",
     "db:init": "node scripts/init-db.js",
     "db:migrate": "node scripts/migrate-db.js",
+    "db:backup": "node scripts/backup.js",
+    "db:restore": "node scripts/restore.js",
     "seed:admin": "node scripts/seed-admin.js",
     "smoke": "node scripts/smoke-test.js"
   },

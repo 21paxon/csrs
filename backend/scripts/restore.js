@@ -11,6 +11,8 @@ if (!backupFolder || !databaseUrl) {
 if (process.env.RESTORE_CONFIRM !== 'I_UNDERSTAND_THIS_REPLACES_DATABASE') {
   throw new Error('Restore stopped. Set RESTORE_CONFIRM=I_UNDERSTAND_THIS_REPLACES_DATABASE after checking the target database.');
 }
+const evidenceSource = path.join(backupFolder, 'evidence');
+const evidenceTarget = path.join(__dirname, '..', 'uploads');
 
 function run(command, args, env = process.env) {
   return new Promise((resolve, reject) => {
@@ -25,18 +27,24 @@ function run(command, args, env = process.env) {
 (async () => {
   const dump = path.join(backupFolder, 'database.dump');
   await fs.access(dump);
-  await run('pg_restore', [
-    '--clean', '--if-exists', '--no-owner', '--dbname', databaseUrl, dump
-  ]);
-  const backupEvidence = path.join(backupFolder, 'evidence');
+  let evidenceNames = [];
   try {
-    await fs.cp(backupEvidence, path.join(__dirname, '..', 'uploads'), {
+    evidenceNames = await fs.readdir(evidenceSource);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+  await fs.mkdir(evidenceTarget, { recursive: true });
+  const existingEvidence = await fs.readdir(evidenceTarget);
+  if (evidenceNames.length && existingEvidence.length) {
+    throw new Error('Restore stopped before database changes: restore evidence into an empty uploads directory.');
+  }
+  await run('pg_restore', [
+    '--clean', '--if-exists', '--no-owner', dump
+  ], { ...process.env, PGDATABASE: databaseUrl });
+  for (const name of evidenceNames) {
+    await fs.cp(path.join(evidenceSource, name), path.join(evidenceTarget, name), {
       recursive: true, force: false, errorOnExist: true
     });
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw new Error(`Database restored; evidence restore stopped: ${err.message}. Restore into an empty uploads directory.`);
-    }
   }
   process.stdout.write(`Restore completed from ${backupFolder}\n`);
 })().catch((err) => {
