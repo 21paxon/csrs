@@ -34,6 +34,19 @@ const SEE_ALL = [
 ];
 const MANAGE = [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY];
 
+function responseDueAt(severity, now = new Date()) {
+  const minutes = { Critical: 5, High: 30, Medium: 240 }[severity];
+  if (minutes) return new Date(now.getTime() + minutes * 60000);
+  const due = new Date(now);
+  let workingDays = 0;
+  while (workingDays < 2) {
+    due.setUTCDate(due.getUTCDate() + 1);
+    const weekday = due.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) workingDays += 1;
+  }
+  return due;
+}
+
 const SELECT_INCIDENT = `
   SELECT i.id, i.reference_no,
          c.name AS category,
@@ -118,7 +131,7 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
       ? crypto.randomBytes(5).toString('hex').toUpperCase()
       : null;
     const accessHash = accessCode ? await bcrypt.hash(accessCode, 10) : null;
-    const dueMinutes = { Critical: 5, High: 30, Medium: 240, Low: 2880 }[severity] || 240;
+    const dueAt = responseDueAt(severity);
 
     const client = await db.pool.connect();
     let incident;
@@ -135,13 +148,13 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
            incident_datetime, reporter_id, is_anonymous,
            access_code_hash, severity, status, due_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Submitted',
-                 CURRENT_TIMESTAMP + make_interval(mins => $13))
+                 $13)
          RETURNING id, reference_no, severity, status, due_at`,
         [
           ref, categoryId, locationId || null, b.location_text || (hasValidCoordinates ? 'Map pin' : null),
           hasValidCoordinates ? lat : null, hasValidCoordinates ? lng : null,
           b.description, b.incident_datetime, anonymous ? null : req.user.id,
-          anonymous, accessHash, severity, dueMinutes
+          anonymous, accessHash, severity, dueAt
         ]
       );
 
