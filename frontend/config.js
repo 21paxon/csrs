@@ -1,3 +1,4 @@
+
 window.CSRS_CONFIG = {
   apiBaseUrl: "https://csrs-backend.onrender.com",
 
@@ -14,13 +15,21 @@ window.CSRS_CONFIG = {
   allowAnonymous: true,
   loginPath: "/home.html",
 
-  // Route mappings used by dashboard.js
+  // API routes
   routes: {
     dashboard: "/api/dashboard",
     incidents: "/api/incidents",
     categories: "/api/incident-categories",
     locations: "/api/locations",
     emergency: "/api/emergency",
-    visitors: "/api/gate/on-campus"
+    visitors: "/api/gate/on-campus",
+
+    // Admin user management
+    users: "/api/admin/users",
+    userStats: "/api/admin/users/stats",
+    approveUser: "/api/admin/users/:id/approve",
+    rejectUser: "/api/admin/users/:id/reject",
+    activateUser: "/api/admin/users/:id/activate",
+    deactivateUser: "/api/admin/users/:id/deactivate"
   }
 };
