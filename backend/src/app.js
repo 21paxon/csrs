@@ -122,14 +122,16 @@ app.use(express.urlencoded({
 // --------------------------------------------------
 // Health check
 // --------------------------------------------------
-app.get('/api/health', (req, res) => {
+function health(req, res) {
   res.status(200).json({
     success: true,
     status: 'ok',
     system: 'CSRS',
     timestamp: new Date().toISOString()
   });
-});
+}
+app.get('/health', health);
+app.get('/api/health', health);
 
 // --------------------------------------------------
 // Authentication and user management
