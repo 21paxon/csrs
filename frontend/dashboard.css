@@ -307,22 +307,6 @@ svg {
   font-size: 11px;
 }
 
-.logout-button {
-  width: 100%;
-  padding: 11px;
-  border: 1px solid #46556b;
-  border-radius: 8px;
-  color: #f5c6c6;
-  background: transparent;
-  text-align: left;
-  font-size: 13px;
-  transition: background 0.15s;
-}
-
-.logout-button:hover {
-  background: #29394e;
-}
-
 /* Top navigation */
 
 .topbar {
@@ -370,6 +354,10 @@ svg {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.topbar-logout {
+  white-space: nowrap;
 }
 
 .connection-indicator {
@@ -1224,6 +1212,12 @@ button:disabled {
 
   .topbar-right {
     gap: 7px;
+  }
+
+  .topbar-logout {
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 11px;
   }
 
   .top-profile > span:last-child {

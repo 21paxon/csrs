@@ -1696,11 +1696,12 @@ function setupNavigation() {
     if (PAGE_INFO[page] && page !== state.page) showPage(page, false);
   });
 
-  on("logoutButton", "click", () => {
+  const signOut = () => {
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
     window.location.replace("/home.html");
-  });
+  };
+  on("topLogoutButton", "click", signOut);
 }
 
 function setupIncidentForm() {
