@@ -21,6 +21,12 @@
   controls.style.cssText = 'display:flex;align-items:center;gap:.5rem;flex-wrap:wrap';
   controls.appendChild(button);
   if (sessionStorage.getItem('csrs_token')) controls.appendChild(pushButton);
+  const pushStatus = document.createElement('span');
+  pushStatus.id = 'csrsPushStatus';
+  pushStatus.setAttribute('role', 'status');
+  pushStatus.setAttribute('aria-live', 'polite');
+  pushStatus.style.cssText = 'display:none;grid-column:1/-1;max-width:340px;color:#8f1d18;font:500 12px/1.4 system-ui';
+  controls.appendChild(pushStatus);
   const dashboardHeader = document.querySelector('.topbar-right');
   const dashboardTopbar = document.querySelector('.topbar');
   if (dashboardHeader) dashboardHeader.prepend(controls);
@@ -39,39 +45,78 @@
     return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
   }
 
+  async function responseJson(response) {
+    return response.json().catch(() => ({}));
+  }
+
+  function showPushStatus(message, isError = true) {
+    pushStatus.textContent = message;
+    pushStatus.style.display = message ? 'block' : 'none';
+    pushStatus.style.color = isError ? '#8f1d18' : '#17603c';
+  }
+
   pushButton.addEventListener('click', async () => {
     try {
-      if (!canInstallWorker || !('PushManager' in window)) throw new Error('Web push is not available in this browser or connection.');
+      if (!canInstallWorker || !('PushManager' in window) || !('Notification' in window)) throw new Error('Web push requires a supported browser and a secure HTTPS connection.');
       const token = sessionStorage.getItem('csrs_token');
+      if (!token) throw new Error('Your session has expired. Sign in again, then enable push alerts.');
       const base = String(window.CSRS_CONFIG?.apiBaseUrl || '').replace(/\/+$/, '');
       const keyResponse = await fetch(`${base}/api/notifications/push-public-key`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const keyData = await keyResponse.json().catch(() => ({}));
+      const keyData = await responseJson(keyResponse);
       const publicKey = keyData.public_key;
-      if (!keyResponse.ok) throw new Error('Could not check push notification settings. Sign in again and retry.');
-      if (!publicKey) throw new Error('Push alerts are not configured by the college yet.');
+      if (!keyResponse.ok) throw new Error(keyData.error || keyData.message || `Could not check push settings (HTTP ${keyResponse.status}).`);
+      if (pushButton.dataset.state === 'enabled') {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          const removed = await fetch(`${base}/api/notifications/push-subscriptions`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint: subscription.endpoint })
+          });
+          if (!removed.ok) throw new Error('Could not remove your push subscription from the server.');
+          await subscription.unsubscribe();
+        }
+        pushButton.dataset.state = '';
+        pushButton.disabled = false;
+        updatePushLabel('push_enable', 'Enable push alerts');
+        showPushStatus('Push alerts are turned off.', false);
+        return;
+      }
+      if (!publicKey) throw new Error('Push alerts are not configured: set VAPID_PUBLIC_KEY on the backend.');
+      if (!keyData.delivery_configured) throw new Error('Push delivery is not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY on the backend (or configure PUSH_API_URL and PUSH_API_KEY).');
+      if (Notification.permission === 'denied') throw new Error('Notifications are blocked in browser settings. Allow notifications for this site, then retry.');
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') throw new Error('Notification permission was not granted.');
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlBytes(publicKey)
-      });
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlBytes(publicKey)
+        });
+      }
       const saved = await fetch(`${base}/api/notifications/push-subscriptions`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription })
       });
-      if (!saved.ok) throw new Error('The push subscription could not be saved.');
-      updatePushLabel('push_enabled', 'Push alerts enabled');
+      if (!saved.ok) {
+        const savedData = await responseJson(saved);
+        throw new Error(savedData.error || savedData.message || `The push subscription could not be saved (HTTP ${saved.status}).`);
+      }
+      updatePushLabel('push_disable', 'Turn off push alerts');
       pushButton.dataset.state = 'enabled';
-      pushButton.disabled = true;
+      pushButton.disabled = false;
+      showPushStatus('Push alerts are enabled on this device.', false);
     } catch (error) {
       pushButton.dataset.state = 'error';
       pushButton.dataset.error = error.message || 'Push alerts could not be enabled';
       updatePushLabel('push_unavailable', 'Push alerts could not be enabled');
       pushButton.title = pushButton.dataset.error;
+      showPushStatus(pushButton.dataset.error);
     }
   });
 
@@ -109,7 +154,7 @@
     });
     button.textContent = strings.language_switch;
     pushButton.setAttribute('aria-label', strings.push_aria_label || 'Enable web push alerts');
-    if (pushButton.dataset.state === 'enabled') updatePushLabel('push_enabled', 'Push alerts enabled');
+    if (pushButton.dataset.state === 'enabled') updatePushLabel('push_disable', 'Turn off push alerts');
     else if (pushButton.dataset.state === 'error') updatePushLabel('push_unavailable', 'Push alerts could not be enabled');
     else updatePushLabel('push_enable', 'Enable push alerts');
     localStorage.setItem(languageKey, safeLanguage);

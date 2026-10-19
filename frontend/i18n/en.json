@@ -2,6 +2,7 @@
   "language_switch": "Kinyarwanda",
   "push_enable": "Enable push alerts",
   "push_enabled": "Push alerts enabled",
+  "push_disable": "Turn off push alerts",
   "push_unavailable": "Push alerts could not be enabled",
   "push_aria_label": "Enable web push alerts",
   "main_menu": "MAIN MENU",

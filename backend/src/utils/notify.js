@@ -38,7 +38,9 @@ async function persistNotifications(recipients, title, message, type, link) {
         params
       );
     }
-    if (process.env.PUSH_API_URL || process.env.NODE_ENV !== 'production') {
+    const nativePushConfigured = process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY;
+    const adapterPushConfigured = process.env.PUSH_API_URL && process.env.PUSH_API_KEY;
+    if (nativePushConfigured || adapterPushConfigured || process.env.NODE_ENV !== 'production') {
       const { rows: subscriptions } = await client.query(
         `SELECT user_id, endpoint, p256dh, auth
            FROM push_subscriptions WHERE user_id = ANY($1::int[])`,

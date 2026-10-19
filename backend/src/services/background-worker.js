@@ -1,5 +1,6 @@
 const db = require('../db');
 const crypto = require('crypto');
+const webpush = require('web-push');
 const appConfig = require('../config');
 const { notifyRoles, notifyOnDutyOfficers } = require('../utils/notify');
 const { ROLES } = require('../middleware/auth');
@@ -16,6 +17,33 @@ async function deliver(job) {
     payload = JSON.parse(Buffer.concat([
       decipher.update(Buffer.from(payload.data, 'base64')), decipher.final()
     ]).toString('utf8'));
+  }
+  if (job.channel === 'push' && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+      process.env.VAPID_SUBJECT || 'mailto:security@rp.ac.rw',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    try {
+      await webpush.sendNotification({
+        endpoint: job.recipient,
+        keys: payload.keys
+      }, JSON.stringify({
+        title: payload.title,
+        message: payload.message,
+        type: payload.type,
+        link: payload.link
+      }), {
+        TTL: 3600,
+        urgency: payload.type === 'emergency' ? 'high' : 'normal'
+      });
+      return;
+    } catch (err) {
+      if (err.statusCode === 404 || err.statusCode === 410) {
+        await db.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [job.recipient]);
+      }
+      throw err;
+    }
   }
   const config = {
     email: ['EMAIL_API_URL', 'EMAIL_API_KEY'],

@@ -10,7 +10,13 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/push-public-key', (req, res) => {
-  res.json({ public_key: process.env.VAPID_PUBLIC_KEY || null });
+  const nativePushConfigured = Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+  const adapterPushConfigured = Boolean(process.env.PUSH_API_URL && process.env.PUSH_API_KEY);
+  res.json({
+    public_key: process.env.VAPID_PUBLIC_KEY || null,
+    delivery_configured: nativePushConfigured || adapterPushConfigured,
+    delivery_provider: nativePushConfigured ? 'native-vapid' : adapterPushConfigured ? 'adapter' : 'missing'
+  });
 });
 
 router.get('/delivery-status', requireRole(ROLES.ADMIN, ROLES.HEAD_OF_SECURITY), wrap(async (req, res) => {
