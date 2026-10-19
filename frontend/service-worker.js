@@ -37,3 +37,26 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
 });
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch (_) {}
+  const title = payload.title || 'CSRS alert';
+  event.waitUntil(self.registration.showNotification(title, {
+    body: payload.message || 'You have a new campus safety notification.',
+    icon: '/icons/csrs-icon.svg',
+    badge: '/icons/csrs-icon.svg',
+    data: { url: payload.link || '/home.html' },
+    tag: payload.type === 'emergency' ? 'csrs-emergency' : undefined,
+    renotify: payload.type === 'emergency'
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const path = event.notification.data?.url || '/home.html';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    const existing = clients.find((client) => new URL(client.url).origin === self.location.origin);
+    return existing ? existing.navigate(path).then(() => existing.focus()) : self.clients.openWindow(path);
+  }));
+});

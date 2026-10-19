@@ -100,7 +100,8 @@ const corsOptions = {
 
   allowedHeaders: [
     'Content-Type',
-    'Authorization'
+    'Authorization',
+    'x-access-code'
   ],
 
   optionsSuccessStatus: 204,

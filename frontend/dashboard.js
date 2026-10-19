@@ -1323,6 +1323,12 @@ async function loadAccessReport() {
 async function downloadReport(type, format) {
   try {
     const query = new URLSearchParams({ format });
+    if (type === "incident") {
+      const reference = $("reportReference")?.value.trim();
+      if (!reference) throw new Error("Enter the incident reference number.");
+      query.set("reference_no", reference);
+    }
+    if (type === "incident-summary") query.set("period", $("reportPeriod")?.value || "month");
     const token = getToken();
     const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(type)}?${query}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
@@ -1547,6 +1553,9 @@ function setupOtherPages() {
   on("loadIncidentReport", "click", loadIncidentReport);
   on("loadAccessReport", "click", loadAccessReport);
   on("refreshBackupStatus", "click", loadBackupStatus);
+  on("downloadSelectedReport", "click", () => {
+    downloadReport($("reportType")?.value, $("reportFormat")?.value || "pdf");
+  });
   document.querySelectorAll("[data-download-report]").forEach((button) => {
     button.addEventListener("click", () => downloadReport(button.dataset.downloadReport, button.dataset.format));
   });

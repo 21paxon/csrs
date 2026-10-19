@@ -39,5 +39,11 @@ Source: supplied CSRS Codex build prompt (the SRS and its original `schema.sql` 
 
 - Incident status changes now follow an explicit server-side transition map. Resolving or closing requires a resolution summary; only Admin or Head of Security can approve `Closed`, and only after `Resolved`.
 - Audit rows for anonymous incident submissions no longer record the authenticated username or request IP.
+- Failed login responses use the same generic message; anonymous tracking lookups/replies are rate limited.
+- Added a notification outbox with retry/back-off, provider adapters, development console fake, push-subscription storage, and delivery status for Admin/Head of Security.
+- Added scheduled repeat notifications for unacknowledged emergencies, scoped to on-duty officers and security leadership, plus deduplicated missed-checkpoint alerts after roster end.
+- Added PDF/XLSX export and report types for individual incidents, summaries, emergency alerts, response time, disciplinary referrals, and officer performance. Spreadsheet strings are protected from formula execution.
+- Added a service-worker app shell, manifest, and an initial English/Kinyarwanda switch for core reporting/emergency flows.
+- Added database/evidence backup and guarded restore scripts, retention pruning, backup status records and an Admin status view.
 
-These changes have not been test-run; the corresponding boxes remain unchecked.
+These changes have not been test-run against PostgreSQL or in a browser; the corresponding requirement boxes remain unchecked. JavaScript syntax checks and `git diff --check` passed. `npm install` added the export libraries and reported two moderate dependency advisories.

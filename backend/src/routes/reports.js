@@ -30,6 +30,7 @@ const REPORTS = {
     const w = where();
     range(w, 'i.reported_datetime', q);
 
+    if (q.category_id) w.add('i.category_id = ?', Number(q.category_id));
     if (q.severity) w.add('i.severity = ?', q.severity);
     if (q.status) w.add('i.status = ?', q.status);
     if (q.location_id) w.add('i.location_id = ?', Number(q.location_id));
@@ -152,7 +153,105 @@ const REPORTS = {
   }
 };
 
-// GET /api/reports/:type?from=&to=&format=csv
+REPORTS.incident = (q) => {
+  if (!q.reference_no) throw new HttpError(400, 'reference_no is required for an individual incident report');
+  const w = where();
+  w.add('i.reference_no = ?', String(q.reference_no).trim());
+  return [
+    `SELECT i.reference_no, c.name AS category, l.name AS location,
+            i.description, i.incident_datetime, i.reported_datetime,
+            i.severity, i.status, i.resolution_summary, i.closed_datetime,
+            i.is_anonymous
+       FROM incidents i
+       LEFT JOIN incident_categories c ON c.id = i.category_id
+       LEFT JOIN locations l ON l.id = i.location_id ${w.clause}`,
+    w.params
+  ];
+};
+
+REPORTS.emergency = (q) => {
+  const w = where();
+  range(w, 'a.triggered_at', q);
+  if (q.status) w.add('a.status = ?', q.status);
+  return [
+    `SELECT a.id, COALESCE(u.full_name, u.username) AS sender,
+            a.message, a.lat, a.lng, a.status, a.triggered_at,
+            a.acknowledged_at, a.arrived_at, a.resolved_at, a.repeat_count
+       FROM emergency_alerts a JOIN users u ON u.id = a.user_id
+       ${w.clause} ORDER BY a.triggered_at DESC`,
+    w.params
+  ];
+};
+
+REPORTS['response-time'] = (q) => {
+  const w = where();
+  range(w, 'i.reported_datetime', q);
+  if (q.severity) w.add('i.severity = ?', q.severity);
+  if (q.location_id) w.add('i.location_id = ?', Number(q.location_id));
+  return [
+    `SELECT i.reference_no, i.severity, i.reported_datetime,
+            first_response.responded_at,
+            ROUND(EXTRACT(EPOCH FROM (first_response.responded_at - i.reported_datetime)) / 60)::int AS response_minutes,
+            i.closed_datetime,
+            ROUND(EXTRACT(EPOCH FROM (i.closed_datetime - i.reported_datetime)) / 60)::int AS resolution_minutes
+       FROM incidents i
+       LEFT JOIN LATERAL (
+         SELECT MIN(u.created_at) AS responded_at FROM incident_updates u
+          WHERE u.incident_id = i.id AND u.new_status IN ('Verified', 'In Progress')
+       ) first_response ON TRUE
+       ${w.clause} ORDER BY i.reported_datetime DESC`,
+    w.params
+  ];
+};
+
+REPORTS['incident-summary'] = (q) => {
+  const requested = String(q.period || 'month').toLowerCase();
+  const period = ['day', 'week', 'month', 'year'].includes(requested) ? requested : 'month';
+  const w = where();
+  range(w, 'i.reported_datetime', q);
+  if (q.category_id) w.add('i.category_id = ?', Number(q.category_id));
+  if (q.location_id) w.add('i.location_id = ?', Number(q.location_id));
+  if (q.severity) w.add('i.severity = ?', q.severity);
+  return [
+    `SELECT date_trunc('${period}', i.reported_datetime) AS period,
+            c.name AS category, i.severity, i.status,
+            COUNT(*)::int AS incident_count
+       FROM incidents i JOIN incident_categories c ON c.id = i.category_id
+       ${w.clause} GROUP BY 1, 2, 3, 4 ORDER BY 1 DESC, 2, 3`,
+    w.params
+  ];
+};
+
+REPORTS.disciplinary = (q) => {
+  const w = where();
+  range(w, 'i.reported_datetime', q);
+  w.raw('i.referred_to_discipline = TRUE');
+  if (q.status) w.add('i.status = ?', q.status);
+  return [
+    `SELECT i.reference_no, i.reported_datetime, i.severity, i.status,
+            i.resolution_summary, c.name AS category
+       FROM incidents i LEFT JOIN incident_categories c ON c.id = i.category_id
+       ${w.clause} ORDER BY i.reported_datetime DESC`,
+    w.params
+  ];
+};
+
+REPORTS['officer-performance'] = (q) => {
+  const w = where();
+  range(w, 'p.scanned_at', q);
+  if (q.officer_id) w.add('p.officer_id = ?', Number(q.officer_id));
+  return [
+    `SELECT u.id AS officer_id, u.full_name AS officer,
+            COUNT(*)::int AS checkins,
+            COUNT(DISTINCT p.checkpoint_id)::int AS checkpoints_covered,
+            MAX(p.scanned_at) AS last_checkin
+       FROM patrol_logs p JOIN users u ON u.id = p.officer_id
+       ${w.clause} GROUP BY u.id, u.full_name ORDER BY checkins DESC`,
+    w.params
+  ];
+};
+
+// GET /api/reports/:type?from=&to=&format=csv|xlsx|pdf
 router.get('/:type', wrap(async (req, res) => {
   const build = REPORTS[req.params.type];
 
@@ -162,8 +261,19 @@ router.get('/:type', wrap(async (req, res) => {
       `Unknown report. Available: ${Object.keys(REPORTS).join(', ')}`
     );
   }
+  if (req.params.type === 'audit' &&
+      ![ROLES.ADMIN, ROLES.HEAD_OF_SECURITY].includes(req.user.role)) {
+    throw new HttpError(403, 'You do not have access to audit reports');
+  }
 
-  const [sql, params] = build(req.query);
+  let [sql, params] = build(req.query);
+  if (req.user.role === ROLES.DEAN && /\bincidents\s+i\b/i.test(sql)) {
+    const clause = 'i.reporter_id IN (SELECT id FROM users WHERE role = \'student\')';
+    const boundary = sql.search(/\s(?:GROUP BY|ORDER BY)\b/i);
+    const head = boundary < 0 ? sql : sql.slice(0, boundary);
+    const tail = boundary < 0 ? '' : sql.slice(boundary);
+    sql = `${head}${/\bWHERE\b/i.test(head) ? ' AND ' : ' WHERE '}${clause}${tail}`;
+  }
   const { rows } = await db.query(`${sql} LIMIT 10000`, params);
   const format = String(req.query.format || 'json').toLowerCase();
   if (!['json', 'csv', 'xlsx', 'pdf'].includes(format)) {

@@ -586,6 +586,38 @@
               <p class="page-description">Review security activity and operational summaries.</p>
             </div>
           </div>
+          <article class="panel" aria-label="Export report">
+            <div class="form-grid">
+              <label>Report type
+                <select id="reportType">
+                  <option value="incidents">Incident list</option>
+                  <option value="incident-summary">Daily, weekly, monthly or annual summary</option>
+                  <option value="incident">Individual incident</option>
+                  <option value="response-time">Response and resolution times</option>
+                  <option value="emergency">Emergency alerts</option>
+                  <option value="lost-found">Lost and found</option>
+                  <option value="gate">Visitor and gate log</option>
+                  <option value="patrol">Patrol log</option>
+                  <option value="officer-performance">Officer performance</option>
+                  <option value="disciplinary">Disciplinary referrals</option>
+                  <option value="audit">Audit log</option>
+                </select>
+              </label>
+              <label>Period
+                <select id="reportPeriod">
+                  <option value="day">Daily</option><option value="week">Weekly</option>
+                  <option value="month" selected>Monthly</option><option value="year">Annual</option>
+                </select>
+              </label>
+              <label>Individual incident reference
+                <input id="reportReference" maxlength="32" placeholder="INC-2026-0001">
+              </label>
+              <label>Format
+                <select id="reportFormat"><option value="pdf">PDF</option><option value="xlsx">Excel</option></select>
+              </label>
+              <button type="button" class="button secondary" id="downloadSelectedReport">Download report</button>
+            </div>
+          </article>
           <div class="dashboard-grid">
             <article class="panel">
               <h3>Incident Summary</h3>

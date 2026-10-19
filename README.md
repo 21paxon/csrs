@@ -12,7 +12,7 @@ CSRS helps the college manage campus safety in one place: incident reporting (in
 | Database | Neon PostgreSQL                                    |
 | Auth     | JWT + bcrypt, role-based access (7 roles)           |
 | Security | helmet, rate-limited login, parameterized queries, immutable audit log |
-| Frontend | HTML5 / CSS3 / JavaScript (PWA planned)             |
+| Frontend | HTML5 / CSS3 / JavaScript (installable PWA shell)   |
 
 ## Getting Started
 
@@ -111,14 +111,14 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 | Notifications | `GET /api/notifications`, `PATCH /:id/read`, `POST /read-all` | any user |
 | | `POST /api/notifications/announcements` | Admin, HoS |
 | Dashboard | `GET /api/dashboard?days=30` (totals, hotspots, trends, pending alerts, visitors on campus) | Admin, HoS, CM, Dean |
-| Reports | `GET /api/reports/:type?from=&to=&format=csv` (incidents, lost-found, gate, patrol, audit) | Admin, HoS, CM, Dean |
+| Reports | `GET /api/reports/:type?from=&to=&format=json|csv|xlsx|pdf` (incident, summary, response-time, emergency, lost-found, gate, patrol, officer-performance, disciplinary, audit) | Admin, HoS, CM, Dean (audit restricted) |
 | Audit | `GET /api/audit-logs` | Admin, HoS |
 
 ### Background notifications and patrol checks
 
 Run `npm run db:migrate` to install migration `003-notification-and-patrol-queues` before starting a version that includes the background worker. The worker starts with the API process, retries configured provider deliveries with exponential back-off, repeats unacknowledged emergency alerts every minute, and creates one missed-checkpoint notification for each completed roster/checkpoint pair. Missed checkpoints are evaluated when the rostered shift ends because the current roster model has no per-checkpoint timing window.
 
-In development, email, SMS, and subscribed push deliveries are written to the server log. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY`, `SMS_API_URL` / `SMS_API_KEY`, and optionally `PUSH_API_URL` / `PUSH_API_KEY`. Each endpoint receives a JSON POST with `channel`, `to`, `title`, `message`, `type`, and `link`; push jobs also include the browser subscription keys. These are provider adapters, so the deployment must point them at a service that accepts this contract. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Users register/remove browser subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
+In development, email, SMS, and subscribed push deliveries are written to the server log. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY`, `SMS_API_URL` / `SMS_API_KEY`, and optionally `PUSH_API_URL` / `PUSH_API_KEY`. Set `VAPID_PUBLIC_KEY` to the public key paired with the push gateway's private key. Each endpoint receives a JSON POST with `channel`, `to`, `title`, `message`, `type`, and `link`; push jobs also include the browser subscription keys. These are provider adapters, so the deployment must point them at a service that accepts this contract. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Signed-in users can enable browser push from the language/push controls and register/remove subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
 
 For local offline-shell development, the service worker registers on the home and signed-in dashboard pages. It caches app files only; incident and account data are never stored for offline use. Production service-worker installation requires HTTPS.
 
@@ -150,8 +150,13 @@ npm run smoke
 
 It creates test users and walks through every module (about 60 checks) and prints `ok` or `FAIL` for each. If something fails, send that output to the team.
 
-### Not built yet
-Push/SMS/email delivery (notifications are stored in-app; the `channel` column is ready), PDF/Excel export (CSV opens in Excel), and the frontend screens.
+### Remaining implementation and deployment work
+
+- Email/SMS and push delivery use retryable provider adapters. Configure the college's real provider endpoints and VAPID/web-push gateway before production; development uses a console fake.
+- The PWA caches its app shell only. Offline incident submission and background data sync are intentionally not enabled.
+- The language switcher translates the main reporting and emergency flows; other screens still contain English text. Kinyarwanda strings need fluent review.
+- The original SRS document, a real PostgreSQL migration/restore run, cross-browser acceptance, accessibility review, performance/load results and security test results remain outstanding.
+- `npm install` reported two moderate dependency advisories after adding the spreadsheet and PDF export packages; review them before production deployment.
 
 ## Project Structure
 

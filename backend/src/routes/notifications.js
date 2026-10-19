@@ -9,6 +9,10 @@ const { audit } = require('../utils/audit');
 const router = express.Router();
 router.use(authenticate);
 
+router.get('/push-public-key', (req, res) => {
+  res.json({ public_key: process.env.VAPID_PUBLIC_KEY || null });
+});
+
 router.get('/delivery-status', requireRole(ROLES.ADMIN, ROLES.HEAD_OF_SECURITY), wrap(async (req, res) => {
   const { limit, offset } = paging(req);
   const status = String(req.query.status || '').trim();
