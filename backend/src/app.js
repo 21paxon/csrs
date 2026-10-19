@@ -9,45 +9,82 @@ const { notFound, errorHandler } = require('./middleware/error');
 const app = express();
 
 app.set('trust proxy', 1);
+
 app.use(helmet());
+
 app.use(cors({
   origin(origin, callback) {
     if (!origin || config.frontendOrigins.includes(origin)) {
       return callback(null, true);
     }
 
-    return callback(new Error('Origin is not allowed by CSRS CORS policy'));
+    return callback(
+      new Error('Origin is not allowed by CSRS CORS policy')
+    );
   }
 }));
+
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', (req, res) =>
-  res.json({ status: 'ok', system: 'CSRS' })
-);
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    system: 'CSRS'
+  });
+});
 
-// API routes
+// Authentication and user routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+
+// Admin user management and registration approval
+app.use('/api/admin', require('./routes/admin'));
+
+// Reference data
 app.use('/api', require('./routes/reference'));
+
+// Incident management
 app.use('/api/incidents', require('./routes/incidents'));
+
+// Emergency management
 app.use('/api/emergency', require('./routes/emergency'));
+
+// Lost and found
 app.use('/api/lost-found', require('./routes/lostfound'));
+
+// Gate and campus access
 app.use('/api/gate', require('./routes/gate'));
+
+// Security patrols
 app.use('/api/patrol', require('./routes/patrol'));
+
+// Notifications
 app.use('/api/notifications', require('./routes/notifications'));
+
+// Dashboard statistics
 app.use('/api/dashboard', require('./routes/dashboard'));
+
+// Reports and audit logs
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/audit-logs', require('./routes/audit'));
 
-// Serve the landing page at the root URL
+// Serve the landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'home.html'));
+  res.sendFile(
+    path.join(__dirname, '..', '..', 'frontend', 'home.html')
+  );
 });
 
-// Serve other public files
-app.use(express.static(path.join(__dirname, '..', '..', 'frontend')));
+// Serve frontend files
+app.use(express.static(
+  path.join(__dirname, '..', '..', 'frontend')
+));
 
+// API 404 handler
 app.use('/api', notFound);
+
+// Global error handler
 app.use(errorHandler);
 
 module.exports = app;
