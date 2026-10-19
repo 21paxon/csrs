@@ -28,46 +28,46 @@
         </span>
       </a>
 
-      <p class="nav-label">MAIN MENU</p>
+      <p class="nav-label" data-i18n="main_menu">MAIN MENU</p>
 
       <nav class="navigation" aria-label="Main navigation">
-        <a href="#overview" class="nav-link active" data-page="overview">
+        <a href="#overview" class="nav-link active" data-page="overview" data-i18n="dashboard_overview">
           <span>▦</span> Overview
         </a>
-        <a href="#users" class="nav-link" data-page="users" data-admin-only="true">
+        <a href="#users" class="nav-link" data-page="users" data-admin-only="true" data-i18n="dashboard_users">
           <span>♙</span> User Management
           <span class="nav-count" id="pendingUsersBadge" hidden>0</span>
         </a>
-        <a href="#incidents" class="nav-link" data-page="incidents">
+        <a href="#incidents" class="nav-link" data-page="incidents" data-i18n="dashboard_incidents">
           <span>⚑</span> Incidents
         </a>
-        <a href="#lost-found" class="nav-link" data-page="lost-found">
+        <a href="#lost-found" class="nav-link" data-page="lost-found" data-i18n="dashboard_lost_found">
           <span>◇</span> Lost and Found
         </a>
-        <a href="#emergency" class="nav-link" data-page="emergency">
+        <a href="#emergency" class="nav-link" data-page="emergency" data-i18n="dashboard_emergency">
           <span>!</span> Emergency Alerts
         </a>
-        <a href="#gate" class="nav-link" data-page="gate">
+        <a href="#gate" class="nav-link" data-page="gate" data-i18n="dashboard_gate">
           <span>↔</span> Gate Management
         </a>
-        <a href="#visitors" class="nav-link" data-page="visitors">
+        <a href="#visitors" class="nav-link" data-page="visitors" data-i18n="dashboard_visitors">
           <span>♧</span> Visitor Management
         </a>
-        <a href="#patrols" class="nav-link" data-page="patrols">
+        <a href="#patrols" class="nav-link" data-page="patrols" data-i18n="dashboard_patrols">
           <span>⌖</span> Security Patrols
         </a>
       </nav>
 
-      <p class="nav-label account-heading">MANAGEMENT</p>
+      <p class="nav-label account-heading" data-i18n="management">MANAGEMENT</p>
 
       <nav class="navigation" aria-label="Management navigation">
-        <a href="#reports" class="nav-link" data-page="reports">
+        <a href="#reports" class="nav-link" data-page="reports" data-i18n="dashboard_reports">
           <span>▤</span> Reports
         </a>
-        <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-admin-only="true">
+        <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-admin-only="true" data-i18n="dashboard_audit_logs">
           <span>◷</span> Audit Logs
         </a>
-        <a href="#profile" class="nav-link" data-page="profile">
+        <a href="#profile" class="nav-link" data-page="profile" data-i18n="dashboard_profile">
           <span>♙</span> My Profile
         </a>
       </nav>
@@ -80,7 +80,7 @@
             <small id="sidebarRole">User</small>
           </div>
         </div>
-        <button type="button" class="logout-button" id="logoutButton">
+        <button type="button" class="logout-button" id="logoutButton" data-i18n="sign_out">
           Sign out
         </button>
       </div>
@@ -98,8 +98,8 @@
             aria-expanded="false"
           >☰</button>
           <div>
-            <p class="eyebrow">CAMPUS SECURITY PORTAL</p>
-            <h1 id="pageTitle">Overview</h1>
+            <p class="eyebrow" data-i18n="campus_security_portal">CAMPUS SECURITY PORTAL</p>
+            <h1 id="pageTitle" data-i18n="dashboard_overview">Overview</h1>
             <p class="breadcrumb">RP Musanze College / <span id="breadcrumbPage">Overview</span></p>
           </div>
         </div>
@@ -365,64 +365,64 @@
         <section class="page-section" id="page-lost-found" hidden>
           <div class="page-heading">
             <div>
-              <h2>Lost and Found</h2>
-              <p class="page-description">Record lost property, register found items and follow up on claims.</p>
+              <h2 data-i18n="dashboard_lost_found">Lost and Found</h2>
+              <p class="page-description" data-i18n="dashboard_lost_found_description">Record lost property, register found items and follow up on claims.</p>
             </div>
-            <button class="button primary" type="button" id="toggleLostFoundForm">Record Item</button>
+            <button class="button primary" type="button" id="toggleLostFoundForm" data-i18n="record_item">Record Item</button>
           </div>
 
           <article class="panel form-panel" id="lostFoundFormPanel" hidden>
-            <h3>Record Lost or Found Property</h3>
+            <h3 data-i18n="record_property">Record Lost or Found Property</h3>
             <form id="lostFoundForm">
               <div class="form-grid">
-                <label>Record Type
+                <label><span data-i18n="record_type">Record Type</span>
                   <select id="lostFoundType" name="type" required>
-                    <option value="lost">Lost item</option>
-                    <option value="found">Found item</option>
+                    <option value="lost" data-i18n="lost_item">Lost item</option>
+                    <option value="found" data-i18n="found_item">Found item</option>
                   </select>
                 </label>
-                <label>Item Name
-                  <input id="lostFoundItemName" name="item_name" required maxlength="150" placeholder="e.g. Student ID card">
+                <label><span data-i18n="item_name">Item Name</span>
+                  <input id="lostFoundItemName" name="item_name" required maxlength="150" placeholder="e.g. Student ID card" data-i18n-placeholder="item_example">
                 </label>
-                <label>Location
-                  <input id="lostFoundLocation" name="location" required maxlength="200" placeholder="Where was it lost or found?">
+                <label><span data-i18n="location">Location</span>
+                  <input id="lostFoundLocation" name="location" required maxlength="200" placeholder="Where was it lost or found?" data-i18n-placeholder="location_example">
                 </label>
-                <label>Date
+                <label><span data-i18n="date">Date</span>
                   <input id="lostFoundDate" name="date" type="date" required>
                 </label>
-                <label class="full-width">Description
+                <label class="full-width"><span data-i18n="description">Description</span>
                   <textarea id="lostFoundDescription" name="description" rows="3" required placeholder="Describe the item and any identifying details."></textarea>
                 </label>
               </div>
               <div class="form-actions">
-                <button class="button secondary" type="button" id="cancelLostFoundForm">Cancel</button>
-                <button class="button primary" type="submit">Save Record</button>
+                <button class="button secondary" type="button" id="cancelLostFoundForm" data-i18n="cancel">Cancel</button>
+                <button class="button primary" type="submit" data-i18n="save_record">Save Record</button>
               </div>
             </form>
           </article>
 
           <article class="panel">
             <div class="table-toolbar">
-              <input id="lostFoundSearch" type="search" placeholder="Search property records..." aria-label="Search lost and found records">
+              <input id="lostFoundSearch" type="search" placeholder="Search property records..." aria-label="Search lost and found records" data-i18n-placeholder="search_properties" data-i18n-aria-label="search_properties">
               <select id="lostFoundStatusFilter" aria-label="Filter lost and found records">
-                <option value="">All records</option>
-                <option value="lost">Lost</option>
-                <option value="found">Found</option>
-                <option value="claimed">Claimed</option>
-                <option value="returned">Returned</option>
+                <option value="" data-i18n="all_records">All records</option>
+                <option value="lost" data-i18n="lost">Lost</option>
+                <option value="found" data-i18n="found">Found</option>
+                <option value="claimed" data-i18n="claimed">Claimed</option>
+                <option value="returned" data-i18n="returned">Returned</option>
               </select>
-              <button class="button secondary" type="button" id="refreshLostFound">Refresh</button>
+              <button class="button secondary" type="button" id="refreshLostFound" data-i18n="refresh">Refresh</button>
             </div>
             <div class="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th>Item</th>
-                    <th>Type</th>
-                    <th>Location</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th data-i18n="item_name">Item</th>
+                    <th data-i18n="record_type">Type</th>
+                    <th data-i18n="location">Location</th>
+                    <th data-i18n="date">Date</th>
+                    <th data-i18n="status">Status</th>
+                    <th data-i18n="actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="lostFoundTable">
