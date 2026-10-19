@@ -6,6 +6,10 @@ const { HttpError } = require('../utils/helpers');
 
 const UPLOAD_ROOT = path.join(__dirname, '..', '..', 'uploads');
 fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
+const configuredMaxMb = Number(process.env.MAX_UPLOAD_MB);
+const maxUploadMb = Number.isFinite(configuredMaxMb) && configuredMaxMb > 0
+  ? Math.min(configuredMaxMb, 100)
+  : 20;
 
 const ALLOWED = {
   'image/jpeg': 'image', 'image/png': 'image', 'image/webp': 'image',
@@ -24,7 +28,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024, files: 5 },
+  limits: { fileSize: maxUploadMb * 1024 * 1024, files: 5 },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED[file.mimetype]) return cb(new HttpError(400, `File type not allowed: ${file.mimetype}`));
     cb(null, true);
