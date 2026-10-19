@@ -46,5 +46,7 @@ Source: supplied CSRS Codex build prompt (the SRS and its original `schema.sql` 
 - Added a service-worker app shell, manifest, and an initial English/Kinyarwanda switch for core reporting/emergency flows.
 - Added database/evidence backup and guarded restore scripts, retention pruning, backup status records and an Admin status view.
 - Added public password-reset request and completion pages; reset tokens are hashed, one-hour/one-use, email payloads are encrypted in the outbox, and reset/admin password changes revoke prior JWT sessions.
+- Added Leaflet map-point selection for reports, coordinate-aware hotspot maps and server-side filters limiting Dean data to student reports and Security Officer dashboard data to assigned cases.
+- Added configurable emergency contact records and a dialable contact list in the emergency screen.
 
 These changes have not been test-run against PostgreSQL or in a browser; the corresponding requirement boxes remain unchecked. JavaScript syntax checks and `git diff --check` passed. `npm install` added the export libraries and reported two moderate dependency advisories.

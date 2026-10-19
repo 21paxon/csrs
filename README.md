@@ -89,12 +89,13 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 
 | Module | Endpoint | Who |
 |--------|----------|-----|
-| Auth | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password` | public / any user |
+| Auth | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` | public / any user |
 | Users | `GET/POST /api/users`, `PATCH /api/users/:id`, `POST /api/users/:id/reset-password`, `POST /api/users/import` (college records) | Admin |
 | Backups | `GET /api/admin/backups/status` | Admin |
 | | `GET /api/users/officers`, `GET /api/users/hosts?q=` | Admin, HoS (, SO for hosts) |
 | Reference | `GET /api/categories`, `GET /api/locations` | public |
 | | `POST /api/categories`, `POST/PUT /api/locations` | Admin, HoS |
+| | `GET /api/emergency-contacts`, `POST/DELETE /api/emergency-contacts` | public / Admin |
 | Incidents | `POST /api/incidents` (multipart `evidence` files; anonymous if not logged in or `is_anonymous=true`) | public / any user |
 | | `GET /api/incidents/track/:ref` + header `x-access-code`; `POST .../track/:ref/reply` | anonymous reporter |
 | | `GET /api/incidents` (filters: status, severity, category_id, location_id, from, to), `GET /api/incidents/:id` | by role (see below) |
@@ -116,7 +117,7 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 
 ### Background notifications and patrol checks
 
-Run `npm run db:migrate` to install migration `003-notification-and-patrol-queues` before starting a version that includes the background worker. The worker starts with the API process, retries configured provider deliveries with exponential back-off, repeats unacknowledged emergency alerts every minute, and creates one missed-checkpoint notification for each completed roster/checkpoint pair. Missed checkpoints are evaluated when the rostered shift ends because the current roster model has no per-checkpoint timing window.
+Run `npm run db:migrate` to install the numbered migrations before starting this version. The worker starts with the API process, retries configured provider deliveries with exponential back-off, repeats unacknowledged emergency alerts every minute, and creates one missed-checkpoint notification for each completed roster/checkpoint pair. Missed checkpoints are evaluated when the rostered shift ends because the current roster model has no per-checkpoint timing window.
 
 In development, email, SMS, and subscribed push deliveries are written to the server log. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY`, `SMS_API_URL` / `SMS_API_KEY`, and optionally `PUSH_API_URL` / `PUSH_API_KEY`. Set `VAPID_PUBLIC_KEY` to the public key paired with the push gateway's private key. Each endpoint receives a JSON POST with `channel`, `to`, `title`, `message`, `type`, and `link`; push jobs also include the browser subscription keys. These are provider adapters, so the deployment must point them at a service that accepts this contract. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Signed-in users can enable browser push from the language/push controls and register/remove subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
 
@@ -157,6 +158,7 @@ It creates test users and walks through every module (about 60 checks) and print
 - The PWA caches its app shell only. Offline incident submission and background data sync are intentionally not enabled.
 - The language switcher translates the main reporting and emergency flows; other screens still contain English text. Kinyarwanda strings need fluent review.
 - The original SRS document, a real PostgreSQL migration/restore run, cross-browser acceptance, accessibility review, performance/load results and security test results remain outstanding.
+- Optional TOTP MFA, complete Admin settings screens, and imports from Excel files remain outstanding.
 - `npm install` reported two moderate dependency advisories after adding the spreadsheet and PDF export packages; review them before production deployment.
 
 ## Project Structure
