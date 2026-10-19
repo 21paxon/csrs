@@ -143,13 +143,22 @@ async function detectMissedPatrolCheckpoints() {
      ON CONFLICT (roster_id, checkpoint_id) DO NOTHING
      RETURNING roster_id, checkpoint_id`
   );
-  if (rows.length) {
+  const pending = await db.query(
+    `SELECT roster_id, checkpoint_id FROM patrol_missed_alerts WHERE notified_at IS NULL`
+  );
+  if (pending.rows.length) {
     await notifyRoles(
       [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY],
       'Missed patrol checkpoints',
-      `${rows.length} patrol checkpoint(s) were not scanned during a completed shift.`,
+      `${pending.rows.length} patrol checkpoint(s) were not scanned during a completed shift.`,
       'patrol',
       '/dashboard.html#patrol'
+    );
+    await db.query(
+      `UPDATE patrol_missed_alerts p SET notified_at = CURRENT_TIMESTAMP
+        FROM unnest($1::int[], $2::int[]) AS pending(roster_id, checkpoint_id)
+       WHERE p.roster_id = pending.roster_id AND p.checkpoint_id = pending.checkpoint_id`,
+      [pending.rows.map((row) => row.roster_id), pending.rows.map((row) => row.checkpoint_id)]
     );
   }
 }
