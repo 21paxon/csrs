@@ -31,5 +31,27 @@ window.CSRS_CONFIG = {
     rejectUser: "/api/admin/users/:id/reject",
     activateUser: "/api/admin/users/:id/activate",
     deactivateUser: "/api/admin/users/:id/deactivate"
-  }
-};
+
+    
+  dashboard: "/api/dashboard",
+  incidents: "/api/incidents",
+  categories: "/api/incident-categories",
+  locations: "/api/locations",
+  emergency: "/api/emergency",
+  visitors: "/api/gate/on-campus",
+
+  users: "/api/admin/users",
+  userStats: "/api/admin/users/stats",
+  approveUser: "/api/admin/users/:id/approve",
+  rejectUser: "/api/admin/users/:id/reject",
+  activateUser: "/api/admin/users/:id/activate",
+  deactivateUser: "/api/admin/users/:id/deactivate",
+
+  lostFound: "/api/lost-found",
+  patrols: "/api/patrol",
+  reports: "/api/reports",
+  auditLogs: "/api/audit-logs"
+}
+
+  };
+
