@@ -183,9 +183,19 @@
       }
     });
 
-    setText("pageTitle", VIEWS[view][0]);
-    setText("pageSubtitle", VIEWS[view][1]);
-    document.title = `CSRS | ${VIEWS[view][0]}`;
+    const translationKeys = {
+      overview: ["student_dashboard", "student_overview_description"],
+      reports: ["my_reports", "student_reports_description"],
+      emergency: ["emergency_centre", "student_emergency_description"],
+      "lost-found": ["dashboard_lost_found", "dashboard_lost_found_description"],
+      profile: ["profile", "student_profile_description"]
+    };
+    const strings = window.CSRS_TRANSLATIONS || {};
+    const keys = translationKeys[view];
+    const title = strings[keys[0]] || VIEWS[view][0];
+    setText("pageTitle", title);
+    setText("pageSubtitle", strings[keys[1]] || VIEWS[view][1]);
+    document.title = `CSRS | ${title}`;
 
     if (location.hash !== `#${view}`) {
       history.replaceState(null, "", `#${view}`);
@@ -199,6 +209,8 @@
 
     if (focus && $("main")) $("main").focus({ preventScroll: true });
   }
+
+  window.addEventListener("csrs:language-changed", () => showView(currentView));
 
   document.querySelectorAll("[data-view]").forEach((link) => {
     link.addEventListener("click", (event) => {
