@@ -32,6 +32,9 @@ router.get(
       Math.max(toInt(req.query.days) || 30, 1),
       365
     );
+    const studentScope = req.user.role === ROLES.DEAN
+      ? " AND i.reporter_id IN (SELECT id FROM users WHERE role = 'student')"
+      : '';
 
     const [
       totals,
@@ -69,21 +72,21 @@ router.get(
               )::numeric,
               1
             ) AS avg_hours_to_close
-         FROM incidents
-         WHERE reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)`,
+         FROM incidents i
+         WHERE i.reported_datetime >=
+           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}`,
         [days]
       ),
 
       // Incidents grouped by severity.
       db.query(
         `SELECT
-            severity::text AS severity,
+            i.severity::text AS severity,
             COUNT(*)::int AS count
-         FROM incidents
-         WHERE reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)
-         GROUP BY severity
+         FROM incidents i
+         WHERE i.reported_datetime >=
+           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+         GROUP BY i.severity
          ORDER BY count DESC`,
         [days]
       ),
@@ -91,12 +94,12 @@ router.get(
       // Incidents grouped by status.
       db.query(
         `SELECT
-            status::text AS status,
+            i.status::text AS status,
             COUNT(*)::int AS count
-         FROM incidents
-         WHERE reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)
-         GROUP BY status
+         FROM incidents i
+         WHERE i.reported_datetime >=
+           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+         GROUP BY i.status
          ORDER BY count DESC`,
         [days]
       ),
@@ -109,7 +112,7 @@ router.get(
          FROM incidents i
          JOIN incident_categories c ON c.id = i.category_id
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)
+           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
          GROUP BY c.name
          ORDER BY count DESC`,
         [days]
@@ -118,17 +121,21 @@ router.get(
       // Locations with the most reported incidents.
       db.query(
         `SELECT
-            l.id AS location_id,
-            l.name AS location,
-            l.lat,
-            l.lng,
+            i.location_id,
+            COALESCE(l.name, i.location_text, 'Map pin') AS location,
+            COALESCE(i.lat, l.lat) AS lat,
+            COALESCE(i.lng, l.lng) AS lng,
             COUNT(*)::int AS incidents
          FROM incidents i
-         JOIN locations l ON l.id = i.location_id
+         LEFT JOIN locations l ON l.id = i.location_id
          WHERE i.reported_datetime >=
            CURRENT_TIMESTAMP - make_interval(days => $1)
-         GROUP BY l.id, l.name, l.lat, l.lng
-         ORDER BY incidents DESC, l.name ASC
+           AND COALESCE(i.lat, l.lat) IS NOT NULL
+           AND COALESCE(i.lng, l.lng) IS NOT NULL
+           ${studentScope}
+         GROUP BY i.location_id, COALESCE(l.name, i.location_text, 'Map pin'),
+                  COALESCE(i.lat, l.lat), COALESCE(i.lng, l.lng)
+         ORDER BY incidents DESC, location ASC
          LIMIT 10`,
         [days]
       ),
@@ -136,12 +143,12 @@ router.get(
       // Daily incident trend.
       db.query(
         `SELECT
-            reported_datetime::date AS day,
+            i.reported_datetime::date AS day,
             COUNT(*)::int AS count
-         FROM incidents
-         WHERE reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)
-         GROUP BY reported_datetime::date
+         FROM incidents i
+         WHERE i.reported_datetime >=
+           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+         GROUP BY i.reported_datetime::date
          ORDER BY day ASC`,
         [days]
       ),
@@ -170,10 +177,10 @@ router.get(
       ),
       db.query(
         `SELECT COUNT(*)::int AS overdue
-           FROM incidents
-          WHERE due_at IS NOT NULL
-            AND due_at < CURRENT_TIMESTAMP
-            AND status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')`
+           FROM incidents i
+          WHERE i.due_at IS NOT NULL
+            AND i.due_at < CURRENT_TIMESTAMP
+            AND i.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')${studentScope}`
       ),
       db.query(
         `SELECT COUNT(*)::int AS missed

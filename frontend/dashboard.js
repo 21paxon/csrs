@@ -514,6 +514,56 @@ async function loadOverview() {
 
   renderRecentIncidents();
   renderOverviewCharts(dashboard);
+  renderHotspotMap(dashboard.hotspots || []);
+}
+
+let hotspotMap;
+let hotspotLayer;
+function renderHotspotMap(points) {
+  const status = $("hotspotMapStatus");
+  const container = $("hotspotMap");
+  if (!container || !status) return;
+  if (!window.L) {
+    status.textContent = "The map library could not be loaded. Check your connection.";
+    return;
+  }
+  const valid = points.filter((point) => Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng)));
+  if (!hotspotMap) {
+    const center = valid.length ? [Number(valid[0].lat), Number(valid[0].lng)] : [-1.5, 29.6];
+    hotspotMap = L.map(container).setView(center, valid.length ? 14 : 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(hotspotMap);
+  } else {
+    hotspotMap.invalidateSize();
+    if (hotspotLayer) hotspotMap.removeLayer(hotspotLayer);
+  }
+  hotspotLayer = L.layerGroup();
+  const bounds = [];
+  valid.forEach((point) => {
+    const coords = [Number(point.lat), Number(point.lng)];
+    bounds.push(coords);
+    const count = Number(point.incidents) || 1;
+    const marker = L.circleMarker(coords, {
+      radius: Math.min(22, 7 + Math.sqrt(count) * 2),
+      color: "#8f202b",
+      fillColor: "#c6343d",
+      fillOpacity: 0.7
+    });
+    const popup = document.createElement("div");
+    const label = document.createElement("strong");
+    label.textContent = String(point.location || "Campus location");
+    const details = document.createElement("p");
+    details.textContent = `${count} reported incident${count === 1 ? "" : "s"}`;
+    popup.append(label, details);
+    marker.bindPopup(popup).addTo(hotspotLayer);
+  });
+  hotspotLayer.addTo(hotspotMap);
+  if (bounds.length) hotspotMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 16 });
+  status.textContent = valid.length
+    ? `${valid.length} mapped location${valid.length === 1 ? "" : "s"} in the selected period.`
+    : "No incident coordinates are available for the selected period.";
 }
 
 function renderRecentIncidents() {
