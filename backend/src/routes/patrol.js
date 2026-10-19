@@ -65,15 +65,6 @@ router.get('/missed', requireRole(...STAFFED), wrap(async (req, res) => {
       ORDER BY d.end_at DESC`
   );
 
-  if (rows.length && [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY].includes(req.user.role)) {
-    await notify(
-      [req.user.id],
-      'Missed patrol checkpoints',
-      `${rows.length} checkpoint(s) were missed in the last 7 days.`,
-      'patrol'
-    );
-  }
-
   res.json(rows);
 }));
 

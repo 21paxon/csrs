@@ -113,6 +113,14 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 | Reports | `GET /api/reports/:type?from=&to=&format=csv` (incidents, lost-found, gate, patrol, audit) | Admin, HoS, CM, Dean |
 | Audit | `GET /api/audit-logs` | Admin, HoS |
 
+### Background notifications and patrol checks
+
+Run `npm run db:migrate` to install migration `003-notification-and-patrol-queues` before starting a version that includes the background worker. The worker starts with the API process, retries configured provider deliveries with exponential back-off, repeats unacknowledged emergency alerts every minute, and creates one missed-checkpoint notification for each completed roster/checkpoint pair. Missed checkpoints are evaluated when the rostered shift ends because the current roster model has no per-checkpoint timing window.
+
+In development, email, SMS, and subscribed push deliveries are written to the server log. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY`, `SMS_API_URL` / `SMS_API_KEY`, and optionally `PUSH_API_URL` / `PUSH_API_KEY`. Each endpoint receives a JSON POST with `channel`, `to`, `title`, `message`, `type`, and `link`; push jobs also include the browser subscription keys. These are provider adapters, so the deployment must point them at a service that accepts this contract. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Users register/remove browser subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
+
+For local offline-shell development, the service worker registers on the home and signed-in dashboard pages. It caches app files only; incident and account data are never stored for offline use. Production service-worker installation requires HTTPS.
+
 **Who sees which incidents:** Admin, HoS, CM and Dean see all; a Security Officer sees cases assigned to them; everyone else sees only their own reports. Anonymous reports store no reporter, and the access code is stored only as a hash.
 
 ## Checking that everything works

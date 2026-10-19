@@ -9,6 +9,24 @@ const { audit } = require('../utils/audit');
 const router = express.Router();
 router.use(authenticate);
 
+router.get('/delivery-status', requireRole(ROLES.ADMIN, ROLES.HEAD_OF_SECURITY), wrap(async (req, res) => {
+  const { limit, offset } = paging(req);
+  const status = String(req.query.status || '').trim();
+  const allowed = ['pending', 'processing', 'sent', 'failed'];
+  if (status && !allowed.includes(status)) throw new HttpError(400, 'Invalid delivery status');
+  const params = status ? [status] : [];
+  const filter = status ? 'WHERE status = $1' : '';
+  params.push(limit, offset);
+  const { rows } = await db.query(
+    `SELECT id, channel, status, attempts, next_attempt_at, last_error,
+            created_at, sent_at
+       FROM notification_queue ${filter}
+      ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+  res.json(rows);
+}));
+
 router.post('/push-subscriptions', wrap(async (req, res) => {
   const subscription = req.body?.subscription || req.body;
   const endpoint = String(subscription?.endpoint || '').trim();
