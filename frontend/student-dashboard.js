@@ -458,7 +458,10 @@
       await loadPortal();
       if (message) message.textContent = "Lost-item report submitted.";
     } catch (error) {
-      if (message) message.textContent = `Could not submit report: ${error.message}`;
+      const detail = error.message === "Not found"
+        ? "The live server is missing POST /api/lost-found/lost. Deploy the latest backend code, then retry."
+        : error.message;
+      if (message) message.textContent = `Could not submit report: ${detail}`;
     } finally {
       setLoading(button, false, "Submit lost-item report");
     }
