@@ -3,398 +3,682 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10243a">
-  <title>CSRS | Security Dashboard</title>
-  <style>
-    :root {
-      font-family: Arial, sans-serif;
-      color: #172b40;
-      background: #f3f6fa;
-      --navy: #10243a;
-      --blue: #1769aa;
-      --border: #dce4ed;
-      --muted: #65758a;
-    }
-
-    * { box-sizing: border-box; }
-    body { margin: 0; }
-    button, input, select, textarea { font: inherit; }
-    button { cursor: pointer; }
-    [hidden] { display: none !important; }
-
-    .app { min-height: 100vh; }
-    .sidebar {
-      position: fixed;
-      inset: 0 auto 0 0;
-      width: 245px;
-      background: var(--navy);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      padding: 22px 15px;
-      z-index: 10;
-    }
-
-    .brand {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 5px 8px 25px;
-      color: white;
-      text-decoration: none;
-    }
-
-    .brand-mark {
-      background: #2378bd;
-      padding: 12px;
-      border-radius: 10px;
-      font-weight: 800;
-    }
-
-    .brand small, .user-details span {
-      display: block;
-      color: #b7c7d9;
-      margin-top: 5px;
-    }
-
-    .campus-label, .nav-heading {
-      color: #9cb2c8;
-      font-size: 11px;
-      letter-spacing: 1px;
-      margin: 15px 8px 8px;
-    }
-
-    .campus-name { margin: 0 8px 20px; font-weight: 600; }
-
-    .navigation { display: grid; gap: 7px; }
-    .nav-link {
-      color: #d9e5f0;
-      text-decoration: none;
-      padding: 12px;
-      border-radius: 7px;
-      display: flex;
-      gap: 11px;
-    }
-
-    .nav-link:hover, .nav-link.active { background: #214361; color: white; }
-    .account-heading { margin-top: 25px; }
-
-    .sidebar-footer { margin-top: auto; }
-    .user-summary { display: flex; align-items: center; gap: 10px; padding: 12px 5px; }
-    .avatar {
-      width: 39px;
-      height: 39px;
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-      border-radius: 50%;
-      color: white;
-      background: #1769aa;
-      font-weight: bold;
-    }
-
-    .user-details { min-width: 0; overflow-wrap: anywhere; }
-    .logout-button {
-      width: 100%;
-      text-align: left;
-      padding: 12px;
-      color: #fff;
-      border: 1px solid #526a80;
-      border-radius: 7px;
-      background: transparent;
-    }
-
-    .main-column { margin-left: 245px; min-width: 0; }
-    .topbar {
-      min-height: 76px;
-      padding: 15px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      background: white;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .eyebrow { font-size: 11px; color: var(--blue); letter-spacing: 1px; font-weight: bold; }
-    .breadcrumb { color: var(--muted); font-size: 13px; margin-top: 6px; }
-    .topbar-right { display: flex; align-items: center; gap: 13px; }
-    .top-profile { display: flex; align-items: center; gap: 9px; background: none; border: 0; }
-    .avatar-small { width: 32px; height: 32px; }
-    .connection-indicator { color: #386b50; font-size: 12px; }
-    .connection-dot { display: inline-block; width: 8px; height: 8px; background: #28a268; border-radius: 50%; margin-right: 4px; }
-
-    .main-content { padding: 28px; max-width: 1600px; margin: auto; }
-    .page-heading, .section-title-row, .panel-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 15px;
-    }
-
-    h1 { font-size: 28px; margin: 7px 0; }
-    h2 { font-size: 20px; }
-    h3 { font-size: 16px; margin: 0 0 7px; }
-    p { line-height: 1.5; }
-    .page-description, .panel-heading p { color: var(--muted); margin: 5px 0 0; font-size: 14px; }
-    .period-control, .field { display: grid; gap: 7px; font-size: 13px; color: var(--muted); }
-
-    .welcome-panel {
-      background: linear-gradient(110deg, #10243a, #1c527d);
-      color: white;
-      border-radius: 12px;
-      padding: 25px;
-      margin: 25px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .welcome-panel h2 { margin: 8px 0; font-size: 24px; }
-    .welcome-panel p { margin-bottom: 0; color: #d5e4f2; }
-    .welcome-kicker { font-size: 11px; letter-spacing: 1px; }
-    .welcome-symbol { font-size: 28px; border: 1px solid #7c9db8; padding: 18px; border-radius: 12px; }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-    .stat-card, .panel { background: white; border: 1px solid var(--border); border-radius: 10px; }
-    .stat-card { padding: 19px; }
-    .stat-top { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 13px; }
-    .stat-symbol { color: var(--blue); font-weight: bold; }
-    .alert-symbol, .critical-symbol { color: #bf493f; }
-    .stat-value { font-size: 30px; font-weight: bold; margin: 18px 0 8px; }
-    .stat-card p { color: var(--muted); font-size: 12px; margin-bottom: 0; }
-
-    .section-title-row { margin: 30px 0 15px; }
-    .section-title-row h2 { margin-bottom: 5px; }
-    .section-title-row p, .last-updated { color: var(--muted); font-size: 13px; }
-    .analytics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    .panel { padding: 20px; margin-bottom: 18px; min-width: 0; }
-    .panel-heading { margin-bottom: 18px; }
-    .chart-container { display: grid; gap: 14px; min-height: 80px; }
-    .chart-row { display: grid; grid-template-columns: minmax(80px, 1fr) 2fr 40px; gap: 10px; align-items: center; font-size: 12px; }
-    .chart-row > span:first-child { overflow-wrap: anywhere; }
-    .chart-track { height: 9px; background: #eaf0f6; border-radius: 8px; overflow: hidden; }
-    .chart-fill { height: 100%; background: #2479b6; border-radius: 8px; }
-    .chart-value { text-align: right; }
-    .table-wrapper { width: 100%; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
-    th, td { padding: 13px 12px; border-bottom: 1px solid #e8edf3; white-space: nowrap; }
-    th { background: #f8fafc; color: #526478; font-weight: 600; }
-    .empty-cell { text-align: center; padding: 25px; color: var(--muted); white-space: normal; }
-    .badge { display: inline-block; border-radius: 20px; padding: 5px 9px; background: #e8eef5; color: #33485e; font-size: 11px; }
-    .badge.critical, .badge.high, .badge.active { background: #ffebe9; color: #a3332b; }
-    .badge.resolved, .badge.closed, .badge.low { background: #e3f5e9; color: #22663b; }
-    .badge.medium, .badge.submitted, .badge.pending { background: #fff2d7; color: #805816; }
-
-    .button { padding: 10px 14px; border-radius: 7px; border: 1px solid var(--border); }
-    .button-primary { color: white; background: var(--blue); border-color: var(--blue); }
-    .button-secondary { background: white; color: #243b51; }
-    .button-danger { color: white; background: #b63832; border-color: #b63832; }
-    button:disabled { opacity: .65; cursor: wait; }
-    input, select, textarea { width: 100%; border: 1px solid #cbd6e2; border-radius: 7px; padding: 11px; background: white; color: #172b40; }
-    input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible { outline: 2px solid #328bd0; outline-offset: 2px; }
-    .table-toolbar { display: flex; gap: 12px; margin-bottom: 16px; }
-    .search-field { flex: 1; }
-    .filter-field { width: 210px; }
-    .form-panel { margin-top: 20px; }
-    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; }
-    .field-full { grid-column: 1 / -1; }
-    .field b { color: #b63832; }
-    .checkbox-field { display: flex; gap: 9px; align-items: flex-start; color: var(--muted); font-size: 13px; }
-    .checkbox-field input { width: auto; margin-top: 2px; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-    .message { padding: 13px 16px; margin-bottom: 15px; border-radius: 8px; }
-    .message-error { color: #942b25; background: #fff0ee; border: 1px solid #f1c6c1; }
-    .message-success { color: #22663b; background: #e9f7ee; border: 1px solid #bfe5ca; }
-    .profile-banner { display: flex; align-items: center; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
-    .profile-banner h2 { margin: 0 0 6px; }
-    .profile-banner p { color: var(--muted); margin: 0; }
-    .profile-avatar { width: 60px; height: 60px; font-size: 23px; }
-    .profile-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; padding: 24px 0; }
-    .profile-detail span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-    .profile-detail strong { overflow-wrap: anywhere; }
-    .profile-note { color: var(--muted); font-size: 13px; }
-    .page-footer { display: flex; justify-content: space-between; gap: 10px; padding: 20px 0; color: var(--muted); font-size: 12px; }
-    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-    .menu-button { display: none; }
-
-    @media (max-width: 1100px) {
-      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .connection-indicator { display: none; }
-    }
-    @media (max-width: 760px) {
-      .sidebar { transform: translateX(-100%); transition: transform .2s ease; }
-      .sidebar.open { transform: translateX(0); }
-      .sidebar-backdrop { position: fixed; inset: 0; background: #10243a88; z-index: 9; }
-      .main-column { margin-left: 0; }
-      .topbar { padding: 13px 16px; }
-      .menu-button { display: inline-block; }
-      .topbar-left { display: flex; align-items: center; gap: 12px; }
-      .topbar-right { gap: 8px; }
-      .top-profile > span:last-child { display: none; }
-      .main-content { padding: 18px 14px; }
-      .analytics-grid { grid-template-columns: 1fr; }
-      .page-heading { align-items: flex-start; flex-direction: column; }
-      .period-control { width: 100%; }
-      .welcome-symbol { display: none; }
-      .form-grid, .profile-details { grid-template-columns: 1fr; }
-      .table-toolbar { flex-direction: column; }
-      .filter-field { width: 100%; }
-      .page-footer { flex-direction: column; }
-    }
-    @media (max-width: 420px) {
-      .stats-grid { grid-template-columns: 1fr; }
-      .topbar .eyebrow { display: none; }
-      .topbar-right .button { padding: 9px; }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#14243a">
+  <meta name="description" content="Campus Security and Reporting System - Rwanda Polytechnic Musanze College">
+  <title>CSRS | Campus Security and Reporting System</title>
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-<div class="app">
-  <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
 
-  <aside id="sidebar" class="sidebar">
-    <a class="brand" href="#overview" data-view="overview">
-      <span class="brand-mark">CS</span>
-      <span><strong>CSRS</strong><small>Campus Security</small></span>
-    </a>
-    <div class="campus-label">RWANDA POLYTECHNIC</div>
-    <div class="campus-name">Musanze College</div>
+  <div class="app">
+    <div id="sidebarBackdrop" class="backdrop" hidden></div>
 
-    <nav class="navigation" aria-label="Main navigation">
-      <p class="nav-heading">WORKSPACE</p>
-      <a class="nav-link active" href="#overview" data-view="overview">▦ Dashboard</a>
-      <a class="nav-link" href="#incidents" data-view="incidents">⚑ Incident monitoring</a>
-      <a class="nav-link" href="#emergency" data-view="emergency">! Emergency centre</a>
-      <a class="nav-link" href="#visitors" data-view="visitors">♙ Campus visitors</a>
-      <p class="nav-heading">ACCOUNT</p>
-      <a class="nav-link" href="#profile" data-view="profile">◎ Profile management</a>
-    </nav>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" data-page="overview">
+        <span class="brand-icon">CS</span>
+        <span>
+          <strong>CSRS</strong>
+          <small>RP Musanze College</small>
+        </span>
+      </a>
 
-    <div class="sidebar-footer">
-      <div class="user-summary">
-        <div id="userAvatar" class="avatar">U</div>
-        <div class="user-details"><strong id="sidebarUsername">User</strong><span id="sidebarRole">Staff</span></div>
+      <p class="nav-label">MAIN MENU</p>
+
+      <nav class="navigation" aria-label="Main navigation">
+        <a href="#overview" class="nav-link active" data-page="overview">
+          <span>▦</span> Overview
+        </a>
+        <a href="#users" class="nav-link" data-page="users" data-admin-only="true">
+          <span>♙</span> User Management
+          <span class="nav-count" id="pendingUsersBadge" hidden>0</span>
+        </a>
+        <a href="#incidents" class="nav-link" data-page="incidents">
+          <span>⚑</span> Incidents
+        </a>
+        <a href="#lost-found" class="nav-link" data-page="lost-found">
+          <span>◇</span> Lost and Found
+        </a>
+        <a href="#emergency" class="nav-link" data-page="emergency">
+          <span>!</span> Emergency Alerts
+        </a>
+        <a href="#gate" class="nav-link" data-page="gate">
+          <span>↔</span> Gate Management
+        </a>
+        <a href="#visitors" class="nav-link" data-page="visitors">
+          <span>♧</span> Visitor Management
+        </a>
+        <a href="#patrols" class="nav-link" data-page="patrols">
+          <span>⌖</span> Security Patrols
+        </a>
+      </nav>
+
+      <p class="nav-label account-heading">MANAGEMENT</p>
+
+      <nav class="navigation" aria-label="Management navigation">
+        <a href="#reports" class="nav-link" data-page="reports">
+          <span>▤</span> Reports
+        </a>
+        <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-admin-only="true">
+          <span>◷</span> Audit Logs
+        </a>
+        <a href="#profile" class="nav-link" data-page="profile">
+          <span>♙</span> My Profile
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">U</div>
+          <div class="user-details">
+            <strong id="sidebarUsername">Loading user...</strong>
+            <small id="sidebarRole">User</small>
+          </div>
+        </div>
+        <button type="button" class="logout-button" id="logoutButton">
+          Sign out
+        </button>
       </div>
-      <button id="logoutButton" class="logout-button" type="button">↪ Sign out</button>
-    </div>
-  </aside>
+    </aside>
 
-  <div class="main-column">
-    <header class="topbar">
-      <div class="topbar-left">
-        <button id="menuButton" class="button button-secondary menu-button" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
-        <div><div class="eyebrow">CAMPUS SECURITY AND REPORTING SYSTEM</div><div class="breadcrumb">Musanze College / <span id="breadcrumbCurrent">Dashboard</span></div></div>
-      </div>
-      <div class="topbar-right">
-        <span class="connection-indicator"><span class="connection-dot"></span> Workspace</span>
-        <button id="refreshButton" class="button button-secondary" type="button">↻ Refresh</button>
-        <button id="topProfileButton" class="top-profile" type="button" data-view="profile"><span id="topAvatar" class="avatar avatar-small">U</span><span id="topUsername">User</span></button>
-      </div>
-    </header>
-
-    <main id="main" class="main-content" tabindex="-1">
-      <div id="errorBox" class="message message-error" role="alert" hidden></div>
-      <div id="noticeBox" class="message message-success" role="status" hidden></div>
-
-      <section class="page-section" data-view-panel="overview">
-        <div class="page-heading">
-          <div><p class="eyebrow">SECURITY OPERATIONS</p><h1 id="pageTitle">Security Dashboard</h1><p id="pageSubtitle" class="page-description">Campus security overview</p></div>
-          <label class="period-control">Reporting period<select id="period"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></label>
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button
+            type="button"
+            class="menu-button"
+            id="menuButton"
+            aria-label="Open navigation"
+            aria-controls="sidebar"
+            aria-expanded="false"
+          >☰</button>
+          <div>
+            <p class="eyebrow">CAMPUS SECURITY PORTAL</p>
+            <h1 id="pageTitle">Overview</h1>
+            <p class="breadcrumb">RP Musanze College / <span id="breadcrumbPage">Overview</span></p>
+          </div>
         </div>
 
-        <div class="welcome-panel">
-          <div><p class="welcome-kicker">SECURITY OPERATIONS OVERVIEW</p><h2>Welcome back, <span id="welcomeName">User</span></h2><p>Review campus security activity and reported incidents.</p></div>
-          <div class="welcome-symbol">CSRS</div>
+        <div class="topbar-right">
+          <span class="connection-indicator">
+            <span class="connection-dot"></span> CSRS Portal
+          </span>
+          <button type="button" class="top-profile" data-page="profile">
+            <span class="avatar avatar-small" id="topAvatar">U</span>
+            <span id="welcomeName">My Account</span>
+          </button>
         </div>
+      </header>
 
-        <div class="stats-grid">
-          <article class="stat-card"><div class="stat-top"><span>Total incidents</span><span class="stat-symbol">01</span></div><div id="totalIncidents" class="stat-value">—</div><p>Reported incidents</p></article>
-          <article class="stat-card"><div class="stat-top"><span>Pending alerts</span><span class="stat-symbol alert-symbol">02</span></div><div id="pendingAlerts" class="stat-value">—</div><p>Emergency alerts requiring attention</p></article>
-          <article class="stat-card"><div class="stat-top"><span>Visitors on campus</span><span class="stat-symbol">03</span></div><div id="visitors" class="stat-value">—</div><p>Current visitor records</p></article>
-          <article class="stat-card"><div class="stat-top"><span>Critical incidents</span><span class="stat-symbol critical-symbol">04</span></div><div id="highSeverity" class="stat-value">—</div><p>Critical incidents recorded</p></article>
-        </div>
+      <main class="main-content" id="mainContent" tabindex="-1">
+        <div id="errorBox" class="message error" role="alert" hidden></div>
+        <div id="noticeBox" class="message success" role="status" hidden></div>
 
-        <div class="section-title-row"><div><h2>Incident analytics</h2><p>Summaries returned by the backend.</p></div><span id="lastUpdated" class="last-updated">Not refreshed yet</span></div>
-        <div class="analytics-grid">
-          <article class="panel"><div class="panel-heading"><div><h3>Incidents by severity</h3><p>Severity distribution</p></div></div><div id="severityChart" class="chart-container"><p class="empty-cell">Waiting for data...</p></div></article>
-          <article class="panel"><div class="panel-heading"><div><h3>Incidents by status</h3><p>Current workflow status</p></div></div><div id="statusChart" class="chart-container"><p class="empty-cell">Waiting for data...</p></div></article>
-          <article class="panel"><div class="panel-heading"><div><h3>Incidents by category</h3><p>Reported categories</p></div></div><div id="categoryChart" class="chart-container"><p class="empty-cell">Waiting for data...</p></div></article>
-          <article class="panel"><div class="panel-heading"><div><h3>Incident trend</h3><p>Daily incident totals</p></div></div><div id="trendChart" class="chart-container"><p class="empty-cell">Waiting for data...</p></div></article>
-        </div>
-
-        <article class="panel">
-          <div class="panel-heading"><div><h3>Incident hotspots</h3><p>Locations with recorded incidents</p></div><button class="button button-secondary" type="button" data-view="incidents">View incidents</button></div>
-          <div class="table-wrapper"><table><thead><tr><th>Location</th><th>Incident count</th></tr></thead><tbody id="hotspotsTable"><tr><td colspan="2" class="empty-cell">Waiting for data...</td></tr></tbody></table></div>
-        </article>
-      </section>
-
-      <section class="page-section" data-view-panel="incidents" hidden>
-        <div class="page-heading"><div><p class="eyebrow">INCIDENT MANAGEMENT</p><h1>Incident Monitoring</h1><p class="page-description">Review reports or submit a new incident.</p></div><button id="toggleIncidentForm" class="button button-primary" type="button" aria-expanded="false">+ Report incident</button></div>
-
-        <article id="incidentFormPanel" class="panel" hidden>
-          <div class="panel-heading"><div><h2>Submit an incident report</h2><p>Provide accurate information about the incident.</p></div></div>
-          <form id="incidentForm">
-            <div class="form-grid">
-              <label class="field">Incident category <b>*</b><select id="incidentCategory" name="category_id" required><option value="">Select category</option></select></label>
-              <label class="field">Campus location <b>*</b><select id="incidentLocation" name="location_id" required><option value="">Select location</option></select></label>
-              <label class="field">Severity <b>*</b><select id="incidentSeverity" name="severity" required><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option><option value="Critical">Critical</option></select></label>
-              <label class="field">Incident date and time <b>*</b><input id="incidentDateTime" name="incident_datetime" type="datetime-local" required></label>
-              <label class="field field-full">Description <b>*</b><textarea id="incidentDescription" name="description" rows="4" maxlength="5000" required placeholder="Describe what happened..."></textarea></label>
-              <label id="anonymousLabel" class="checkbox-field field-full"><input id="incidentAnonymous" name="is_anonymous" type="checkbox"><span>Submit anonymously, if permitted by the system policy.</span></label>
+        <!-- OVERVIEW -->
+        <section class="page-section" id="page-overview">
+          <div class="welcome-panel">
+            <div>
+              <p class="welcome-kicker">CAMPUS SECURITY AND REPORTING SYSTEM</p>
+              <h2>Welcome, <span id="overviewName">User</span></h2>
+              <p>Monitor campus safety, manage reports and coordinate security operations.</p>
             </div>
-            <div class="form-actions"><button id="cancelIncidentForm" class="button button-secondary" type="button">Cancel</button><button class="button button-primary" type="submit">Submit report</button></div>
-          </form>
-        </article>
-
-        <article class="panel">
-          <div class="table-toolbar">
-            <label class="search-field"><span class="visually-hidden">Search incidents</span><input id="incidentSearch" type="search" placeholder="Search incidents..."></label>
-            <label class="filter-field"><span class="visually-hidden">Filter incident status</span><select id="incidentStatusFilter"><option value="">All statuses</option><option>Submitted</option><option>Verified</option><option>In Progress</option><option>Resolved</option><option>Closed</option><option>Rejected</option><option>Duplicate</option><option>Escalated</option></select></label>
+            <div class="welcome-symbol">CSRS</div>
           </div>
-          <div class="table-wrapper"><table><thead><tr><th>Reference</th><th>Category</th><th>Location</th><th>Severity</th><th>Status</th><th>Date reported</th></tr></thead><tbody id="incidentsTable"><tr><td colspan="6" class="empty-cell">Incident records will appear here.</td></tr></tbody></table></div>
-        </article>
-      </section>
 
-      <section class="page-section" data-view-panel="emergency" hidden>
-        <div class="page-heading"><div><p class="eyebrow">EMERGENCY RESPONSE</p><h1>Emergency Centre</h1><p class="page-description">Review emergency alerts returned by the backend.</p></div><button id="refreshEmergency" class="button button-secondary" type="button">Refresh alerts</button></div>
-        <article class="panel">
-          <div class="table-toolbar"><label class="search-field"><span class="visually-hidden">Search alerts</span><input id="emergencySearch" type="search" placeholder="Search emergency alerts..."></label><label class="filter-field"><span class="visually-hidden">Filter alerts</span><select id="emergencyStatusFilter"><option value="">All statuses</option><option>Pending</option><option>Active</option><option>Acknowledged</option><option>Resolved</option><option>Closed</option></select></label></div>
-          <div class="table-wrapper"><table><thead><tr><th>Reference</th><th>Alert</th><th>Location</th><th>Status</th><th>Date created</th></tr></thead><tbody id="emergencyTable"><tr><td colspan="5" class="empty-cell">Emergency alerts will appear here.</td></tr></tbody></table></div>
-        </article>
-      </section>
-
-      <section class="page-section" data-view-panel="visitors" hidden>
-        <div class="page-heading"><div><p class="eyebrow">GATE MANAGEMENT</p><h1>Campus Visitors</h1><p class="page-description">Review visitor check-in and check-out records.</p></div><button id="refreshVisitors" class="button button-secondary" type="button">Refresh visitors</button></div>
-        <article class="panel">
-          <div class="table-toolbar"><label class="search-field"><span class="visually-hidden">Search visitors</span><input id="visitorSearch" type="search" placeholder="Search visitor or host..."></label><label class="filter-field"><span class="visually-hidden">Filter visitors</span><select id="visitorStatusFilter"><option value="">All available records</option><option value="on-campus">On campus</option><option value="checked-out">Checked out</option></select></label></div>
-          <div class="table-wrapper"><table><thead><tr><th>Visitor</th><th>Purpose</th><th>Host</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead><tbody id="visitorsTable"><tr><td colspan="6" class="empty-cell">Visitor records will appear here.</td></tr></tbody></table></div>
-        </article>
-      </section>
-
-      <section class="page-section" data-view-panel="profile" hidden>
-        <div class="page-heading"><div><p class="eyebrow">ACCOUNT SETTINGS</p><h1>Profile Management</h1><p class="page-description">Review the account linked to your session.</p></div></div>
-        <article class="panel">
-          <div class="profile-banner"><div id="profileAvatar" class="avatar profile-avatar">U</div><div><h2 id="profileDisplayName">User</h2><p id="profileRole">Staff</p></div></div>
-          <div class="profile-details">
-            <div class="profile-detail"><span>Full name</span><strong id="profileFullName">—</strong></div>
-            <div class="profile-detail"><span>Username</span><strong id="profileUsername">—</strong></div>
-            <div class="profile-detail"><span>Email address</span><strong id="profileEmail">—</strong></div>
-            <div class="profile-detail"><span>Role</span><strong id="profileRoleDetail">—</strong></div>
-            <div class="profile-detail"><span>Registration number</span><strong id="profileRegistration">—</strong></div>
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-top">Total Incidents</div>
+              <div class="stat-value" id="totalIncidents">—</div>
+              <p>Recorded incident reports</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Pending Registrations</div>
+              <div class="stat-value" id="pendingRegistrations">—</div>
+              <p>Accounts awaiting approval</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Active Alerts</div>
+              <div class="stat-value" id="pendingAlerts">—</div>
+              <p>Alerts requiring attention</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Registered Users</div>
+              <div class="stat-value" id="registeredUsers">—</div>
+              <p>Accounts in the system</p>
+            </article>
           </div>
-          <p class="profile-note">This page displays account information available in the current session. Profile editing requires a supported backend endpoint.</p>
-          <button id="profileLogoutButton" class="button button-danger" type="button">Sign out of CSRS</button>
-        </article>
-      </section>
 
-      <footer class="page-footer"><span>CSRS · Rwanda Polytechnic, Musanze College</span><span>Campus security operations</span></footer>
-    </main>
+          <div class="dashboard-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Incidents by Severity</h3>
+                  <p>Distribution of reported incidents</p>
+                </div>
+              </div>
+              <div class="chart-list" id="severityChart">
+                <p class="empty-cell">Loading statistics...</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Incident Status</h3>
+                  <p>Current incident workflow</p>
+                </div>
+              </div>
+              <div class="chart-list" id="statusChart">
+                <p class="empty-cell">Loading statistics...</p>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3>Recent Incidents</h3>
+                <p>Latest security reports</p>
+              </div>
+              <button class="button secondary" type="button" data-page="incidents">
+                View all
+              </button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="recentIncidentsTable">
+                  <tr><td colspan="5" class="empty-cell">Loading incidents...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- USER MANAGEMENT -->
+        <section class="page-section" id="page-users" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>User Management</h2>
+              <p class="page-description">Review registration requests and manage system accounts.</p>
+            </div>
+            <button class="button secondary" type="button" id="refreshUsers">Refresh</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-top">Pending Approval</div>
+              <div class="stat-value" id="usersPendingCount">—</div>
+              <p>Awaiting administrator review</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Active Accounts</div>
+              <div class="stat-value" id="usersActiveCount">—</div>
+              <p>Approved accounts</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">All Accounts</div>
+              <div class="stat-value" id="usersTotalCount">—</div>
+              <p>Registered system users</p>
+            </article>
+          </div>
+
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="userSearch" type="search" placeholder="Search by name, email or registration number" aria-label="Search users">
+              <select id="userStatusFilter" aria-label="Filter users by status">
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="rejected">Rejected</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Registration Number</th>
+                    <th>Requested Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable">
+                  <tr><td colspan="6" class="empty-cell">User records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="profile-note">
+              Registration approval and role changes must be authorized and validated by the backend.
+            </p>
+          </article>
+        </section>
+
+        <!-- INCIDENT MANAGEMENT -->
+        <section class="page-section" id="page-incidents" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Incident Management</h2>
+              <p class="page-description">Report incidents and track their resolution.</p>
+            </div>
+            <button class="button primary" type="button" id="toggleIncidentForm">Report Incident</button>
+          </div>
+
+          <article class="panel form-panel" id="incidentFormPanel" hidden>
+            <h3>New Incident Report</h3>
+            <form id="incidentForm">
+              <div class="form-grid">
+                <label>Category
+                  <select id="incidentCategory" name="category_id" required>
+                    <option value="">Select category</option>
+                  </select>
+                </label>
+                <label>Location
+                  <select id="incidentLocation" name="location_id" required>
+                    <option value="">Select location</option>
+                  </select>
+                </label>
+                <label>Incident Date and Time
+                  <input type="datetime-local" id="incidentDateTime" name="incident_datetime" required>
+                </label>
+                <label>Severity
+                  <select id="incidentSeverity" name="severity" required>
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </label>
+                <label class="full-width">Description
+                  <textarea id="incidentDescription" name="description" rows="4" required placeholder="Describe what happened, where it happened and any relevant details."></textarea>
+                </label>
+                <label class="checkbox-label full-width">
+                  <input type="checkbox" id="incidentAnonymous" name="is_anonymous">
+                  Submit this report anonymously, if permitted by your account.
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="button secondary" id="cancelIncidentForm">Cancel</button>
+                <button type="submit" class="button primary">Submit Report</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="incidentSearch" type="search" placeholder="Search incidents..." aria-label="Search incidents">
+              <select id="incidentStatusFilter" aria-label="Filter incidents by status">
+                <option value="">All statuses</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Verified">Verified</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Escalated">Escalated</option>
+              </select>
+              <button type="button" class="button secondary" id="refreshButton">Refresh</button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Reference</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="incidentsTable">
+                  <tr><td colspan="6" class="empty-cell">Incident records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- LOST AND FOUND -->
+        <section class="page-section" id="page-lost-found" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Lost and Found</h2>
+              <p class="page-description">Record lost property, register found items and follow up on claims.</p>
+            </div>
+            <button class="button primary" type="button" id="toggleLostFoundForm">Record Item</button>
+          </div>
+
+          <article class="panel form-panel" id="lostFoundFormPanel" hidden>
+            <h3>Record Lost or Found Property</h3>
+            <form id="lostFoundForm">
+              <div class="form-grid">
+                <label>Record Type
+                  <select id="lostFoundType" name="type" required>
+                    <option value="lost">Lost item</option>
+                    <option value="found">Found item</option>
+                  </select>
+                </label>
+                <label>Item Name
+                  <input id="lostFoundItemName" name="item_name" required maxlength="150" placeholder="e.g. Student ID card">
+                </label>
+                <label>Location
+                  <input id="lostFoundLocation" name="location" required maxlength="200" placeholder="Where was it lost or found?">
+                </label>
+                <label>Date
+                  <input id="lostFoundDate" name="date" type="date" required>
+                </label>
+                <label class="full-width">Description
+                  <textarea id="lostFoundDescription" name="description" rows="3" required placeholder="Describe the item and any identifying details."></textarea>
+                </label>
+              </div>
+              <div class="form-actions">
+                <button class="button secondary" type="button" id="cancelLostFoundForm">Cancel</button>
+                <button class="button primary" type="submit">Save Record</button>
+              </div>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="lostFoundSearch" type="search" placeholder="Search property records..." aria-label="Search lost and found records">
+              <select id="lostFoundStatusFilter" aria-label="Filter lost and found records">
+                <option value="">All records</option>
+                <option value="lost">Lost</option>
+                <option value="found">Found</option>
+                <option value="claimed">Claimed</option>
+                <option value="returned">Returned</option>
+              </select>
+              <button class="button secondary" type="button" id="refreshLostFound">Refresh</button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="lostFoundTable">
+                  <tr><td colspan="6" class="empty-cell">Lost and found records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- EMERGENCY ALERTS -->
+        <section class="page-section" id="page-emergency" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Emergency Alerts</h2>
+              <p class="page-description">Monitor emergencies and track response status.</p>
+            </div>
+            <button class="button secondary" type="button" id="refreshEmergency">Refresh</button>
+          </div>
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="emergencySearch" type="search" placeholder="Search alerts..." aria-label="Search emergency alerts">
+              <select id="emergencyStatusFilter" aria-label="Filter emergency alerts">
+                <option value="">All statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Acknowledged">Acknowledged</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Alert</th>
+                    <th>Location</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="emergencyTable">
+                  <tr><td colspan="6" class="empty-cell">Emergency alerts will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- GATE MANAGEMENT -->
+        <section class="page-section" id="page-gate" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Gate Management</h2>
+              <p class="page-description">Review campus access records and gate activity.</p>
+            </div>
+            <button class="button secondary" type="button" id="refreshGate">Refresh</button>
+          </div>
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="gateSearch" type="search" placeholder="Search gate records..." aria-label="Search gate records">
+              <select id="gateStatusFilter" aria-label="Filter gate records">
+                <option value="">All records</option>
+                <option value="entry">Entry</option>
+                <option value="exit">Exit</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Person</th>
+                    <th>Record Type</th>
+                    <th>Gate</th>
+                    <th>Recorded By</th>
+                    <th>Date and Time</th>
+                  </tr>
+                </thead>
+                <tbody id="gateTable">
+                  <tr><td colspan="5" class="empty-cell">Gate records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- VISITOR MANAGEMENT -->
+        <section class="page-section" id="page-visitors" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Visitor Management</h2>
+              <p class="page-description">Track visitor registration, campus entry and departure.</p>
+            </div>
+            <button class="button secondary" type="button" id="refreshVisitors">Refresh</button>
+          </div>
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="visitorSearch" type="search" placeholder="Search visitors..." aria-label="Search visitors">
+              <select id="visitorStatusFilter" aria-label="Filter visitors">
+                <option value="">All statuses</option>
+                <option value="On Campus">On Campus</option>
+                <option value="Checked Out">Checked Out</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Visitor</th>
+                    <th>Purpose</th>
+                    <th>Host</th>
+                    <th>Entry Time</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="visitorsTable">
+                  <tr><td colspan="6" class="empty-cell">Visitor records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- SECURITY PATROLS -->
+        <section class="page-section" id="page-patrols" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Security Patrols</h2>
+              <p class="page-description">Review patrol activities, checkpoints and observations.</p>
+            </div>
+            <button class="button secondary" type="button" id="refreshPatrols">Refresh</button>
+          </div>
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="patrolSearch" type="search" placeholder="Search patrols..." aria-label="Search patrols">
+              <select id="patrolStatusFilter" aria-label="Filter patrols">
+                <option value="">All patrol statuses</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Patrol</th>
+                    <th>Officer</th>
+                    <th>Checkpoint</th>
+                    <th>Status</th>
+                    <th>Start Time</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="patrolsTable">
+                  <tr><td colspan="6" class="empty-cell">Patrol records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- REPORTS -->
+        <section class="page-section" id="page-reports" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Reports</h2>
+              <p class="page-description">Review security activity and operational summaries.</p>
+            </div>
+          </div>
+          <div class="dashboard-grid">
+            <article class="panel">
+              <h3>Incident Summary</h3>
+              <p class="profile-note">Incident totals, severity distribution and resolution status.</p>
+              <button type="button" class="button secondary" id="loadIncidentReport">Load Incident Summary</button>
+              <div id="incidentReportOutput" class="chart-list"></div>
+            </article>
+            <article class="panel">
+              <h3>Access Summary</h3>
+              <p class="profile-note">Gate activity and visitor records, subject to your role permissions.</p>
+              <button type="button" class="button secondary" id="loadAccessReport">Load Access Summary</button>
+              <div id="accessReportOutput" class="chart-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- AUDIT LOGS -->
+        <section class="page-section" id="page-audit-logs" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Audit Logs</h2>
+              <p class="page-description">Review administrative actions and important system events.</p>
+            </div>
+            <button type="button" class="button secondary" id="refreshAuditLogs">Refresh</button>
+          </div>
+          <article class="panel">
+            <div class="table-toolbar">
+              <input id="auditSearch" type="search" placeholder="Search audit logs..." aria-label="Search audit logs">
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Details</th>
+                    <th>Date and Time</th>
+                  </tr>
+                </thead>
+                <tbody id="auditLogsTable">
+                  <tr><td colspan="5" class="empty-cell">Audit records will appear here.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- PROFILE -->
+        <section class="page-section" id="page-profile" hidden>
+          <div class="page-heading">
+            <div>
+              <h2>My Profile</h2>
+              <p class="page-description">View your account information.</p>
+            </div>
+          </div>
+          <article class="panel">
+            <div class="profile-banner">
+              <div class="avatar profile-avatar" id="profileAvatar">U</div>
+              <div>
+                <h2 id="profileName">User</h2>
+                <p id="profileRole">System User</p>
+              </div>
+            </div>
+            <div class="profile-details">
+              <div class="profile-detail">
+                <span>Email address</span>
+                <strong id="profileEmail">—</strong>
+              </div>
+              <div class="profile-detail">
+                <span>Registration number</span>
+                <strong id="profileRegistration">—</strong>
+              </div>
+              <div class="profile-detail">
+                <span>Account status</span>
+                <strong id="profileStatus">—</strong>
+              </div>
+              <div class="profile-detail">
+                <span>Role</span>
+                <strong id="profileRoleDetail">—</strong>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <footer class="page-footer">
+          <span>CSRS · Rwanda Polytechnic, Musanze College</span>
+          <span>Campus Security and Reporting System</span>
+        </footer>
+      </main>
+    </div>
   </div>
-</div>
 
-<script src="config.js"></script>
-<script src="dashboard.js" defer></script>
+  <script src="config.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
