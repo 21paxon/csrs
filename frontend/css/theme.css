@@ -139,6 +139,44 @@ aside {
   border-color: var(--csrs-gold);
 }
 
+.csrs-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.csrs-header-controls button {
+  min-height: 40px;
+  max-width: 100%;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+@media (max-width: 600px) {
+  .csrs-header-controls {
+    gap: 6px;
+  }
+
+  .csrs-header-controls button {
+    min-height: 42px;
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .csrs-push-status {
+    flex-basis: 100%;
+  }
+
+  .csrs-floating-controls {
+    left: 8px !important;
+    bottom: 8px !important;
+    max-width: calc(100vw - 76px);
+  }
+}
+
 .header-link:hover,
 .nav-links > a.nav-signin:hover {
   border-color: var(--csrs-navy);

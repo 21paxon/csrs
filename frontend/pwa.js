@@ -6,6 +6,7 @@
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'csrsLanguageToggle';
+  button.className = 'csrs-language-toggle';
   button.style.cssText = 'border:1px solid #cbd7e5;border-radius:7px;padding:.48rem .72rem;background:#fff;color:#123b70;font:600 12px system-ui;cursor:pointer;min-height:36px';
   button.setAttribute('aria-label', 'Change language');
   document.body.appendChild(button);
@@ -13,6 +14,7 @@
   const pushButton = document.createElement('button');
   pushButton.type = 'button';
   pushButton.id = 'csrsPushToggle';
+  pushButton.className = 'csrs-push-toggle';
   pushButton.textContent = 'Enable push alerts';
   pushButton.setAttribute('aria-label', 'Enable web push alerts');
   pushButton.style.cssText = button.style.cssText;
@@ -23,6 +25,7 @@
   if (sessionStorage.getItem('csrs_token')) controls.appendChild(pushButton);
   const pushStatus = document.createElement('span');
   pushStatus.id = 'csrsPushStatus';
+  pushStatus.className = 'csrs-push-status';
   pushStatus.setAttribute('role', 'status');
   pushStatus.setAttribute('aria-live', 'polite');
   pushStatus.style.cssText = 'display:none;grid-column:1/-1;max-width:340px;color:#8f1d18;font:500 12px/1.4 system-ui';
@@ -34,6 +37,7 @@
   else if (siteHeader) siteHeader.appendChild(controls);
   else if (dashboardTopbar) dashboardTopbar.appendChild(controls);
   else {
+    controls.classList.add('csrs-floating-controls');
     controls.style.cssText += ';position:fixed;left:1rem;bottom:1rem;z-index:9999;padding:.35rem;background:#f4f7fb;border-radius:10px;box-shadow:0 2px 12px #0003';
     document.body.appendChild(controls);
   }
