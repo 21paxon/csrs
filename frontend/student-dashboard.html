@@ -40,9 +40,6 @@
     .action-card strong { display: block; margin-bottom: 6px; color: var(--navy); font-size: 14px; }
     .action-card span { color: var(--muted); font-size: 12px; line-height: 1.6; }
 
-    .frame-panel { padding: 0; overflow: hidden; }
-    /* Height is set by the embedded page once it reports its content size. */
-    .frame-panel iframe { display: block; width: 100%; height: 900px; min-height: 480px; border: 0; background: #fff; }
     .frame-header {
       display: flex;
       align-items: center;
@@ -52,6 +49,15 @@
       border-bottom: 1px solid var(--border);
     }
     .frame-header h3 { margin: 0; }
+    .dashboard-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .dashboard-form .full { grid-column: 1 / -1; }
+    .dashboard-form label { display: block; margin-bottom: 6px; color: var(--text); font-size: 13px; font-weight: 700; }
+    .dashboard-form input, .dashboard-form select, .dashboard-form textarea { width: 100%; }
+    .dashboard-form textarea { min-height: 100px; }
+    .dashboard-form .actions { display: flex; gap: 10px; align-items: center; }
+    .dashboard-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .dashboard-tabs button[aria-selected="true"] { color: #fff; background: var(--rp-blue); }
+    @media (max-width: 650px) { .dashboard-form { grid-template-columns: 1fr; } .dashboard-form .full { grid-column: auto; } }
 
     .subtitle { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.6; }
     .subtitle:empty { display: none; }
@@ -86,7 +92,7 @@
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <div class="brand-icon" aria-hidden="true">C</div>
+        <img class="brand-mark" src="/images/rp-logo.jpg" alt="Rwanda Polytechnic logo">
         <div>
           <strong>CSRS</strong>
           <small>RP Musanze College</small>
@@ -220,13 +226,21 @@
           </button>
         </div>
 
-        <article class="panel frame-panel" id="reportFormPanel" hidden>
+        <article class="panel" id="reportFormPanel" hidden>
           <div class="frame-header">
             <h3>New incident report</h3>
             <button class="button secondary" id="closeReportForm" type="button">Close</button>
           </div>
-          <iframe id="incidentFrame" title="Incident reporting form"
-                  data-src="/incidents.html"></iframe>
+          <form id="dashboardIncidentForm" class="dashboard-form">
+            <div><label for="incidentCategory">Category</label><select id="incidentCategory" required><option value="">Loading categories...</option></select></div>
+            <div><label for="incidentLocation">Campus location</label><select id="incidentLocation" required><option value="">Loading locations...</option></select></div>
+            <div><label for="incidentDate">When did it happen?</label><input id="incidentDate" type="datetime-local" required></div>
+            <div><label for="incidentSeverity">Severity</label><select id="incidentSeverity" required><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select></div>
+            <div class="full"><label for="incidentDescription">Description</label><textarea id="incidentDescription" maxlength="10000" required placeholder="Describe what happened and any relevant details."></textarea></div>
+            <div class="full"><label for="incidentEvidence">Evidence (optional, up to 5 files)</label><input id="incidentEvidence" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx"></div>
+            <div class="full actions"><button class="button primary" id="incidentSubmit" type="submit">Submit incident</button><label><input id="incidentAnonymous" type="checkbox"> Submit anonymously</label></div>
+          </form>
+          <p class="subtitle" id="incidentFormMessage" role="status"></p>
         </article>
 
         <article class="panel">
@@ -290,9 +304,32 @@
           </div>
         </div>
 
-        <article class="panel frame-panel">
-          <iframe id="lostFoundFrame" title="Lost and found workspace"
-                  data-src="/lost-found.html"></iframe>
+        <article class="panel">
+          <div class="dashboard-tabs" role="tablist" aria-label="Lost and found items">
+            <button class="button secondary" id="lostItemsTab" type="button" role="tab" aria-selected="true" aria-controls="studentLostPanel">Lost items</button>
+            <button class="button secondary" id="foundItemsTab" type="button" role="tab" aria-selected="false" aria-controls="studentFoundPanel">Found items</button>
+            <button class="button secondary" id="refreshLostFound" type="button">Refresh</button>
+          </div>
+          <p id="lostFoundMessage" class="subtitle" role="status"></p>
+          <div id="studentLostPanel" role="tabpanel">
+            <h3>Report a lost item</h3>
+            <form id="dashboardLostForm" class="dashboard-form">
+              <div><label for="lostItemName">Item name</label><input id="lostItemName" name="item_name" maxlength="180" required></div>
+              <div><label for="lostItemCategory">Category</label><input id="lostItemCategory" name="category" maxlength="100"></div>
+              <div><label for="lostItemLocation">Where was it lost?</label><input id="lostItemLocation" name="location_lost" maxlength="200"></div>
+              <div><label for="lostItemDate">Date lost</label><input id="lostItemDate" name="date_lost" type="date"></div>
+              <div><label for="lostItemPhone">Contact phone</label><input id="lostItemPhone" name="contact_phone" type="tel" maxlength="50" autocomplete="tel"></div>
+              <div><label for="lostItemPhoto">Photo (optional)</label><input id="lostItemPhoto" name="photo" type="file" accept="image/*"></div>
+              <div class="full"><label for="lostItemDescription">Description</label><textarea id="lostItemDescription" name="description" maxlength="2000"></textarea></div>
+              <div class="full"><button class="button primary" id="lostItemSubmit" type="submit">Submit lost-item report</button></div>
+            </form>
+            <h3>My lost-item reports</h3>
+            <div class="table-scroll"><table><thead><tr><th>Item</th><th>Category</th><th>Location</th><th>Date</th><th>Status</th></tr></thead><tbody id="studentLostRows"></tbody></table></div>
+          </div>
+          <div id="studentFoundPanel" role="tabpanel" hidden>
+            <h3>Open found items on campus</h3>
+            <div class="table-scroll"><table><thead><tr><th>Item</th><th>Category</th><th>Location</th><th>Date found</th><th>Description</th></tr></thead><tbody id="studentFoundRows"></tbody></table></div>
+          </div>
         </article>
       </section>
 
