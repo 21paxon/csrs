@@ -403,6 +403,12 @@ svg {
   background: #f4f7fb;
 }
 
+.button-small {
+  padding: 7px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .avatar-small {
   width: 34px;
   height: 34px;

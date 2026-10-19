@@ -110,6 +110,11 @@ function isAdmin() {
   );
 }
 
+function canManageLostFoundAndEmergencies() {
+  return ["admin", "administrator", "super_admin", "superadmin", "head_security", "security_officer"]
+    .includes(roleOf());
+}
+
 function userName() {
   const user = state.user || {};
   return (
@@ -1045,18 +1050,81 @@ function renderLostFound() {
   items.forEach((item) => {
     const row = document.createElement("tr");
 
-    makeCell(row, getValue(item, ["item_name", "name", "title"]));
-    makeCell(row, getValue(item, ["type", "item_type"]));
-    makeCell(row, getValue(item, ["location", "location_name"]));
-    makeCell(row, formatDate(getValue(item, ["date", "created_at", "reported_at"])));
+    const kind = String(getValue(item, ["kind", "type", "item_type"], "lost")).toLowerCase();
+    makeCell(row, `${getValue(item, ["item_name", "name", "title"])} (#${item.id})`);
+    makeCell(row, kind);
+    makeCell(row, getValue(item, ["location", "location_lost", "location_found", "location_name"]));
+    makeCell(row, formatDate(getValue(item, ["date", "date_lost", "date_found", "event_date", "created_at", "reported_at"])));
     renderStatusCell(row, getValue(item, ["status"], "Open"));
 
     const actions = document.createElement("td");
-    actions.textContent = "—";
+    if (canManageLostFoundAndEmergencies() && kind === "found" && item.id) {
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "button secondary button-small";
+      action.textContent = String(item.status).toLowerCase() === "matched"
+        ? translated("mark_collected", "Mark collected")
+        : translated("match_item", "Match lost report");
+      action.disabled = !["open", "matched"].includes(String(item.status || "open").toLowerCase());
+      action.addEventListener("click", () => String(item.status).toLowerCase() === "matched"
+        ? collectMatchedItem(item)
+        : matchFoundItem(item));
+      actions.appendChild(action);
+    } else {
+      actions.textContent = "—";
+    }
     row.appendChild(actions);
 
     tbody.appendChild(row);
   });
+}
+
+async function matchFoundItem(foundItem) {
+  const candidates = state.lostFound.filter((item) =>
+    String(getValue(item, ["kind", "type", "item_type"], "")).toLowerCase() === "lost" &&
+    String(item.status || "").toLowerCase() === "open"
+  );
+  if (!candidates.length) {
+    showMessage("There are no open lost reports to match yet.", "error");
+    return;
+  }
+  const choices = candidates.map((item) => `#${item.id} — ${getValue(item, ["item_name", "title"], "Unnamed item")}`).join("\n");
+  const answer = window.prompt(`Enter the ID of the lost report that matches found item #${foundItem.id}:\n${choices}`);
+  if (answer === null) return;
+  const lostItem = candidates.find((item) => String(item.id) === answer.trim().replace(/^#/, ""));
+  if (!lostItem) {
+    showMessage("Enter one of the listed lost report IDs.", "error");
+    return;
+  }
+  try {
+    await api(`${PAGE_ENDPOINTS.lostFound.replace(/\/+$/, "")}/match`, {
+      method: "POST",
+      body: JSON.stringify({ lost_id: Number(lostItem.id), found_id: Number(foundItem.id) })
+    });
+    showMessage("Items matched. The person who reported the lost item was notified.");
+    await loadLostFound();
+  } catch (error) {
+    showMessage(`Unable to match items: ${error.message}`, "error");
+  }
+}
+
+async function collectMatchedItem(foundItem) {
+  const lostItem = state.lostFound.find((item) => Number(item.id) === Number(foundItem.matched_item_id));
+  if (!lostItem?.user_id) {
+    showMessage("The matched lost report owner could not be identified. Refresh the records and retry.", "error");
+    return;
+  }
+  if (!window.confirm("Confirm that the claimant's identity was checked and the item is being handed over?")) return;
+  try {
+    await api(`${PAGE_ENDPOINTS.lostFound.replace(/\/+$/, "")}/found/${foundItem.id}/collect`, {
+      method: "POST",
+      body: JSON.stringify({ user_id: Number(lostItem.user_id) })
+    });
+    showMessage("Item marked as collected and the lost report was closed.");
+    await loadLostFound();
+  } catch (error) {
+    showMessage(`Unable to record collection: ${error.message}`, "error");
+  }
 }
 
 async function submitLostFound(event) {
@@ -1109,6 +1177,22 @@ async function loadEmergency() {
   renderEmergency();
 }
 
+async function performEmergencyAction(alert, action) {
+  const prompts = {
+    acknowledge: "Confirm that a responder is taking responsibility for this alert?",
+    arrive: "Confirm that responders have arrived at the reported location?",
+    resolve: "Confirm that this emergency has been handled and can be closed?"
+  };
+  if (!window.confirm(prompts[action])) return;
+  try {
+    await api(`${PAGE_ENDPOINTS.emergency}/${alert.id}/${action}`, { method: "PATCH" });
+    showMessage(`Emergency alert #${alert.id} updated.`);
+    await loadEmergency();
+  } catch (error) {
+    showMessage(`Unable to update emergency alert: ${error.message}`, "error");
+  }
+}
+
 function renderEmergency() {
   const query = $("emergencySearch")?.value || "";
   const status = $("emergencyStatusFilter")?.value || "";
@@ -1134,14 +1218,39 @@ function renderEmergency() {
   items.forEach((alert) => {
     const row = document.createElement("tr");
 
-    makeCell(row, getValue(alert, ["title", "alert_type", "message", "description"]));
-    makeCell(row, getValue(alert, ["location", "location_name"]));
-    renderSeverityCell(row, getValue(alert, ["severity", "priority"], "Medium"));
+    const summary = getValue(alert, ["message", "title", "alert_type", "description"], "Emergency assistance requested");
+    const reporter = alert.username || alert.full_name || "Campus user";
+    makeCell(row, `#${alert.id} · ${reporter}: ${summary}`);
+    const location = getValue(alert, ["location", "location_name"], null) ||
+      (alert.lat != null && alert.lng != null ? `${alert.lat}, ${alert.lng}` : "Location unavailable");
+    makeCell(row, location);
+    renderSeverityCell(row, getValue(alert, ["severity", "priority"], "Critical"));
     renderStatusCell(row, getValue(alert, ["status"], "Unknown"));
-    makeCell(row, formatDate(getValue(alert, ["created_at", "createdAt", "timestamp"])));
+    makeCell(row, formatDate(getValue(alert, ["triggered_at", "created_at", "createdAt", "timestamp"])));
 
     const actions = document.createElement("td");
-    actions.textContent = "—";
+    if (canManageLostFoundAndEmergencies() && alert.id) {
+      const current = String(alert.status || "").toLowerCase();
+      const nextActions = current === "triggered"
+        ? [["acknowledge", "Acknowledge"], ["resolve", "Resolve"]]
+        : current === "acknowledged"
+          ? [["arrive", "Mark arrived"], ["resolve", "Resolve"]]
+          : current === "arrived"
+            ? [["resolve", "Resolve"]]
+            : [];
+      nextActions.forEach(([action, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "button secondary button-small";
+        const labelKeys = { acknowledge: "acknowledge_alert", arrive: "mark_arrived", resolve: "resolve_alert" };
+        button.textContent = translated(labelKeys[action], label);
+        button.addEventListener("click", () => performEmergencyAction(alert, action));
+        actions.appendChild(button);
+      });
+      if (!actions.childElementCount) actions.textContent = "—";
+    } else {
+      actions.textContent = "—";
+    }
     row.appendChild(actions);
 
     tbody.appendChild(row);
@@ -1577,6 +1686,12 @@ function setupUserManagement() {
 }
 
 function setupLostFound() {
+  const foundOption = $("lostFoundType")?.querySelector('option[value="found"]');
+  if (foundOption && !canManageLostFoundAndEmergencies()) {
+    foundOption.disabled = true;
+    foundOption.hidden = true;
+  }
+
   on("toggleLostFoundForm", "click", () => {
     const panel = $("lostFoundFormPanel");
     if (panel) panel.hidden = !panel.hidden;

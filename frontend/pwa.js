@@ -6,7 +6,7 @@
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'csrsLanguageToggle';
-  button.style.cssText = 'position:fixed;left:1rem;bottom:1rem;z-index:9999;border:0;border-radius:999px;padding:.7rem 1rem;background:#fff;color:#123b70;box-shadow:0 2px 12px #0003;font:600 14px system-ui;cursor:pointer';
+  button.style.cssText = 'border:1px solid #d9e2ef;border-radius:8px;padding:.55rem .8rem;background:#fff;color:#123b70;font:600 13px system-ui;cursor:pointer';
   button.setAttribute('aria-label', 'Change language');
   document.body.appendChild(button);
 
@@ -15,8 +15,20 @@
   pushButton.id = 'csrsPushToggle';
   pushButton.textContent = 'Enable push alerts';
   pushButton.setAttribute('aria-label', 'Enable web push alerts');
-  pushButton.style.cssText = button.style.cssText.replace('bottom:1rem', 'bottom:4rem');
-  if (sessionStorage.getItem('csrs_token')) document.body.appendChild(pushButton);
+  pushButton.style.cssText = button.style.cssText;
+  const controls = document.createElement('div');
+  controls.className = 'csrs-header-controls';
+  controls.style.cssText = 'display:flex;align-items:center;gap:.5rem;flex-wrap:wrap';
+  controls.appendChild(button);
+  if (sessionStorage.getItem('csrs_token')) controls.appendChild(pushButton);
+  const dashboardHeader = document.querySelector('.topbar-right');
+  const dashboardTopbar = document.querySelector('.topbar');
+  if (dashboardHeader) dashboardHeader.prepend(controls);
+  else if (dashboardTopbar) dashboardTopbar.appendChild(controls);
+  else {
+    controls.style.cssText += ';position:fixed;left:1rem;bottom:1rem;z-index:9999;padding:.35rem;background:#f4f7fb;border-radius:10px;box-shadow:0 2px 12px #0003';
+    document.body.appendChild(controls);
+  }
 
   const updatePushLabel = (key, fallback) => {
     if (pushButton.isConnected) pushButton.textContent = currentStrings[key] || fallback;
