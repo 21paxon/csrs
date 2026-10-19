@@ -158,12 +158,12 @@ It creates test users and walks through every module (about 60 checks) and print
 
 ### Remaining implementation and deployment work
 
-- Email/SMS and push delivery use retryable provider adapters. Configure the college's real provider endpoints and VAPID/web-push gateway before production; development uses a console fake.
+- Native Web Push can use VAPID keys; email and SMS delivery use retryable provider adapters. Configure the college's real provider endpoints and VAPID keys before production; development uses a console fake.
 - Password reset links use a hashed, one-hour token and invalidate existing sessions. The development email fake prints reset links to the backend console; production needs `EMAIL_API_URL` and `PUBLIC_APP_URL` configured.
 - The PWA caches its app shell only. Offline incident submission and background data sync are intentionally not enabled.
 - The language switcher translates the main reporting and emergency flows; other screens still contain English text. Kinyarwanda strings need fluent review.
 - The original SRS document, a real PostgreSQL migration/restore run, cross-browser acceptance, accessibility review, performance/load results and security test results remain outstanding.
-- Optional TOTP MFA, complete Admin settings screens, and imports from Excel files remain outstanding.
+- Optional TOTP MFA, Admin system settings, and `.xlsx`/`.csv` user import are implemented. Apply database migrations with `npm run db:migrate` before use. Configure and preserve `MFA_ENCRYPTION_KEY` before enabling MFA; changing it makes existing authenticator secrets unreadable.
 - `npm install` reported two moderate dependency advisories after adding the spreadsheet and PDF export packages; review them before production deployment.
 
 ## Project Structure

@@ -68,7 +68,8 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch(window.CSRS.apiUrl("/api/settings/public"))
     .then((response) => response.ok ? response.json() : null)
     .then((settings) => {
-      if (settings && settings.registration_enabled === false) {
+      if (!settings) return;
+      if (settings.registration_enabled === false) {
         const notice = document.getElementById("registrationNotice");
         if (notice) {
           notice.hidden = false;
@@ -76,6 +77,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         registerButton.disabled = true;
         registerButton.title = "Registration is currently closed";
+      }
+      const contact = document.getElementById("homeSupportContact");
+      if (contact && (settings.support_email || settings.emergency_phone)) {
+        const label = document.createElement("span");
+        label.textContent = "College support: ";
+        contact.append(label);
+        if (settings.support_email) {
+          const email = document.createElement("a");
+          email.href = `mailto:${settings.support_email}`;
+          email.textContent = settings.support_email;
+          contact.append(email);
+        }
+        if (settings.support_email && settings.emergency_phone) contact.append(document.createTextNode(" · "));
+        if (settings.emergency_phone) {
+          const phone = document.createElement("a");
+          phone.href = `tel:${settings.emergency_phone.replace(/[^+0-9]/g, "")}`;
+          phone.textContent = settings.emergency_phone;
+          contact.append(phone);
+        }
       }
     })
     .catch(() => {});

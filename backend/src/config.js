@@ -12,6 +12,8 @@ module.exports = {
   port: parseInt(process.env.PORT, 10) || 3000,
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
+  // Keep this key stable across deployments and JWT signing-key rotations.
+  mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY || process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   frontendOrigins: (process.env.FRONTEND_ORIGINS || 'http://localhost:3000')
     .split(',')

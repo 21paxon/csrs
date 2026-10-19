@@ -60,7 +60,7 @@ function verifyCode(secret, candidate, timestamp = Date.now()) {
 }
 
 function seal(secret) {
-  const key = crypto.createHash('sha256').update(config.jwtSecret).digest();
+  const key = crypto.createHash('sha256').update(config.mfaEncryptionKey).digest();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
@@ -70,7 +70,7 @@ function seal(secret) {
 function unseal(value) {
   const [ivText, tagText, ciphertextText] = String(value || '').split('.');
   if (!ivText || !tagText || !ciphertextText) throw new Error('Invalid encrypted MFA secret');
-  const key = crypto.createHash('sha256').update(config.jwtSecret).digest();
+  const key = crypto.createHash('sha256').update(config.mfaEncryptionKey).digest();
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivText, 'base64url'));
   decipher.setAuthTag(Buffer.from(tagText, 'base64url'));
   return Buffer.concat([
