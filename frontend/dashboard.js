@@ -1051,16 +1051,19 @@ async function submitLostFound(event) {
     return;
   }
 
+  const kind = $("lostFoundType").value === "found" ? "found" : "lost";
+  const route = `${PAGE_ENDPOINTS.lostFound.replace(/\/+$/, "")}/${kind}`;
   const payload = {
-    type: $("lostFoundType").value,
     item_name: $("lostFoundItemName").value.trim(),
-    location: $("lostFoundLocation").value.trim(),
-    date: $("lostFoundDate").value,
+    [kind === "found" ? "location_found" : "location_lost"]:
+      $("lostFoundLocation").value.trim(),
+    [kind === "found" ? "date_found" : "date_lost"]:
+      $("lostFoundDate").value,
     description: $("lostFoundDescription").value.trim()
   };
 
   try {
-    await api(PAGE_ENDPOINTS.lostFound, {
+    await api(route, {
       method: "POST",
       body: JSON.stringify(payload)
     });
