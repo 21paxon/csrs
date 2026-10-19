@@ -1124,3 +1124,68 @@ h1, h2 {
 .register-link a:hover {
   text-decoration: underline;
 }
+
+/* Refined institutional landing page */
+.header-container { min-height: 88px; }
+.rp-logo { border-radius: 14px; box-shadow: 0 5px 16px rgba(18, 59, 112, .12); }
+.hero {
+  background:
+    radial-gradient(circle at 88% 18%, rgba(229, 173, 50, .11), transparent 22rem),
+    linear-gradient(120deg, #eef4fb 0%, #fff 53%, #eaf1f9 100%);
+}
+.hero-container { min-height: 590px; padding-top: 82px; padding-bottom: 82px; }
+.institution-label { border-radius: 5px; }
+.primary-btn, .secondary-btn { border-radius: 8px; }
+.security-panel {
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 24px 65px rgba(18, 59, 112, .15);
+}
+.security-service { padding: 24px 0; }
+.service-number, .panel-number, .module-icon { border-radius: 10px; }
+.module-card {
+  padding: 27px;
+  border-radius: 14px;
+  box-shadow: 0 5px 22px rgba(18, 59, 112, .035);
+}
+.module-card:hover { transform: translateY(-5px); }
+.security-note-aside { border-radius: 14px; box-shadow: 0 10px 30px rgba(18, 59, 112, .045); }
+.response-steps {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+.response-steps-container {
+  max-width: var(--container);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.response-step { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.response-step > span {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--rp-blue-light);
+  color: var(--rp-blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+.response-step strong, .response-step small { display: block; }
+.response-step strong { color: var(--rp-blue-dark); font-size: 13px; }
+.response-step small { color: var(--muted); font-size: 11px; }
+.nav-links .csrs-header-controls { margin-left: 2px; }
+
+@media (max-width: 760px) {
+  .hero-container { min-height: auto; padding-top: 48px; padding-bottom: 48px; }
+  .response-steps { padding: 18px 20px; }
+  .response-steps-container { grid-template-columns: 1fr; gap: 14px; }
+  .response-step { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .response-step:last-child { padding-bottom: 0; border-bottom: 0; }
+  .security-panel, .module-card { padding: 22px; }
+  .nav-links .csrs-header-controls { margin-left: 0; }
+}

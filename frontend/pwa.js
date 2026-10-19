@@ -28,8 +28,10 @@
   pushStatus.style.cssText = 'display:none;grid-column:1/-1;max-width:340px;color:#8f1d18;font:500 12px/1.4 system-ui';
   controls.appendChild(pushStatus);
   const dashboardHeader = document.querySelector('.topbar-right');
+  const siteNavigation = document.querySelector('.header-container .nav-links');
   const dashboardTopbar = document.querySelector('.topbar');
   if (dashboardHeader) dashboardHeader.prepend(controls);
+  else if (siteNavigation) siteNavigation.appendChild(controls);
   else if (dashboardTopbar) dashboardTopbar.appendChild(controls);
   else {
     controls.style.cssText += ';position:fixed;left:1rem;bottom:1rem;z-index:9999;padding:.35rem;background:#f4f7fb;border-radius:10px;box-shadow:0 2px 12px #0003';
