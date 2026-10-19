@@ -379,6 +379,16 @@ $("trackForm").addEventListener("submit", async (event) => {
   }
 });
 
+$("incidentForm").addEventListener("reset", () => {
+  window.setTimeout(() => {
+    if (mapMarker && incidentMap) incidentMap.removeLayer(mapMarker);
+    mapMarker = null;
+    if ($("mapLocationStatus")) {
+      $("mapLocationStatus").textContent = "Choose a configured campus location or tap the map.";
+    }
+  }, 0);
+});
+
 $("refreshButton").addEventListener("click", loadIncidents);
 loadReferenceData();
 loadIncidents();

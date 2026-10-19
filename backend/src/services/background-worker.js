@@ -98,19 +98,27 @@ async function repeatUnacknowledgedAlerts() {
       RETURNING id, user_id, lat, lng, message, repeat_count`
   );
   for (const alert of rows) {
+    const senderResult = await db.query(
+      'SELECT full_name, phone, username FROM users WHERE id = $1',
+      [alert.user_id]
+    );
+    const sender = senderResult.rows[0];
+    const senderDetails = sender
+      ? `From ${sender.full_name || sender.username}.${sender.phone ? ` Phone: ${sender.phone}.` : ' Phone number is not recorded.'}`
+      : 'Sender details are unavailable.';
     const position = alert.lat == null || alert.lng == null
       ? 'Location is unknown.'
       : `Location: ${alert.lat}, ${alert.lng}.`;
     await notifyRoles(
       [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY],
       'UNACKNOWLEDGED EMERGENCY ALERT',
-      `Emergency alert #${alert.id} remains unacknowledged. ${position}`,
+      `Emergency alert #${alert.id} remains unacknowledged. ${senderDetails} ${position}`,
       'emergency',
       `/emergency/${alert.id}`
     );
     await notifyOnDutyOfficers(
       'UNACKNOWLEDGED EMERGENCY ALERT',
-      `Emergency alert #${alert.id} remains unacknowledged. ${position}`,
+      `Emergency alert #${alert.id} remains unacknowledged. ${senderDetails} ${position}`,
       'emergency',
       `/emergency/${alert.id}`
     );
@@ -166,7 +174,7 @@ async function runOnce() {
 
 function start() {
   if (timer) return;
-  timer = setInterval(runOnce, Number(process.env.BACKGROUND_WORKER_INTERVAL_MS) || 10000);
+  timer = setInterval(runOnce, Number(process.env.BACKGROUND_WORKER_INTERVAL_MS) || 5000);
   timer.unref();
   void runOnce();
 }

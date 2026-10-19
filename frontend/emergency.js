@@ -7,7 +7,36 @@ if (!requireAuth()) {
   /* redirected */
 } else {
   mountShell({ current: "emergency" });
+  void loadEmergencyContacts();
   initialize();
+}
+
+async function loadEmergencyContacts() {
+  const list = $("emergencyContacts");
+  try {
+    const contacts = await api("/api/emergency-contacts");
+    list.replaceChildren();
+    if (!contacts.length) {
+      list.textContent = "Emergency contact numbers have not been configured.";
+      return;
+    }
+    contacts.forEach((contact) => {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      const dial = String(contact.phone_number).replace(/[^0-9+*#]/g, "");
+      link.href = `tel:${dial}`;
+      link.textContent = `${contact.name}: ${contact.phone_number}`;
+      item.appendChild(link);
+      if (contact.description) {
+        const description = document.createElement("span");
+        description.textContent = ` — ${contact.description}`;
+        item.appendChild(description);
+      }
+      list.appendChild(item);
+    });
+  } catch (error) {
+    list.textContent = `Emergency contacts could not be loaded: ${error.message}`;
+  }
 }
 
 async function initialize() {

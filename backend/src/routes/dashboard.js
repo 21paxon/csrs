@@ -32,9 +32,16 @@ router.get(
       Math.max(toInt(req.query.days) || 30, 1),
       365
     );
-    const studentScope = req.user.role === ROLES.DEAN
-      ? " AND i.reporter_id IN (SELECT id FROM users WHERE role = 'student')"
-      : '';
+    const roleScope = ` AND ($2::text IS NULL OR i.reporter_id IN
+        (SELECT id FROM users WHERE role = $2))
+      AND ($3::int IS NULL OR EXISTS (
+        SELECT 1 FROM incident_assignments ia
+         WHERE ia.incident_id = i.id AND ia.officer_id = $3
+      ))`;
+    const roleScopeValues = [
+      req.user.role === ROLES.DEAN ? ROLES.STUDENT : null,
+      req.user.role === ROLES.SECURITY_OFFICER ? req.user.id : null
+    ];
 
     const [
       totals,
@@ -74,8 +81,8 @@ router.get(
             ) AS avg_hours_to_close
          FROM incidents i
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}`,
-        [days]
+           CURRENT_TIMESTAMP - make_interval(days => $1)${roleScope}`,
+        [days, ...roleScopeValues]
       ),
 
       // Incidents grouped by severity.
@@ -85,10 +92,10 @@ router.get(
             COUNT(*)::int AS count
          FROM incidents i
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+           CURRENT_TIMESTAMP - make_interval(days => $1)${roleScope}
          GROUP BY i.severity
          ORDER BY count DESC`,
-        [days]
+        [days, ...roleScopeValues]
       ),
 
       // Incidents grouped by status.
@@ -98,10 +105,10 @@ router.get(
             COUNT(*)::int AS count
          FROM incidents i
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+           CURRENT_TIMESTAMP - make_interval(days => $1)${roleScope}
          GROUP BY i.status
          ORDER BY count DESC`,
-        [days]
+        [days, ...roleScopeValues]
       ),
 
       // Incidents grouped by category.
@@ -112,10 +119,10 @@ router.get(
          FROM incidents i
          JOIN incident_categories c ON c.id = i.category_id
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+           CURRENT_TIMESTAMP - make_interval(days => $1)${roleScope}
          GROUP BY c.name
          ORDER BY count DESC`,
-        [days]
+        [days, ...roleScopeValues]
       ),
 
       // Locations with the most reported incidents.
@@ -132,12 +139,12 @@ router.get(
            CURRENT_TIMESTAMP - make_interval(days => $1)
            AND COALESCE(i.lat, l.lat) IS NOT NULL
            AND COALESCE(i.lng, l.lng) IS NOT NULL
-           ${studentScope}
+           ${roleScope}
          GROUP BY i.location_id, COALESCE(l.name, i.location_text, 'Map pin'),
                   COALESCE(i.lat, l.lat), COALESCE(i.lng, l.lng)
          ORDER BY incidents DESC, location ASC
          LIMIT 10`,
-        [days]
+        [days, ...roleScopeValues]
       ),
 
       // Daily incident trend.
@@ -147,10 +154,10 @@ router.get(
             COUNT(*)::int AS count
          FROM incidents i
          WHERE i.reported_datetime >=
-           CURRENT_TIMESTAMP - make_interval(days => $1)${studentScope}
+           CURRENT_TIMESTAMP - make_interval(days => $1)${roleScope}
          GROUP BY i.reported_datetime::date
          ORDER BY day ASC`,
-        [days]
+        [days, ...roleScopeValues]
       ),
 
       // Count all unresolved emergency alerts.
@@ -180,7 +187,14 @@ router.get(
            FROM incidents i
           WHERE i.due_at IS NOT NULL
             AND i.due_at < CURRENT_TIMESTAMP
-            AND i.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')${studentScope}`
+            AND i.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')
+            AND ($1::text IS NULL OR i.reporter_id IN
+              (SELECT id FROM users WHERE role = $1))
+            AND ($2::int IS NULL OR EXISTS (
+              SELECT 1 FROM incident_assignments ia
+               WHERE ia.incident_id = i.id AND ia.officer_id = $2
+            ))`,
+        roleScopeValues
       ),
       db.query(
         `SELECT COUNT(*)::int AS missed

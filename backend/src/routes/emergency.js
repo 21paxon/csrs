@@ -54,11 +54,19 @@ router.post(
     );
 
     const alert = rows[0];
+    const senderResult = await db.query(
+      'SELECT full_name, phone FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const senderName = senderResult.rows[0]?.full_name || req.user.username;
+    const senderPhone = senderResult.rows[0]?.phone
+      ? ` Phone: ${senderResult.rows[0].phone}.`
+      : ' Phone number is not recorded.';
 
     const location =
       lat !== null && lng !== null
         ? ` Location: ${lat}, ${lng}.`
-        : '';
+        : ' Location is unknown.';
 
     await notifyRoles(
       [
@@ -66,13 +74,13 @@ router.post(
         ROLES.HEAD_OF_SECURITY
       ],
       'EMERGENCY ALERT',
-      `Panic alert #${alert.id} from ${req.user.username}.${location}`,
+      `Panic alert #${alert.id} from ${senderName}.${senderPhone}${location}`,
       'emergency',
       `/emergency/${alert.id}`
     );
     await notifyOnDutyOfficers(
       'EMERGENCY ALERT',
-      `Panic alert #${alert.id} from ${req.user.username}.${location}`,
+      `Panic alert #${alert.id} from ${senderName}.${senderPhone}${location}`,
       'emergency',
       `/emergency/${alert.id}`
     );

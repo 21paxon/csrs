@@ -59,6 +59,39 @@ router.get('/locations', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+router.get('/emergency-contacts', wrap(async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT id, name, phone_number, description
+       FROM emergency_contacts ORDER BY display_order, name`
+  );
+  res.json(rows);
+}));
+
+router.post('/emergency-contacts', authenticate, requireRole(ROLES.ADMIN), wrap(async (req, res) => {
+  const { name, phone_number, description } = req.body || {};
+  if (!String(name || '').trim() || !String(phone_number || '').trim()) {
+    throw new HttpError(400, 'Contact name and phone number are required');
+  }
+  const { rows } = await db.query(
+    `INSERT INTO emergency_contacts (name, phone_number, description, display_order, updated_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, name, phone_number, description, display_order`,
+    [String(name).trim(), String(phone_number).trim(), description ? String(description).trim() : null,
+      Number.isInteger(Number(req.body.display_order)) ? Number(req.body.display_order) : 0, req.user.id]
+  );
+  await audit(req, { userId: req.user.id, action: 'CREATE EMERGENCY CONTACT', targetTable: 'emergency_contacts', recordId: rows[0].id });
+  res.status(201).json(rows[0]);
+}));
+
+router.delete('/emergency-contacts/:id', authenticate, requireRole(ROLES.ADMIN), wrap(async (req, res) => {
+  const id = toInt(req.params.id);
+  if (!id) throw new HttpError(400, 'Invalid emergency contact id');
+  const result = await db.query('DELETE FROM emergency_contacts WHERE id = $1', [id]);
+  if (!result.rowCount) throw new HttpError(404, 'Emergency contact not found');
+  await audit(req, { userId: req.user.id, action: 'DELETE EMERGENCY CONTACT', targetTable: 'emergency_contacts', recordId: id });
+  res.json({ deleted: id });
+}));
+
 // POST /api/locations
 router.post('/locations', ...manage, wrap(async (req, res) => {
   const { name, lat, lng } = req.body || {};

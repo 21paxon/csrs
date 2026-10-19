@@ -53,6 +53,7 @@ const SELECT_INCIDENT = `
          COALESCE(l.name, i.location_text) AS location,
          i.description, i.incident_datetime, i.reported_datetime,
          i.severity, i.status, i.is_anonymous, i.reporter_id,
+         (SELECT u.role FROM users u WHERE u.id = i.reporter_id) AS reporter_role,
          i.due_at, i.resolution_summary, i.referred_to_discipline,
          i.closed_datetime,
          CASE
@@ -77,6 +78,7 @@ const SELECT_INCIDENT = `
     LEFT JOIN locations l ON l.id = i.location_id`;
 
 function canView(user, inc) {
+  if (user.role === ROLES.DEAN) return inc.reporter_role === ROLES.STUDENT;
   if (SEE_ALL.includes(user.role)) return true;
   if (inc.assigned_to === user.id) return true;
   return inc.reporter_id === user.id;
@@ -293,6 +295,8 @@ router.get('/', authenticate, wrap(async (req, res) => {
     } else {
       w.add('i.reporter_id = ?', req.user.id);
     }
+  } else if (req.user.role === ROLES.DEAN) {
+    w.add(`i.reporter_id IN (SELECT id FROM users WHERE role = $1)`, ROLES.STUDENT);
   }
 
   const q = req.query;
