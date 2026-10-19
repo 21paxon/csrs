@@ -1367,3 +1367,21 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.inline-form input[type="file"] {
+  min-width: min(100%, 260px);
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .inline-form,
+  .inline-form input[type="file"] {
+    width: 100%;
+  }
+}

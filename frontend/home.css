@@ -1184,6 +1184,11 @@ h1, h2 {
   border-left: 1px solid var(--border);
 }
 .header-container .csrs-header-controls button { box-shadow: none; }
+.footer-bottom-contact a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 @media (max-width: 760px) {
   .hero-container { min-height: auto; padding-top: 48px; padding-bottom: 48px; }
