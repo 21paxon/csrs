@@ -36,6 +36,7 @@
   "lost_item": "Lost item",
   "found_item": "Found item",
   "item_name": "Item Name",
+  "date": "Date",
   "item_example": "e.g. Student ID card",
   "location_example": "Where was it lost or found?",
   "cancel": "Cancel",
