@@ -239,7 +239,7 @@
 
   mobileQuery.addEventListener("change", () => setSidebar(false));
 
-  $("logoutButton")?.addEventListener("click", () => logout());
+  $("topLogoutButton")?.addEventListener("click", () => logout());
   $("refreshButton")?.addEventListener("click", () => loadPortal(true));
 
   // --------------------------------------------------
