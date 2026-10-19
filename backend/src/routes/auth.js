@@ -166,8 +166,8 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     const { rows } = await db.query(
       `INSERT INTO users
          (full_name, username, email, reg_no, phone, password_hash, role,
-          is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          is_active, approval_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id, full_name, username, email, reg_no, phone, role`,
       [
         cleanFullName,
@@ -177,7 +177,8 @@ router.post('/register', registerLimiter, async (req, res, next) => {
         cleanPhone || null,
         passwordHash,
         cleanAccountType,
-        cleanAccountType === 'student'
+        cleanAccountType === 'student',
+        cleanAccountType === 'student' ? 'approved' : 'pending'
       ]
     );
 

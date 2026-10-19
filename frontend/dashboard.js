@@ -955,8 +955,38 @@ function renderUsersTable() {
       } else {
         actionsCell.textContent = "Configure approval routes";
       }
+    } else if (isAdmin()) {
+      const id = getValue(user, ["user_id", "id"], "");
+      const active = user.is_active === true || user.is_active === "true";
+      const currentUser = Number(id) === Number(state.user?.id);
+      const roleSelect = document.createElement("select");
+      roleSelect.className = "user-role-select";
+      roleSelect.setAttribute("aria-label", `Role for ${name}`);
+      roleSelect.disabled = currentUser;
+      [
+        ["student", "Student"], ["staff", "Staff"], ["dean", "Dean"],
+        ["management", "College management"], ["security_officer", "Security officer"],
+        ["head_security", "Head of Security"], ["admin", "Administrator"]
+      ].forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        option.selected = normalized(role) === value;
+        roleSelect.appendChild(option);
+      });
+      actionsCell.appendChild(roleSelect);
+      if (!currentUser) {
+        actionsCell.appendChild(makeButton("Save role", "secondary", () => saveUserRole(id, roleSelect.value)));
+        actionsCell.appendChild(makeButton("Reset password", "secondary", () => resetUserPassword(id, name)));
+      }
+      const route = active ? ROUTES.deactivateUser : ROUTES.activateUser;
+      if (route && !(currentUser && active)) {
+        actionsCell.appendChild(makeButton(active ? "Deactivate" : "Activate", active ? "button-danger" : "primary", () => {
+          changeUserStatus(id, active ? "deactivate" : "activate", route);
+        }));
+      }
     } else {
-      actionsCell.textContent = "—";
+      actionsCell.textContent = "No actions available.";
     }
 
     row.appendChild(actionsCell);
@@ -966,15 +996,17 @@ function renderUsersTable() {
 
 async function changeUserStatus(userId, action, routeTemplate) {
   if (!isAdmin()) {
-    showMessage("Only administrators can approve registrations.", "error");
+    showMessage("Only administrators can manage user accounts.", "error");
     return;
   }
 
-  const confirmed = window.confirm(
-    action === "approve"
-      ? "Approve this registration?"
-      : "Reject this registration?"
-  );
+  const prompts = {
+    approve: "Approve this registration?",
+    reject: "Reject this registration? This permanently deletes the pending request.",
+    activate: "Activate this account?",
+    deactivate: "Deactivate this account? The user will no longer be able to sign in."
+  };
+  const confirmed = window.confirm(prompts[action] || "Continue with this account change?");
 
   if (!confirmed) return;
 
@@ -989,16 +1021,42 @@ async function changeUserStatus(userId, action, routeTemplate) {
       body: JSON.stringify({})
     });
 
-    showMessage(
-      action === "approve"
-        ? "Registration approved."
-        : "Registration rejected."
-    );
+    const successMessages = {
+      approve: "Registration approved.", reject: "Registration rejected.",
+      activate: "Account activated.", deactivate: "Account deactivated."
+    };
+    showMessage(successMessages[action] || "User account updated.");
 
     await loadUsers();
     await loadOverview();
   } catch (error) {
     showMessage(`Registration update failed: ${error.message}`, "error");
+  }
+}
+
+async function saveUserRole(userId, role) {
+  if (!isAdmin()) return showMessage("Only administrators can change user roles.", "error");
+  try {
+    await api(`/api/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH", body: JSON.stringify({ role })
+    });
+    showMessage("User role updated.");
+    await loadUsers();
+  } catch (error) {
+    showMessage(`Unable to update user role: ${error.message}`, "error");
+  }
+}
+
+async function resetUserPassword(userId, name) {
+  if (!isAdmin()) return showMessage("Only administrators can reset user passwords.", "error");
+  if (!window.confirm(`Create a temporary password for ${name}? They must change it at next sign-in.`)) return;
+  try {
+    const result = await api(`/api/users/${encodeURIComponent(userId)}/reset-password`, {
+      method: "POST", body: JSON.stringify({})
+    });
+    showMessage(`Temporary password for ${result.user?.username || name}: ${result.temporary_password}. Share it securely; it will not be shown again.`);
+  } catch (error) {
+    showMessage(`Unable to reset password: ${error.message}`, "error");
   }
 }
 

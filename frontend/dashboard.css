@@ -883,6 +883,26 @@ textarea {
   margin-top: 0;
 }
 
+.user-role-select {
+  min-width: 145px;
+  min-height: 36px;
+  margin: 3px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: #34445a;
+  background: #ffffff;
+}
+
+#usersTable td:last-child .button {
+  margin: 3px;
+  white-space: nowrap;
+}
+
+#usersTable td:last-child {
+  min-width: 230px;
+}
+
 .field,
 .form-grid > label {
   display: grid;

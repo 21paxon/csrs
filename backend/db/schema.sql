@@ -15,6 +15,7 @@ CREATE TABLE users (
     'dean', 'staff', 'student'
   )),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  approval_status TEXT NOT NULL DEFAULT 'approved',
   failed_attempts INTEGER NOT NULL DEFAULT 0,
   locked_until TIMESTAMPTZ,
   must_change_password BOOLEAN NOT NULL DEFAULT FALSE,

@@ -140,16 +140,19 @@ router.get('/users', async (req, res, next) => {
 
     let condition = '';
 
-    if (status === 'pending' || status === 'inactive') {
-      condition = 'WHERE is_active = FALSE';
+    if (status === 'pending') {
+      condition = "WHERE approval_status = 'pending'";
     } else if (status === 'active') {
-      condition = 'WHERE is_active = TRUE';
+      condition = "WHERE approval_status = 'approved' AND is_active = TRUE";
+    } else if (status === 'inactive') {
+      condition = "WHERE approval_status = 'approved' AND is_active = FALSE";
     }
 
     const { rows } = await db.query(
       `SELECT id, full_name, username, email, reg_no, phone,
               role, is_active, must_change_password,
-              CASE WHEN is_active THEN 'active' ELSE 'pending' END AS status
+              CASE WHEN approval_status = 'pending' THEN 'pending'
+                   WHEN is_active THEN 'active' ELSE 'inactive' END AS status
          FROM users
          ${condition}
         ORDER BY id DESC`
@@ -175,7 +178,7 @@ router.get('/users/stats', async (req, res, next) => {
           WHERE is_active = TRUE
         )::int AS active_users,
         COUNT(*) FILTER (
-          WHERE is_active = FALSE
+          WHERE approval_status = 'pending'
         )::int AS pending_users
       FROM users
     `);
@@ -201,17 +204,19 @@ router.post('/users/:id/approve', async (req, res, next) => {
     const { rows } = await db.query(
       `UPDATE users
           SET is_active = TRUE,
+              approval_status = 'approved',
+              auth_version = auth_version + 1,
               failed_attempts = 0,
               locked_until = NULL
         WHERE id = $1
-          AND is_active = FALSE
+          AND approval_status = 'pending'
         RETURNING id, full_name, username, email, role, is_active`,
       [id]
     );
 
     if (!rows[0]) {
       const existing = await db.query(
-        'SELECT id, is_active FROM users WHERE id = $1',
+        'SELECT id, is_active, approval_status FROM users WHERE id = $1',
         [id]
       );
 
@@ -220,7 +225,7 @@ router.post('/users/:id/approve', async (req, res, next) => {
       }
 
       return res.status(409).json({
-        error: 'This account is already active.'
+        error: 'This account is not awaiting approval.'
       });
     }
 
@@ -259,7 +264,8 @@ router.post('/users/:id/deactivate', async (req, res, next) => {
 
     const { rows } = await db.query(
       `UPDATE users
-          SET is_active = FALSE
+          SET is_active = FALSE,
+              auth_version = auth_version + 1
         WHERE id = $1
           AND is_active = TRUE
         RETURNING id, full_name, username, role, is_active`,
@@ -302,10 +308,13 @@ router.post('/users/:id/activate', async (req, res, next) => {
     const { rows } = await db.query(
       `UPDATE users
           SET is_active = TRUE,
+              approval_status = 'approved',
+              auth_version = auth_version + 1,
               failed_attempts = 0,
               locked_until = NULL
         WHERE id = $1
           AND is_active = FALSE
+          AND approval_status = 'approved'
         RETURNING id, full_name, username, role, is_active`,
       [id]
     );
@@ -348,7 +357,7 @@ async function rejectUser(req, res, next) {
     const { rows } = await db.query(
       `DELETE FROM users
         WHERE id = $1
-          AND is_active = FALSE
+          AND approval_status = 'pending'
         RETURNING id, full_name, username, role`,
       [id]
     );

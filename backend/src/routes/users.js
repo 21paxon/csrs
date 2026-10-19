@@ -196,6 +196,10 @@ router.patch('/:id', async (req, res, next) => {
       });
     }
 
+    if (id === Number(req.user.id) && role !== undefined) {
+      return res.status(400).json({ error: 'You cannot change your own account role.' });
+    }
+
     const cleanRole = role === undefined ? undefined : normalizeRole(role);
 
     if (role !== undefined && !cleanRole) {
@@ -205,7 +209,9 @@ router.patch('/:id', async (req, res, next) => {
     const { rows } = await db.query(
       `UPDATE users
           SET is_active = COALESCE($1, is_active),
-              role = COALESCE($2, role)
+              approval_status = CASE WHEN $1 IS TRUE THEN 'approved' ELSE approval_status END,
+              role = COALESCE($2, role),
+              auth_version = auth_version + CASE WHEN $2 IS NOT NULL AND $2 <> role THEN 1 ELSE 0 END
         WHERE id = $3
         RETURNING id, full_name, username, email, phone,
                   role, is_active, created_at`,
