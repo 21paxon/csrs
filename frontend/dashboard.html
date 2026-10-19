@@ -591,13 +591,27 @@
               <h3>Incident Summary</h3>
               <p class="profile-note">Incident totals, severity distribution and resolution status.</p>
               <button type="button" class="button secondary" id="loadIncidentReport">Load Incident Summary</button>
+              <div class="button-row" aria-label="Download incident report">
+                <button type="button" class="button secondary" data-download-report="incidents" data-format="pdf">PDF</button>
+                <button type="button" class="button secondary" data-download-report="incidents" data-format="xlsx">Excel</button>
+              </div>
               <div id="incidentReportOutput" class="chart-list"></div>
             </article>
             <article class="panel">
               <h3>Access Summary</h3>
               <p class="profile-note">Gate activity and visitor records, subject to your role permissions.</p>
               <button type="button" class="button secondary" id="loadAccessReport">Load Access Summary</button>
+              <div class="button-row" aria-label="Download visitor report">
+                <button type="button" class="button secondary" data-download-report="gate" data-format="pdf">PDF</button>
+                <button type="button" class="button secondary" data-download-report="gate" data-format="xlsx">Excel</button>
+              </div>
               <div id="accessReportOutput" class="chart-list"></div>
+            </article>
+            <article class="panel" data-admin-only hidden>
+              <h3>Database backups</h3>
+              <p class="profile-note">Recent scheduled backup results.</p>
+              <button type="button" class="button secondary" id="refreshBackupStatus">Refresh backup status</button>
+              <div id="backupStatusOutput" class="chart-list" aria-live="polite">No backup status loaded.</div>
             </article>
           </div>
         </section>

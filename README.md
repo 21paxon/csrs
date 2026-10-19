@@ -91,6 +91,7 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 |--------|----------|-----|
 | Auth | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password` | public / any user |
 | Users | `GET/POST /api/users`, `PATCH /api/users/:id`, `POST /api/users/:id/reset-password`, `POST /api/users/import` (college records) | Admin |
+| Backups | `GET /api/admin/backups/status` | Admin |
 | | `GET /api/users/officers`, `GET /api/users/hosts?q=` | Admin, HoS (, SO for hosts) |
 | Reference | `GET /api/categories`, `GET /api/locations` | public |
 | | `POST /api/categories`, `POST/PUT /api/locations` | Admin, HoS |
@@ -120,6 +121,8 @@ Run `npm run db:migrate` to install migration `003-notification-and-patrol-queue
 In development, email, SMS, and subscribed push deliveries are written to the server log. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY`, `SMS_API_URL` / `SMS_API_KEY`, and optionally `PUSH_API_URL` / `PUSH_API_KEY`. Each endpoint receives a JSON POST with `channel`, `to`, `title`, `message`, `type`, and `link`; push jobs also include the browser subscription keys. These are provider adapters, so the deployment must point them at a service that accepts this contract. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Users register/remove browser subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
 
 For local offline-shell development, the service worker registers on the home and signed-in dashboard pages. It caches app files only; incident and account data are never stored for offline use. Production service-worker installation requires HTTPS.
+
+The language switcher currently translates the main report, report-tracking, and emergency labels and guidance. The Kinyarwanda wording is an initial draft and should be approved by a fluent college reviewer before production use; untranslated content remains in English.
 
 ### Database and evidence backups
 

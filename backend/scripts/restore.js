@@ -29,12 +29,12 @@ function run(command, args, env = process.env) {
   await fs.access(dump);
   let evidenceNames = [];
   try {
-    evidenceNames = await fs.readdir(evidenceSource);
+    evidenceNames = (await fs.readdir(evidenceSource)).filter((name) => name !== '.gitkeep');
   } catch (err) {
     if (err.code !== 'ENOENT') throw err;
   }
   await fs.mkdir(evidenceTarget, { recursive: true });
-  const existingEvidence = await fs.readdir(evidenceTarget);
+  const existingEvidence = (await fs.readdir(evidenceTarget)).filter((name) => name !== '.gitkeep');
   if (evidenceNames.length && existingEvidence.length) {
     throw new Error('Restore stopped before database changes: restore evidence into an empty uploads directory.');
   }

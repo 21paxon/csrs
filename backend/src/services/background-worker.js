@@ -34,13 +34,13 @@ async function drainNotificationQueue() {
     `WITH ready AS (
        SELECT id FROM notification_queue
         WHERE (status = 'pending' AND next_attempt_at <= CURRENT_TIMESTAMP)
-           OR (status = 'processing' AND created_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
+           OR (status = 'processing' AND locked_at < CURRENT_TIMESTAMP - INTERVAL '10 minutes')
         ORDER BY next_attempt_at, id
         FOR UPDATE SKIP LOCKED
         LIMIT $1
      )
      UPDATE notification_queue q
-        SET status = 'processing'
+        SET status = 'processing', locked_at = CURRENT_TIMESTAMP
        FROM ready
       WHERE q.id = ready.id
       RETURNING q.id, q.channel, q.recipient, q.payload, q.attempts`,
@@ -52,7 +52,7 @@ async function drainNotificationQueue() {
       await deliver(job);
       await db.query(
         `UPDATE notification_queue
-            SET status = 'sent', sent_at = CURRENT_TIMESTAMP,
+            SET status = 'sent', sent_at = CURRENT_TIMESTAMP, locked_at = NULL,
                 attempts = attempts + 1, last_error = NULL
           WHERE id = $1`,
         [job.id]
@@ -64,6 +64,7 @@ async function drainNotificationQueue() {
         `UPDATE notification_queue
             SET status = CASE WHEN $2 >= $3 THEN 'failed' ELSE 'pending' END,
                 attempts = $2,
+                locked_at = NULL,
                 next_attempt_at = CURRENT_TIMESTAMP + ($4 * INTERVAL '1 minute'),
                 last_error = $5
           WHERE id = $1`,

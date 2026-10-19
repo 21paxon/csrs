@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS notification_queue (
   attempts INTEGER NOT NULL DEFAULT 0,
   next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_error TEXT,
+  locked_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   sent_at TIMESTAMPTZ
 );
@@ -36,6 +37,16 @@ CREATE TABLE IF NOT EXISTS patrol_missed_alerts (
   checkpoint_id INTEGER NOT NULL REFERENCES checkpoints(id) ON DELETE CASCADE,
   alerted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (roster_id, checkpoint_id)
+);
+
+CREATE TABLE IF NOT EXISTS backup_runs (
+  id BIGSERIAL PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('running', 'complete', 'failed')),
+  backup_name TEXT NOT NULL,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  finished_at TIMESTAMPTZ,
+  evidence_entry_count INTEGER,
+  error_message TEXT
 );
 
 INSERT INTO schema_migrations (version)

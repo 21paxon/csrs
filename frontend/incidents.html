@@ -31,28 +31,28 @@
 
   <main class="app-main">
     <section class="panel">
-      <h2>Report an incident</h2>
-      <p class="muted">You can report without signing in. If you submit anonymously, save the reference number and access code so you can check the status later.</p>
+      <h2 data-i18n="report_incident">Report an incident</h2>
+      <p class="muted" data-i18n="report_intro">You can report without signing in. If you submit anonymously, save the reference number and access code so you can check the status later.</p>
       <form id="incidentForm">
         <div class="grid">
           <div>
-            <label for="category">Category</label>
+            <label for="category" data-i18n="category">Category</label>
             <select id="category" required>
               <option value="">Loading categories...</option>
             </select>
           </div>
           <div>
-            <label for="location">Location</label>
+            <label for="location" data-i18n="location">Location</label>
             <select id="location" required>
               <option value="">Loading locations...</option>
             </select>
           </div>
           <div>
-            <label for="incidentDate">When did it happen?</label>
+            <label for="incidentDate" data-i18n="when_happened">When did it happen?</label>
             <input id="incidentDate" type="datetime-local" required>
           </div>
           <div>
-            <label for="severity">Severity</label>
+            <label for="severity" data-i18n="severity">Severity</label>
             <select id="severity" required>
               <option>Low</option>
               <option selected>Medium</option>
@@ -61,20 +61,20 @@
             </select>
           </div>
           <div class="full">
-            <label for="description">Description</label>
+            <label for="description" data-i18n="description">Description</label>
             <textarea id="description" required maxlength="10000"
               placeholder="Describe what happened, where, and any relevant details."></textarea>
           </div>
           <div class="full">
-            <label for="evidence">Evidence (optional, up to 5 files)</label>
+            <label for="evidence" data-i18n="evidence_optional">Evidence (optional, up to 5 files)</label>
             <input id="evidence" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx">
           </div>
           <div class="full check">
             <input id="anonymous" type="checkbox">
-            <label for="anonymous">Submit anonymously</label>
+            <label for="anonymous" data-i18n="submit_anonymously">Submit anonymously</label>
           </div>
           <div class="full">
-            <button id="submitButton" type="submit">Submit incident</button>
+            <button id="submitButton" type="submit" data-i18n="submit_incident">Submit incident</button>
           </div>
         </div>
       </form>
@@ -82,19 +82,19 @@
     </section>
 
     <section class="panel" id="trackPanel">
-      <h2>Track an anonymous report</h2>
-      <p class="muted">Use the reference number and access code issued when the report was submitted.</p>
+      <h2 data-i18n="track_report">Track an anonymous report</h2>
+      <p class="muted" data-i18n="track_intro">Use the reference number and access code issued when the report was submitted.</p>
       <form id="trackForm" class="grid">
         <div>
-          <label for="trackRef">Reference number</label>
+          <label for="trackRef" data-i18n="reference_number">Reference number</label>
           <input id="trackRef" required placeholder="INC-2026-0001" autocapitalize="characters">
         </div>
         <div>
-          <label for="trackCode">Access code</label>
+          <label for="trackCode" data-i18n="access_code">Access code</label>
           <input id="trackCode" required autocomplete="off">
         </div>
         <div class="full">
-          <button type="submit">Check status</button>
+          <button type="submit" data-i18n="check_status">Check status</button>
         </div>
       </form>
       <div id="trackMessage" class="message" role="status"></div>
@@ -179,5 +179,6 @@
   <script src="/config.js"></script>
   <script src="/js/csrs.js"></script>
   <script src="/incidents.js"></script>
+  <script src="/pwa.js" defer></script>
 </body>
 </html>

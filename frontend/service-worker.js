@@ -6,7 +6,8 @@ const SHELL = [
   '/home.css', '/dashboard.css', '/config.js', '/js/csrs.js',
   '/home.js', '/incidents.js', '/emergency.js',
   '/student-dashboard.js', '/dashboard.js',
-  '/manifest.webmanifest', '/icons/csrs-icon.svg', '/images/rp-logo.jpg'
+  '/manifest.webmanifest', '/icons/csrs-icon.svg', '/images/rp-logo.jpg',
+  '/pwa.js', '/i18n/en.json', '/i18n/rw.json'
 ];
 
 self.addEventListener('install', (event) => {

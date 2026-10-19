@@ -10,6 +10,19 @@ const router = express.Router();
 // All routes in this file require an authenticated administrator.
 router.use(authenticate, requireRole(ROLES.ADMIN));
 
+router.get('/backups/status', async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, status, backup_name, started_at, finished_at,
+              evidence_entry_count, error_message
+         FROM backup_runs ORDER BY started_at DESC LIMIT 20`
+    );
+    return res.json(rows);
+  } catch (err) {
+    return next(err);
+  }
+});
+
 const VALID_ROLES = [
   ROLES.ADMIN,
   ROLES.HEAD_OF_SECURITY,

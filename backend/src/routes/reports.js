@@ -5,6 +5,8 @@ const { authenticate, requireRole, ROLES } = require('../middleware/auth');
 const { wrap, where, HttpError } = require('../utils/helpers');
 const { toCsv } = require('../utils/csv');
 const { audit } = require('../utils/audit');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 
 const router = express.Router();
 
@@ -163,6 +165,10 @@ router.get('/:type', wrap(async (req, res) => {
 
   const [sql, params] = build(req.query);
   const { rows } = await db.query(`${sql} LIMIT 10000`, params);
+  const format = String(req.query.format || 'json').toLowerCase();
+  if (!['json', 'csv', 'xlsx', 'pdf'].includes(format)) {
+    throw new HttpError(400, 'format must be json, csv, xlsx, or pdf');
+  }
 
   await audit(req, {
     userId: req.user.id,
@@ -170,7 +176,7 @@ router.get('/:type', wrap(async (req, res) => {
     targetTable: 'reports'
   });
 
-  if (req.query.format === 'csv') {
+  if (format === 'csv') {
     const csv = rows.length
       ? toCsv(rows)
       : 'No records found';
@@ -183,6 +189,59 @@ router.get('/:type', wrap(async (req, res) => {
     );
 
     return res.send(csv);
+  }
+
+  const filename = `csrs-${req.params.type}-report`;
+  if (format === 'xlsx') {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'CSRS';
+    workbook.created = new Date();
+    const sheet = workbook.addWorksheet('Report');
+    const headers = rows.length ? Object.keys(rows[0]) : [];
+    sheet.columns = headers.map((header) => ({ header, key: header, width: Math.min(32, Math.max(14, header.length + 2)) }));
+    for (const row of rows) {
+      const safe = {};
+      for (const header of headers) {
+        const value = row[header];
+        safe[header] = typeof value === 'string' && /^[=+\-@\t\r]/.test(value)
+          ? `'${value}`
+          : value;
+      }
+      sheet.addRow(safe);
+    }
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF123B70' } };
+    res.status(200);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.xlsx"`);
+    await workbook.xlsx.write(res);
+    return res.end();
+  }
+
+  if (format === 'pdf') {
+    res.status(200);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`);
+    const pdf = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 36, bufferPages: true });
+    pdf.pipe(res);
+    pdf.fontSize(16).font('Helvetica-Bold').text(`CSRS ${req.params.type} report`);
+    pdf.moveDown(0.5).fontSize(9).font('Helvetica').text(`Generated: ${new Date().toISOString()} | Records: ${rows.length}`);
+    pdf.moveDown();
+    if (!rows.length) {
+      pdf.text('No records found for the selected filters.');
+    } else {
+      for (const [index, row] of rows.entries()) {
+        const line = Object.entries(row)
+          .map(([key, value]) => `${key}: ${value == null ? '' : String(value)}`)
+          .join('   |   ');
+        if (pdf.y > pdf.page.height - 55) pdf.addPage();
+        pdf.font('Helvetica-Bold').fontSize(9).text(`${index + 1}.`, { continued: true });
+        pdf.font('Helvetica').fontSize(8).text(` ${line}`, { width: pdf.page.width - 72 });
+        pdf.moveDown(0.35);
+      }
+    }
+    pdf.end();
+    return;
   }
 
   return res.json({

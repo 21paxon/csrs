@@ -31,13 +31,13 @@
 
   <main class="app-main">
     <section class="panel">
-      <h2>Request emergency assistance</h2>
-      <p class="muted">This notifies the security response team. If you allow location access, your coordinates are attached automatically.</p>
+      <h2 data-i18n="emergency_request">Request emergency assistance</h2>
+      <p class="muted" data-i18n="emergency_intro">This notifies the security response team. If you allow location access, your coordinates are attached automatically.</p>
       <form id="alertForm">
-        <label for="alertMessage">Emergency details</label>
+        <label for="alertMessage" data-i18n="emergency_details">Emergency details</label>
         <textarea id="alertMessage" maxlength="1000" required placeholder="Briefly describe the emergency and where help is needed."></textarea>
         <p class="muted" id="locationNote">Location will be requested when you send the alert.</p>
-        <button type="submit" class="danger" id="triggerBtn">Trigger emergency alert</button>
+        <button type="submit" class="danger" id="triggerBtn" data-i18n="send_alert">Trigger emergency alert</button>
         <div id="formMessage" class="message" role="status"></div>
       </form>
     </section>
@@ -56,6 +56,7 @@
           </select>
         </div>
         <button type="button" id="refreshBtn" class="secondary">Refresh alerts</button>
+        <button type="button" id="enableDesktopAlerts" class="secondary">Enable desktop alerts</button>
       </div>
       <div id="listMessage" class="message" role="status"></div>
       <div class="table-wrap">
@@ -80,5 +81,6 @@
   <script src="/config.js"></script>
   <script src="/js/csrs.js"></script>
   <script src="/emergency.js"></script>
+  <script src="/pwa.js" defer></script>
 </body>
 </html>

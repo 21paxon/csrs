@@ -1320,6 +1320,51 @@ async function loadAccessReport() {
   }
 }
 
+async function downloadReport(type, format) {
+  try {
+    const query = new URLSearchParams({ format });
+    const token = getToken();
+    const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(type)}?${query}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `Report download failed (${response.status})`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `csrs-${type}-report.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    showMessage(`Unable to download report: ${error.message}`, 'error');
+  }
+}
+
+async function loadBackupStatus() {
+  const output = $("backupStatusOutput");
+  if (!output) return;
+  try {
+    const runs = await api("/api/admin/backups/status");
+    output.replaceChildren();
+    if (!Array.isArray(runs) || !runs.length) {
+      output.textContent = "No backup runs recorded yet.";
+      return;
+    }
+    runs.forEach((run) => {
+      const entry = document.createElement("p");
+      entry.textContent = `${run.status.toUpperCase()} · ${run.backup_name} · ${formatDate(run.started_at, true)}${run.error_message ? ` · ${run.error_message}` : ""}`;
+      output.appendChild(entry);
+    });
+  } catch (error) {
+    output.textContent = `Unable to load backup status: ${error.message}`;
+  }
+}
+
 /* =========================================================
    PAGE LOADING
    ========================================================= */
@@ -1501,6 +1546,10 @@ function setupOtherPages() {
 
   on("loadIncidentReport", "click", loadIncidentReport);
   on("loadAccessReport", "click", loadAccessReport);
+  on("refreshBackupStatus", "click", loadBackupStatus);
+  document.querySelectorAll("[data-download-report]").forEach((button) => {
+    button.addEventListener("click", () => downloadReport(button.dataset.downloadReport, button.dataset.format));
+  });
 }
 
 /* =========================================================
@@ -1526,6 +1575,9 @@ function initDashboard() {
   setupOtherPages();
 
   openInitialPage();
+  window.setInterval(() => {
+    if (state.page === "emergency" && !document.hidden) void loadEmergency();
+  }, 10000);
 }
 
 document.addEventListener("DOMContentLoaded", initDashboard);

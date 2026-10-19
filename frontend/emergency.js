@@ -1,4 +1,5 @@
 const C = window.CSRS;
+let previousAlertIds = null;
 const { $, requireAuth, roleOf, canSecurityOps, api, mountShell, formatDate,
   showMessage, setLoading, emptyRow, getDeviceLocation } = C;
 
@@ -13,9 +14,20 @@ async function initialize() {
   if (canSecurityOps(roleOf())) {
     $("responderSection").classList.remove("hidden");
     $("refreshBtn").addEventListener("click", loadAlerts);
+    $("enableDesktopAlerts").addEventListener("click", async () => {
+      if (!("Notification" in window)) {
+        showMessage($("listMessage"), "Desktop notifications are not supported by this browser.", "error");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      showMessage($("listMessage"), permission === "granted"
+        ? "Desktop emergency alerts are enabled while this page is open."
+        : "Desktop notifications were not enabled.", permission === "granted" ? "ok" : "error");
+    });
     $("statusFilter").addEventListener("change", loadAlerts);
     $("alertsBody").addEventListener("click", onAlertAction);
     await loadAlerts();
+    window.setInterval(() => { if (!document.hidden) void loadAlerts(); }, 10000);
   } else {
     showMessage($("formMessage"), "You can request emergency assistance here. The security team will be notified.");
   }
@@ -70,6 +82,12 @@ async function loadAlerts() {
 
   try {
     const alerts = await api("/api/emergency" + query);
+    const activeIds = new Set(alerts.filter((alert) => alert.status === "Triggered").map((alert) => alert.id));
+    if (previousAlertIds && "Notification" in window && Notification.permission === "granted") {
+      alerts.filter((alert) => alert.status === "Triggered" && !previousAlertIds.has(alert.id))
+        .forEach((alert) => new Notification("CSRS emergency alert", { body: `Alert #${alert.id} needs acknowledgement.` }));
+    }
+    previousAlertIds = activeIds;
     if (!Array.isArray(alerts) || alerts.length === 0) {
       body.replaceChildren();
       body.appendChild(emptyRow(7, "No emergency alerts found."));
