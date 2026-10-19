@@ -310,8 +310,9 @@ function renderEmpty(tbodyId, columns, message) {
   tbody.appendChild(row);
 }
 
-function renderStatusCell(row, value) {
+function renderStatusCell(row, value, label = "") {
   const cell = document.createElement("td");
+  if (label) cell.dataset.label = label;
   const status = String(value || "Unknown");
   const badge = makeElement("span", status, "badge");
 
@@ -920,6 +921,7 @@ function renderUsersTable() {
 
   items.forEach((user) => {
     const row = document.createElement("tr");
+    row.className = "user-row";
     const name = getValue(user, ["full_name", "name", "username"]);
     const email = getValue(user, ["email"]);
     const registration = getValue(user, [
@@ -930,13 +932,14 @@ function renderUsersTable() {
     const role = getValue(user, ["role", "requested_role", "user_role"]);
     const statusValue = userStatus(user);
 
-    makeCell(row, name);
-    makeCell(row, email);
-    makeCell(row, registration);
-    makeCell(row, role);
-    renderStatusCell(row, statusValue);
+    makeCell(row, name).dataset.label = "Name";
+    makeCell(row, email).dataset.label = "Email";
+    makeCell(row, registration).dataset.label = "Registration number";
+    makeCell(row, role).dataset.label = "Account role";
+    renderStatusCell(row, statusValue, "Status");
 
     const actionsCell = document.createElement("td");
+    actionsCell.dataset.label = "Actions";
 
     if (isPendingUser(user) && isAdmin()) {
       const approveRoute = ROUTES.approveUser;
