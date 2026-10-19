@@ -10,6 +10,8 @@ const migrationDirectory = path.join(__dirname, '..', 'db', 'migrations');
 
   try {
     await client.query('BEGIN');
+    // Only one backend instance may apply migrations at a time.
+    await client.query('SELECT pg_advisory_xact_lock($1)', [726384291]);
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version TEXT PRIMARY KEY,

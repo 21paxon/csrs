@@ -70,6 +70,9 @@ FRONTEND_ORIGINS=https://your-csrs-frontend.example.com
 
 Keep the backend URL out of `DATABASE_URL`; the frontend only needs the API
 URL, while the Neon connection string must remain a backend-only secret.
+The backend `npm start` command applies pending, tracked database migrations
+before starting the server. Redeploy the backend after pulling these changes
+and check its startup logs if a migration fails.
 
 For local development, leave `apiBaseUrl` empty and start the backend from its
 folder:

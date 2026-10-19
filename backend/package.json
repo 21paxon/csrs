@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "prestart": "npm run db:migrate",
     "dev": "node --watch src/server.js",
     "db:init": "node scripts/init-db.js",
     "db:migrate": "node scripts/migrate-db.js",
