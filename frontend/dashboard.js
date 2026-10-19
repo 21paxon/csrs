@@ -1,798 +1,1531 @@
 
-(() => {
-  "use strict";
+"use strict";
 
-  const $ = id => document.getElementById(id);
-  const config = window.CSRS_CONFIG || {};
-  const API_BASE = String(
-    config.apiBaseUrl || "https://csrs-backend.onrender.com"
-  ).replace(/\/+$/, "");
+/* =========================================================
+   CSRS DASHBOARD
+   Rwanda Polytechnic - Musanze College
 
-  const PATHS = {
-    dashboard: config.dashboardPath || "/api/dashboard",
-    incidents: config.incidentsPath || "/api/incidents",
-    categories: config.categoriesPath || "/api/incident-categories",
-    locations: config.locationsPath || "/api/locations",
-    emergency: config.emergencyPath || "/api/emergency",
-    visitors: config.visitorsPath || "/api/gate/on-campus"
-  };
+   Uses config.js for the API URL and optional route overrides.
+   ========================================================= */
 
-  const LOGIN_PATH = config.loginPath || "/home.html";
-  const ALLOW_ANONYMOUS = config.allowAnonymous !== false;
-  const VISITORS_INCLUDE_HISTORY = config.visitorsIncludeCheckedOut === true;
+const CONFIG = window.CSRS_CONFIG || {};
+const API_BASE = String(CONFIG.apiBaseUrl || "").replace(/\/+$/, "");
+const ROUTES = CONFIG.routes || {};
 
-  const VIEWS = {
-    overview: ["Security Dashboard", "Campus security overview"],
-    incidents: ["Incident Monitoring", "Review and report incidents"],
-    emergency: ["Emergency Centre", "Monitor emergency alerts"],
-    visitors: ["Campus Visitors", "Review visitor activity"],
-    profile: ["Profile Management", "Manage your account"]
-  };
+const TOKEN_KEY = "csrs_token";
+const USER_KEY = "csrs_user";
 
-  let incidents = [];
-  let emergencies = [];
-  let visitors = [];
-  let currentView = "overview";
-  let requestInProgress = false;
-  const latestRequest = {};
+const $ = (id) => document.getElementById(id);
 
-  const beginRequest = key =>
-    (latestRequest[key] = (latestRequest[key] || 0) + 1);
+const state = {
+  user: null,
+  page: "overview",
+  incidents: [],
+  categories: [],
+  locations: [],
+  users: [],
+  lostFound: [],
+  emergencies: [],
+  visitors: [],
+  gateRecords: [],
+  patrols: [],
+  auditLogs: [],
+  busy: false
+};
 
-  const isStale = (key, id) => latestRequest[key] !== id;
+const PAGE_INFO = {
+  overview: ["Overview", "Campus security overview"],
+  users: ["User Management", "Review registration requests and manage accounts"],
+  incidents: ["Incident Management", "Report and track security incidents"],
+  "lost-found": ["Lost and Found", "Manage lost property and found items"],
+  emergency: ["Emergency Alerts", "Monitor emergency reports"],
+  gate: ["Gate Management", "Review campus access records"],
+  visitors: ["Visitor Management", "Manage campus visitors"],
+  patrols: ["Security Patrols", "Monitor patrol activities"],
+  reports: ["Reports", "Review security activity"],
+  "audit-logs": ["Audit Logs", "Review administrative activity"],
+  profile: ["My Profile", "View account information"]
+};
 
-  function getUser() {
-    try {
-      return JSON.parse(sessionStorage.getItem("csrs_user") || "{}") || {};
-    } catch {
-      return {};
-    }
+const PAGE_ENDPOINTS = {
+  dashboard: ROUTES.dashboard || "/api/dashboard",
+  incidents: ROUTES.incidents || "/api/incidents",
+  categories: ROUTES.categories || "/api/incident-categories",
+  locations: ROUTES.locations || "/api/locations",
+  emergency: ROUTES.emergency || "/api/emergency",
+  visitors: ROUTES.visitors || "/api/visitors",
+  gate: ROUTES.gate || "/api/gate/on-campus",
+  users: ROUTES.users || "",
+  lostFound: ROUTES.lostFound || "",
+  patrols: ROUTES.patrols || "",
+  auditLogs: ROUTES.auditLogs || ""
+};
+
+/* =========================================================
+   AUTHENTICATION AND API HELPERS
+   ========================================================= */
+
+function readUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem(USER_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function roleOf(user = state.user) {
+  return String(
+    user?.role ||
+    user?.user_role ||
+    user?.account_role ||
+    ""
+  ).toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function isAdmin() {
+  return ["admin", "administrator", "super_admin", "superadmin"].includes(
+    roleOf()
+  );
+}
+
+function userName() {
+  const user = state.user || {};
+  return (
+    user.full_name ||
+    user.name ||
+    user.username ||
+    user.first_name ||
+    user.email ||
+    "User"
+  );
+}
+
+function escapeText(value) {
+  return String(value ?? "");
+}
+
+function showMessage(message, type = "success") {
+  const errorBox = $("errorBox");
+  const noticeBox = $("noticeBox");
+
+  if (errorBox) {
+    errorBox.hidden = true;
+    errorBox.textContent = "";
   }
 
-  function clearSession() {
-    sessionStorage.removeItem("csrs_token");
-    sessionStorage.removeItem("csrs_user");
+  if (noticeBox) {
+    noticeBox.hidden = true;
+    noticeBox.textContent = "";
   }
 
-  function redirectToLogin() {
-    clearSession();
-    window.location.replace(LOGIN_PATH);
-  }
+  const target = type === "error" ? errorBox : noticeBox;
+  if (!target) return;
 
-  function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, character => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    })[character]);
-  }
+  target.textContent = message;
+  target.hidden = false;
+}
 
-  function slug(value) {
-    return String(value ?? "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-  }
-
-  function badge(value) {
-    const text = String(value ?? "").trim();
-    if (!text) return "—";
-    return `<span class="badge ${slug(text)}">${escapeHTML(text)}</span>`;
-  }
-
-  function formatNumber(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number.toLocaleString() : "0";
-  }
-
-  function setText(id, value) {
+function clearMessages() {
+  ["errorBox", "noticeBox"].forEach((id) => {
     const element = $(id);
-    if (element) element.textContent = value ?? "";
-  }
-
-  function setHTML(id, value) {
-    const element = $(id);
-    if (element) element.innerHTML = value;
-  }
-
-  function emptyRow(columns, message) {
-    return `<tr><td colspan="${columns}" class="empty-cell">${escapeHTML(message)}</td></tr>`;
-  }
-
-  function showMessage(message, type = "success") {
-    const box = $(type === "error" ? "errorBox" : "noticeBox");
-    const other = $(type === "error" ? "noticeBox" : "errorBox");
-
-    if (other) other.hidden = true;
-
-    if (box) {
-      box.textContent = message;
-      box.hidden = false;
-    } else {
-      console[type === "error" ? "error" : "log"]("CSRS:", message);
+    if (element) {
+      element.hidden = true;
+      element.textContent = "";
     }
+  });
+}
+
+function normalizePath(path) {
+  if (!path) return "";
+  return String(path);
+}
+
+async function api(path, options = {}) {
+  if (!API_BASE) {
+    throw new Error("API base URL is missing from config.js.");
   }
 
-  function clearMessage() {
-    if ($("errorBox")) $("errorBox").hidden = true;
-    if ($("noticeBox")) $("noticeBox").hidden = true;
+  if (!path) {
+    throw new Error("This feature has no API route configured yet.");
   }
 
-  function showError(error) {
-    console.error("CSRS:", error);
-    showMessage(error?.message || "Something went wrong.", "error");
+  const token = getToken();
+  const headers = new Headers(options.headers || {});
+
+  headers.set("Accept", "application/json");
+
+  if (options.body !== undefined && !(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
   }
 
-  function setBusy(button, busy, label) {
-    if (!button) return;
-
-    if (busy) {
-      if (!button.dataset.originalLabel) {
-        button.dataset.originalLabel = button.textContent;
-      }
-      button.disabled = true;
-      if (label) button.textContent = label;
-    } else {
-      button.disabled = false;
-      if (button.dataset.originalLabel) {
-        button.textContent = button.dataset.originalLabel;
-        delete button.dataset.originalLabel;
-      }
-    }
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
-  function displayDate(value) {
-    if (!value) return "—";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
-  }
+  let response;
 
-  function timeOf(value) {
-    const time = new Date(value).getTime();
-    return Number.isNaN(time) ? 0 : time;
-  }
-
-  function valueOf(object, ...keys) {
-    for (const key of keys) {
-      if (object && object[key] !== undefined && object[key] !== null) {
-        return object[key];
-      }
-    }
-    return "";
-  }
-
-  function rowsFrom(data, keys = []) {
-    if (Array.isArray(data)) return data;
-    if (!data || typeof data !== "object") return [];
-
-    for (const key of keys) {
-      if (Array.isArray(data[key])) return data[key];
-    }
-
-    return [];
-  }
-
-  function localInputValue(date = new Date()) {
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-  }
-
-  async function api(path, options = {}) {
-    const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
-    const headers = {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(options.headers || {})
-    };
-
-    const token = sessionStorage.getItem("csrs_token");
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    let response;
-
-    try {
-      response = await fetch(url, { ...options, headers });
-    } catch (error) {
-      console.error("CSRS network error:", url, error);
-      throw new Error(
-        "Cannot connect to the backend. Check the Render service and its CORS settings."
-      );
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json")
-      ? await response.json().catch(() => ({}))
-      : await response.text().catch(() => "");
-
-    if (response.status === 401) {
-      redirectToLogin();
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    if (response.status === 403) {
-      throw new Error("Your account does not have permission for this request.");
-    }
-
-    if (!response.ok) {
-      const message = typeof data === "object" && data !== null
-        ? data.error || data.message
-        : "";
-
-      throw new Error(message || `HTTP ${response.status} from ${path}`);
-    }
-
-    if (typeof data === "string" && data.trimStart().startsWith("<")) {
-      throw new Error(`Expected JSON from ${path}, but the server returned HTML.`);
-    }
-
-    return data;
-  }
-
-  function updateUserDisplay() {
-    const user = getUser();
-    const name = String(
-      user.full_name || user.fullName || user.username ||
-      user.name || user.email || "User"
-    );
-    const role = String(user.role || user.role_name || "Staff");
-    const initial = name.charAt(0).toUpperCase() || "U";
-
-    setText("welcomeName", name);
-    setText("sidebarUsername", name);
-    setText("sidebarRole", role);
-    setText("userAvatar", initial);
-    setText("topAvatar", initial);
-    setText("topUsername", name);
-
-    setText("profileDisplayName", name);
-    setText("profileAvatar", initial);
-    setText("profileRole", role);
-    setText("profileFullName", user.full_name || user.fullName || user.name || "—");
-    setText("profileUsername", user.username || "—");
-    setText("profileEmail", user.email || "—");
-    setText("profileRoleDetail", role);
-    setText(
-      "profileRegistration",
-      user.registration_number || user.registrationNumber || user.reg_no || "—"
+  try {
+    response = await fetch(`${API_BASE}${normalizePath(path)}`, {
+      ...options,
+      headers
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach the CSRS backend. Check your connection and API URL."
     );
   }
 
-  function drawBars(elementId, entries) {
-    const element = $(elementId);
-    if (!element) return;
+  const contentType = response.headers.get("content-type") || "";
+  let result = null;
 
-    const values = (Array.isArray(entries) ? entries : []).map(item => ({
-      label: String(valueOf(
-        item, "label", "name", "status", "category",
-        "category_name", "severity", "date", "day", "location_name"
-      ) || "Other"),
-      value: Number(valueOf(item, "count", "total", "value") || 0)
-    }));
-
-    if (!values.length) {
-      element.innerHTML = '<p class="empty-cell">No data available.</p>';
-      return;
-    }
-
-    const max = Math.max(1, ...values.map(item => item.value));
-
-    element.innerHTML = values.map(item => {
-      const width = Math.max(0, Math.min(100, item.value / max * 100));
-      return `
-        <div class="chart-row">
-          <span title="${escapeHTML(item.label)}">${escapeHTML(item.label)}</span>
-          <div class="chart-track" role="img"
-               aria-label="${escapeHTML(item.label)}: ${escapeHTML(item.value)}">
-            <div class="chart-fill" style="width:${width}%"></div>
-          </div>
-          <span class="chart-value">${escapeHTML(formatNumber(item.value))}</span>
-        </div>`;
-    }).join("");
+  if (contentType.includes("application/json")) {
+    result = await response.json().catch(() => null);
+  } else {
+    result = await response.text().catch(() => "");
   }
 
-  function updateLastUpdated() {
-    setText("lastUpdated", `Updated ${new Date().toLocaleTimeString()}`);
+  if (response.status === 401) {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    window.location.replace("/home.html");
+    throw new Error("Your session has expired. Please sign in again.");
   }
 
-  function resetStats() {
-    ["totalIncidents", "pendingAlerts", "visitors", "highSeverity"]
-      .forEach(id => setText(id, "—"));
+  if (!response.ok) {
+    const message =
+      result?.message ||
+      result?.error ||
+      (typeof result === "string" && result) ||
+      `Request failed (${response.status}).`;
+
+    throw new Error(message);
   }
 
-  async function loadDashboard() {
-    const request = beginRequest("dashboard");
+  return result;
+}
 
-    try {
-      const days = encodeURIComponent($("period")?.value || "30");
-      const data = await api(`${PATHS.dashboard}?days=${days}`);
+function unwrap(result, keys = []) {
+  if (Array.isArray(result)) return result;
 
-      if (isStale("dashboard", request)) return;
+  for (const key of keys) {
+    if (Array.isArray(result?.[key])) return result[key];
+    if (Array.isArray(result?.data?.[key])) return result.data[key];
+  }
 
-      const stats = data.stats || data;
-      const incidentStats = data.incidents && !Array.isArray(data.incidents)
-        ? data.incidents
-        : stats;
+  if (Array.isArray(result?.data)) return result.data;
+  if (Array.isArray(result?.results)) return result.results;
 
-      setText("totalIncidents", formatNumber(valueOf(
-        incidentStats, "total", "count", "total_incidents", "total_incident",
-        "totalIncidents", "incident_count"
-      )));
+  return [];
+}
 
-      setText("pendingAlerts", formatNumber(valueOf(
-        data, "pending_emergency_alerts", "open_alerts", "pending_alerts",
-        "pendingAlerts", "active_alerts"
-      )));
-
-      setText("visitors", formatNumber(valueOf(
-        data, "visitors_on_campus", "active_visitors", "current_visitors",
-        "visitors", "activeVisitors"
-      )));
-
-      setText("highSeverity", formatNumber(valueOf(
-        incidentStats, "open_critical", "critical", "critical_incidents",
-        "criticalIncidents", "high_severity"
-      )));
-
-      drawBars("severityChart", data.by_severity || data.bySeverity);
-      drawBars("statusChart", data.by_status || data.byStatus);
-      drawBars("categoryChart", data.by_category || data.byCategory);
-      drawBars("trendChart", data.daily_trend || data.dailyTrend);
-
-      const hotspots = rowsFrom(data.hotspots, ["hotspots", "data", "items"]);
-      setHTML("hotspotsTable", hotspots.length
-        ? hotspots.map(item => `
-            <tr>
-              <td>${escapeHTML(valueOf(item, "location", "location_name", "name") || "Unknown")}</td>
-              <td>${escapeHTML(formatNumber(valueOf(item, "count", "total")))}</td>
-            </tr>`).join("")
-        : emptyRow(2, "No incident hotspot data returned."));
-
-      updateUserDisplay();
-      updateLastUpdated();
-    } catch (error) {
-      if (isStale("dashboard", request)) return;
-      resetStats();
-      showError(error);
+function getValue(object, keys, fallback = "—") {
+  for (const key of keys) {
+    const value = object?.[key];
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
     }
   }
+  return fallback;
+}
 
-  function populateSelect(elementId, records, idKey, labelKey, placeholder) {
-    const select = $(elementId);
-    if (!select) return;
+function formatDate(value) {
+  if (!value || value === "—") return "—";
 
-    const previousValue = select.value;
-    select.innerHTML = "";
-    const first = document.createElement("option");
-    first.value = "";
-    first.textContent = placeholder;
-    select.appendChild(first);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
 
-    records.forEach(item => {
-      const id = valueOf(item, idKey, "id");
-      const label = valueOf(item, labelKey, "name");
-      if (id === "") return;
+  return date.toLocaleString();
+}
 
-      const option = document.createElement("option");
-      option.value = String(id);
-      option.textContent = String(label || `Option ${id}`);
-      select.appendChild(option);
-    });
+function normalized(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
 
-    if ([...select.options].some(option => option.value === previousValue)) {
-      select.value = previousValue;
-    }
+function makeElement(tag, text, className) {
+  const element = document.createElement(tag);
+
+  if (text !== undefined && text !== null) {
+    element.textContent = String(text);
   }
 
-  async function loadIncidents() {
-    const request = beginRequest("incidents");
-    setHTML("incidentsTable", emptyRow(6, "Loading incidents..."));
+  if (className) element.className = className;
+  return element;
+}
 
-    try {
-      const [raw, categoryData, locationData] = await Promise.all([
-        api(PATHS.incidents),
-        api(PATHS.categories),
-        api(PATHS.locations)
-      ]);
+function makeCell(row, value, className) {
+  const cell = document.createElement("td");
+  cell.textContent = String(value ?? "—");
 
-      if (isStale("incidents", request)) return;
+  if (className) cell.className = className;
+  row.appendChild(cell);
+  return cell;
+}
 
-      incidents = rowsFrom(raw, ["incidents", "data", "items", "rows", "results"])
-        .slice()
-        .sort((a, b) =>
-          timeOf(valueOf(b, "incident_datetime", "created_at")) -
-          timeOf(valueOf(a, "incident_datetime", "created_at"))
-        );
+function makeButton(label, className, onClick) {
+  const button = makeElement("button", label, `button ${className}`);
+  button.type = "button";
+  button.addEventListener("click", onClick);
+  return button;
+}
 
-      populateSelect(
-        "incidentCategory",
-        rowsFrom(categoryData, ["categories", "data", "items"]),
-        "category_id", "category_name", "Select category"
-      );
+function renderEmpty(tbodyId, columns, message) {
+  const tbody = $(tbodyId);
+  if (!tbody) return;
 
-      populateSelect(
-        "incidentLocation",
-        rowsFrom(locationData, ["locations", "data", "items"]),
-        "location_id", "location_name", "Select location"
-      );
+  tbody.replaceChildren();
 
-      renderIncidents();
-      updateLastUpdated();
-    } catch (error) {
-      if (isStale("incidents", request)) return;
-      showError(error);
-      setHTML("incidentsTable", emptyRow(6, error.message));
-    }
+  const row = document.createElement("tr");
+  const cell = makeElement("td", message, "empty-cell");
+  cell.colSpan = columns;
+  row.appendChild(cell);
+  tbody.appendChild(row);
+}
+
+function renderStatusCell(row, value) {
+  const cell = document.createElement("td");
+  const status = String(value || "Unknown");
+  const badge = makeElement("span", status, "badge");
+
+  const cssStatus = status.toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  badge.classList.add(cssStatus);
+  cell.appendChild(badge);
+  row.appendChild(cell);
+}
+
+function renderSeverityCell(row, value) {
+  const cell = document.createElement("td");
+  const severity = String(value || "Unknown");
+  const badge = makeElement("span", severity, "badge");
+
+  badge.classList.add(
+    severity.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+  );
+
+  cell.appendChild(badge);
+  row.appendChild(cell);
+}
+
+function filtered(items, query, fields, status = "", statusFields = []) {
+  const q = normalized(query);
+  const wantedStatus = normalized(status);
+
+  return items.filter((item) => {
+    const matchesText =
+      !q ||
+      fields.some((field) => normalized(item?.[field]).includes(q));
+
+    const matchesStatus =
+      !wantedStatus ||
+      statusFields.some((field) => normalized(item?.[field]) === wantedStatus);
+
+    return matchesText && matchesStatus;
+  });
+}
+
+/* =========================================================
+   ROLE-BASED NAVIGATION
+   ========================================================= */
+
+function canOpenPage(page) {
+  if (["users", "audit-logs"].includes(page) && !isAdmin()) {
+    return false;
   }
 
-  function renderIncidents() {
-    const search = ($("incidentSearch")?.value || "").trim().toLowerCase();
-    const status = ($("incidentStatusFilter")?.value || "").toLowerCase();
+  return Boolean(PAGE_INFO[page]);
+}
 
-    const filtered = incidents.filter(item => {
-      const text = [
-        item.reference_no, item.category_name, item.location_name,
-        item.description, item.status, item.severity
-      ].join(" ").toLowerCase();
-
-      return text.includes(search) &&
-        (!status || String(item.status || "").toLowerCase() === status);
-    });
-
-    setHTML("incidentsTable", filtered.length
-      ? filtered.map(item => `
-          <tr>
-            <td>${escapeHTML(valueOf(item, "reference_no", "id") || "—")}</td>
-            <td>${escapeHTML(valueOf(item, "category_name", "category") || "—")}</td>
-            <td>${escapeHTML(valueOf(item, "location_name", "location") || "—")}</td>
-            <td>${badge(item.severity)}</td>
-            <td>${badge(item.status)}</td>
-            <td>${escapeHTML(displayDate(valueOf(item, "incident_datetime", "created_at")))}</td>
-          </tr>`).join("")
-      : emptyRow(6, "No matching incidents found."));
+function showPage(page, updateHash = true) {
+  if (!canOpenPage(page)) {
+    showMessage("You are not authorized to access that page.", "error");
+    page = "overview";
   }
 
-  function resetIncidentForm() {
-    const form = $("incidentForm");
-    if (!form) return;
+  state.page = page;
 
-    form.reset();
-    if ($("incidentDateTime")) {
-      $("incidentDateTime").max = localInputValue();
-      $("incidentDateTime").value = localInputValue();
-    }
-  }
+  document.querySelectorAll(".page-section").forEach((section) => {
+    section.hidden = section.id !== `page-${page}`;
+  });
 
-  function setIncidentForm(open) {
-    const panel = $("incidentFormPanel");
-    if (!panel) return;
+  document.querySelectorAll("[data-page]").forEach((link) => {
+    const active = link.dataset.page === page;
 
-    panel.hidden = !open;
-    $("toggleIncidentForm")?.setAttribute("aria-expanded", String(open));
-
-    if (open) {
-      if ($("incidentDateTime")) {
-        $("incidentDateTime").max = localInputValue();
-        if (!$("incidentDateTime").value) {
-          $("incidentDateTime").value = localInputValue();
-        }
-      }
-      $("incidentCategory")?.focus();
-    }
-  }
-
-  async function submitIncident(event) {
-    event.preventDefault();
-    if (requestInProgress) return;
-
-    const categoryId = $("incidentCategory")?.value;
-    const locationId = $("incidentLocation")?.value;
-    const dateValue = $("incidentDateTime")?.value;
-    const description = $("incidentDescription")?.value.trim();
-
-    if (!categoryId || !locationId || !description) {
-      showMessage("Please complete the category, location and description.", "error");
-      return;
-    }
-
-    const date = dateValue ? new Date(dateValue) : new Date();
-    if (Number.isNaN(date.getTime()) || date.getTime() > Date.now() + 60000) {
-      showMessage("Enter a valid incident date and time that is not in the future.", "error");
-      return;
-    }
-
-    const payload = {
-      category_id: Number(categoryId),
-      location_id: Number(locationId),
-      severity: $("incidentSeverity")?.value || "Medium",
-      incident_datetime: date.toISOString(),
-      description,
-      is_anonymous: ALLOW_ANONYMOUS && Boolean($("incidentAnonymous")?.checked)
-    };
-
-    const form = $("incidentForm");
-    const button = form?.querySelector('button[type="submit"]');
-    requestInProgress = true;
-    setBusy(button, true, "Submitting...");
-
-    try {
-      await api(PATHS.incidents, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-
-      resetIncidentForm();
-      setIncidentForm(false);
-      showMessage("Incident report submitted successfully.");
-      await loadIncidents();
-      await loadDashboard();
-    } catch (error) {
-      showError(error);
-    } finally {
-      requestInProgress = false;
-      setBusy(button, false);
-    }
-  }
-
-  async function loadEmergencies() {
-    const request = beginRequest("emergency");
-    setHTML("emergencyTable", emptyRow(5, "Loading emergency alerts..."));
-
-    try {
-      const data = await api(PATHS.emergency);
-      if (isStale("emergency", request)) return;
-
-      emergencies = rowsFrom(data, ["emergencies", "alerts", "data", "items"])
-        .slice()
-        .sort((a, b) =>
-          timeOf(valueOf(b, "created_at", "created_on")) -
-          timeOf(valueOf(a, "created_at", "created_on"))
-        );
-
-      renderEmergencies();
-      updateLastUpdated();
-    } catch (error) {
-      if (isStale("emergency", request)) return;
-      showError(error);
-      setHTML("emergencyTable", emptyRow(5, error.message));
-    }
-  }
-
-  function renderEmergencies() {
-    const search = ($("emergencySearch")?.value || "").trim().toLowerCase();
-    const status = ($("emergencyStatusFilter")?.value || "").toLowerCase();
-
-    const filtered = emergencies.filter(item => {
-      const text = [
-        item.reference_no, item.type, item.title,
-        item.location_name, item.description, item.status
-      ].join(" ").toLowerCase();
-
-      return text.includes(search) &&
-        (!status || String(item.status || "").toLowerCase() === status);
-    });
-
-    setHTML("emergencyTable", filtered.length
-      ? filtered.map(item => `
-          <tr>
-            <td>${escapeHTML(valueOf(item, "reference_no", "id") || "—")}</td>
-            <td>${escapeHTML(valueOf(item, "type", "title", "description") || "—")}</td>
-            <td>${escapeHTML(valueOf(item, "location_name", "location") || "—")}</td>
-            <td>${badge(item.status)}</td>
-            <td>${escapeHTML(displayDate(valueOf(item, "created_at", "created_on")))}</td>
-          </tr>`).join("")
-      : emptyRow(5, "No matching emergency alerts found."));
-  }
-
-  const checkoutOf = item =>
-    valueOf(item, "check_out_time", "checked_out_at", "checkout_time");
-
-  async function loadVisitors() {
-    const request = beginRequest("visitors");
-    setHTML("visitorsTable", emptyRow(6, "Loading visitor records..."));
-
-    try {
-      const data = await api(PATHS.visitors);
-      if (isStale("visitors", request)) return;
-
-      visitors = rowsFrom(data, ["visitors", "records", "data", "items"])
-        .slice()
-        .sort((a, b) =>
-          timeOf(valueOf(b, "check_in_time", "checked_in_at", "checkin_time")) -
-          timeOf(valueOf(a, "check_in_time", "checked_in_at", "checkin_time"))
-        );
-
-      renderVisitors();
-      updateLastUpdated();
-    } catch (error) {
-      if (isStale("visitors", request)) return;
-      showError(error);
-      setHTML("visitorsTable", emptyRow(6, error.message));
-    }
-  }
-
-  function renderVisitors() {
-    const search = ($("visitorSearch")?.value || "").trim().toLowerCase();
-    const status = $("visitorStatusFilter")?.value || "";
-
-    const filtered = visitors.filter(item => {
-      const checkedOut = Boolean(checkoutOf(item));
-      const text = [
-        item.visitor_name, item.name, item.purpose, item.host_name, item.host
-      ].join(" ").toLowerCase();
-
-      return text.includes(search) &&
-        (!status ||
-          (status === "checked-out" && checkedOut) ||
-          (status === "on-campus" && !checkedOut));
-    });
-
-    setHTML("visitorsTable", filtered.length
-      ? filtered.map(item => `
-          <tr>
-            <td>${escapeHTML(valueOf(item, "visitor_name", "name") || "—")}</td>
-            <td>${escapeHTML(item.purpose || "—")}</td>
-            <td>${escapeHTML(valueOf(item, "host_name", "host") || "—")}</td>
-            <td>${escapeHTML(displayDate(valueOf(item, "check_in_time", "checked_in_at", "checkin_time")))}</td>
-            <td>${escapeHTML(displayDate(checkoutOf(item)))}</td>
-            <td>${badge(checkoutOf(item) ? "Checked out" : "On campus")}</td>
-          </tr>`).join("")
-      : emptyRow(6, "No matching visitor records found."));
-  }
-
-  function setSidebar(open) {
-    const sidebar = $("sidebar");
-    if (!sidebar) return;
-
-    const mobile = window.matchMedia("(max-width: 760px)").matches;
-    const isOpen = mobile && open;
-
-    sidebar.classList.toggle("open", isOpen);
-    sidebar.inert = mobile && !isOpen;
-
-    if ($("sidebarBackdrop")) $("sidebarBackdrop").hidden = !isOpen;
-    $("menuButton")?.setAttribute("aria-expanded", String(isOpen));
-  }
-
-  function loadView(view) {
-    if (view === "overview") return loadDashboard();
-    if (view === "incidents") return loadIncidents();
-    if (view === "emergency") return loadEmergencies();
-    if (view === "visitors") return loadVisitors();
-    if (view === "profile") {
-      updateUserDisplay();
-      return Promise.resolve();
-    }
-    return Promise.resolve();
-  }
-
-  function showView(name, focus = false) {
-    const view = Object.prototype.hasOwnProperty.call(VIEWS, name)
-      ? name
-      : "overview";
-
-    currentView = view;
-
-    document.querySelectorAll("[data-view-panel]").forEach(panel => {
-      panel.hidden = panel.dataset.viewPanel !== view;
-    });
-
-    document.querySelectorAll("[data-view]").forEach(link => {
-      const active = link.dataset.view === view;
+    if (link.classList.contains("nav-link")) {
       link.classList.toggle("active", active);
-
       if (active) link.setAttribute("aria-current", "page");
       else link.removeAttribute("aria-current");
-    });
-
-    setText("pageTitle", VIEWS[view][0]);
-    setText("pageSubtitle", VIEWS[view][1]);
-    setText("breadcrumbCurrent", VIEWS[view][0]);
-    document.title = `CSRS | ${VIEWS[view][0]}`;
-
-    if (location.hash !== `#${view}`) {
-      history.replaceState(null, "", `#${view}`);
     }
+  });
 
-    setSidebar(false);
-    clearMessage();
+  const [title, subtitle] = PAGE_INFO[page];
 
-    if (focus) $("main")?.focus({ preventScroll: true });
-    loadView(view);
+  if ($("pageTitle")) $("pageTitle").textContent = title;
+  if ($("breadcrumbPage")) $("breadcrumbPage").textContent = title;
+
+  const description = document.querySelector(`#page-${page} .page-description`);
+  if (description && subtitle) description.textContent = subtitle;
+
+  closeMobileSidebar();
+
+  if (updateHash && location.hash !== `#${page}`) {
+    history.replaceState(null, "", `#${page}`);
   }
 
-  function bindEvents() {
-    document.querySelectorAll("[data-view]").forEach(link => {
-      link.addEventListener("click", event => {
-        event.preventDefault();
-        showView(link.dataset.view, true);
-      });
+  clearMessages();
+  loadPage(page);
+}
+
+function openInitialPage() {
+  const requested = location.hash.replace(/^#/, "");
+  showPage(PAGE_INFO[requested] ? requested : "overview", false);
+}
+
+function openMobileSidebar() {
+  $("sidebar")?.classList.add("open");
+
+  const backdrop = $("sidebarBackdrop");
+  if (backdrop) backdrop.hidden = false;
+
+  $("menuButton")?.setAttribute("aria-expanded", "true");
+}
+
+function closeMobileSidebar() {
+  $("sidebar")?.classList.remove("open");
+
+  const backdrop = $("sidebarBackdrop");
+  if (backdrop) backdrop.hidden = true;
+
+  $("menuButton")?.setAttribute("aria-expanded", "false");
+}
+
+function applyRoleVisibility() {
+  document.querySelectorAll("[data-admin-only]").forEach((element) => {
+    element.hidden = !isAdmin();
+  });
+}
+
+/* =========================================================
+   PROFILE
+   ========================================================= */
+
+function renderProfile() {
+  const user = state.user || {};
+  const name = userName();
+  const role = roleOf(user) || "user";
+  const initial = name.charAt(0).toUpperCase() || "U";
+
+  const assignments = {
+    overviewName: name,
+    welcomeName: name,
+    sidebarUsername: name,
+    sidebarRole: role.replace(/_/g, " "),
+    profileName: name,
+    profileRole: role.replace(/_/g, " "),
+    profileEmail: getValue(user, ["email"]),
+    profileRegistration: getValue(user, [
+      "registration_number",
+      "registration_no",
+      "reg_no",
+      "student_id"
+    ]),
+    profileStatus: getValue(user, ["status", "account_status"], "Unknown"),
+    profileRoleDetail: role.replace(/_/g, " ")
+  };
+
+  Object.entries(assignments).forEach(([id, value]) => {
+    if ($(id)) $(id).textContent = value;
+  });
+
+  ["userAvatar", "topAvatar", "profileAvatar"].forEach((id) => {
+    if ($(id)) $(id).textContent = initial;
+  });
+}
+
+/* =========================================================
+   DASHBOARD OVERVIEW
+   ========================================================= */
+
+async function loadOverview() {
+  const tasks = [
+    api(PAGE_ENDPOINTS.dashboard).catch(() => null),
+    api(PAGE_ENDPOINTS.incidents).catch(() => null)
+  ];
+
+  const [dashboardResult, incidentsResult] = await Promise.all(tasks);
+
+  const dashboard = dashboardResult?.data || dashboardResult || {};
+  state.incidents = unwrap(incidentsResult, ["incidents"]);
+
+  const incidentCount =
+    dashboard.total_incidents ??
+    dashboard.totalIncidents ??
+    dashboard.stats?.total_incidents ??
+    dashboard.stats?.totalIncidents ??
+    state.incidents.length;
+
+  if ($("totalIncidents")) {
+    $("totalIncidents").textContent = incidentCount;
+  }
+
+  const activeAlerts =
+    dashboard.pending_alerts ??
+    dashboard.active_alerts ??
+    dashboard.activeAlerts ??
+    dashboard.stats?.pending_alerts ??
+    dashboard.stats?.active_alerts;
+
+  if ($("pendingAlerts")) {
+    $("pendingAlerts").textContent =
+      activeAlerts === undefined ? "—" : activeAlerts;
+  }
+
+  const totalUsers =
+    dashboard.registered_users ??
+    dashboard.total_users ??
+    dashboard.registeredUsers ??
+    dashboard.stats?.registered_users;
+
+  if ($("registeredUsers")) {
+    $("registeredUsers").textContent =
+      totalUsers === undefined ? "—" : totalUsers;
+  }
+
+  const pendingUsers =
+    dashboard.pending_registrations ??
+    dashboard.pending_users ??
+    dashboard.pendingRegistrations ??
+    dashboard.stats?.pending_registrations;
+
+  if ($("pendingRegistrations")) {
+    $("pendingRegistrations").textContent =
+      pendingUsers === undefined ? "—" : pendingUsers;
+  }
+
+  if ($("usersPendingCount")) {
+    $("usersPendingCount").textContent =
+      pendingUsers === undefined ? "—" : pendingUsers;
+  }
+
+  renderRecentIncidents();
+  renderOverviewCharts(dashboard);
+}
+
+function renderRecentIncidents() {
+  const tbody = $("recentIncidentsTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!state.incidents.length) {
+    renderEmpty("recentIncidentsTable", 5, "No incidents have been recorded.");
+    return;
+  }
+
+  state.incidents.slice(0, 6).forEach((incident) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(incident, ["reference_no", "reference", "incident_id", "id"]));
+    makeCell(row, getValue(incident, ["category_name", "category"]));
+    renderSeverityCell(row, getValue(incident, ["severity"], "Medium"));
+    renderStatusCell(row, getValue(incident, ["status"], "Submitted"));
+    makeCell(row, formatDate(getValue(incident, ["incident_datetime", "created_at", "date"])));
+
+    tbody.appendChild(row);
+  });
+}
+
+function renderChart(containerId, items) {
+  const container = $(containerId);
+  if (!container) return;
+
+  container.replaceChildren();
+
+  if (!items.length) {
+    container.appendChild(
+      makeElement("p", "No statistics are available.", "empty-cell")
+    );
+    return;
+  }
+
+  const max = Math.max(1, ...items.map((item) => Number(item.value) || 0));
+
+  items.forEach((item) => {
+    const row = makeElement("div", undefined, "chart-row");
+    const label = makeElement("span", item.label);
+    const track = makeElement("div", undefined, "chart-track");
+    const fill = makeElement("div", undefined, "chart-fill");
+    const value = makeElement("span", item.value, "chart-value");
+
+    fill.style.width = `${Math.max(0, (Number(item.value) / max) * 100)}%`;
+    track.appendChild(fill);
+
+    row.append(label, track, value);
+    container.appendChild(row);
+  });
+}
+
+function renderOverviewCharts(dashboard) {
+  const severityCounts = {};
+  const statusCounts = {};
+
+  state.incidents.forEach((incident) => {
+    const severity = getValue(incident, ["severity"], "Unknown");
+    const status = getValue(incident, ["status"], "Unknown");
+
+    severityCounts[severity] = (severityCounts[severity] || 0) + 1;
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  });
+
+  const suppliedSeverity =
+    dashboard.severity_breakdown ||
+    dashboard.severityBreakdown ||
+    dashboard.stats?.severity_breakdown;
+
+  const suppliedStatus =
+    dashboard.status_breakdown ||
+    dashboard.statusBreakdown ||
+    dashboard.stats?.status_breakdown;
+
+  const severityData = Array.isArray(suppliedSeverity)
+    ? suppliedSeverity.map((item) => ({
+        label: item.severity || item.label || item.name || "Unknown",
+        value: Number(item.count ?? item.total ?? item.value ?? 0)
+      }))
+    : Object.entries(severityCounts).map(([label, value]) => ({ label, value }));
+
+  const statusData = Array.isArray(suppliedStatus)
+    ? suppliedStatus.map((item) => ({
+        label: item.status || item.label || item.name || "Unknown",
+        value: Number(item.count ?? item.total ?? item.value ?? 0)
+      }))
+    : Object.entries(statusCounts).map(([label, value]) => ({ label, value }));
+
+  renderChart("severityChart", severityData);
+  renderChart("statusChart", statusData);
+}
+
+/* =========================================================
+   INCIDENT MANAGEMENT
+   ========================================================= */
+
+async function loadIncidentLookups() {
+  const [categoriesResult, locationsResult] = await Promise.all([
+    api(PAGE_ENDPOINTS.categories).catch(() => null),
+    api(PAGE_ENDPOINTS.locations).catch(() => null)
+  ]);
+
+  state.categories = unwrap(categoriesResult, ["categories"]);
+  state.locations = unwrap(locationsResult, ["locations"]);
+
+  populateSelect(
+    "incidentCategory",
+    state.categories,
+    ["category_id", "id"],
+    ["category_name", "name"],
+    "Select category"
+  );
+
+  populateSelect(
+    "incidentLocation",
+    state.locations,
+    ["location_id", "id"],
+    ["location_name", "name"],
+    "Select location"
+  );
+}
+
+function populateSelect(id, items, idFields, nameFields, placeholder) {
+  const select = $(id);
+  if (!select) return;
+
+  const previousValue = select.value;
+  select.replaceChildren();
+
+  const firstOption = document.createElement("option");
+  firstOption.value = "";
+  firstOption.textContent = placeholder;
+  select.appendChild(firstOption);
+
+  items.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = getValue(item, idFields, "");
+    option.textContent = getValue(item, nameFields, "Unnamed");
+
+    select.appendChild(option);
+  });
+
+  if ([...select.options].some((option) => option.value === previousValue)) {
+    select.value = previousValue;
+  }
+}
+
+async function loadIncidents() {
+  const result = await api(PAGE_ENDPOINTS.incidents);
+  state.incidents = unwrap(result, ["incidents"]);
+
+  renderIncidentsTable();
+  renderRecentIncidents();
+}
+
+function renderIncidentsTable() {
+  const query = $("incidentSearch")?.value || "";
+  const status = $("incidentStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.incidents,
+    query,
+    ["reference_no", "reference", "category_name", "category", "description", "location_name"],
+    status,
+    ["status"]
+  );
+
+  const tbody = $("incidentsTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("incidentsTable", 6, "No matching incidents found.");
+    return;
+  }
+
+  items.forEach((incident) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(incident, ["reference_no", "reference", "incident_id", "id"]));
+    makeCell(row, getValue(incident, ["category_name", "category"]));
+    makeCell(row, getValue(incident, ["location_name", "location"]));
+    renderSeverityCell(row, getValue(incident, ["severity"], "Medium"));
+    renderStatusCell(row, getValue(incident, ["status"], "Submitted"));
+    makeCell(row, formatDate(getValue(incident, ["incident_datetime", "created_at"])));
+
+    tbody.appendChild(row);
+  });
+}
+
+async function submitIncident(event) {
+  event.preventDefault();
+  clearMessages();
+
+  const form = $("incidentForm");
+  if (!form || !form.reportValidity()) return;
+
+  const payload = {
+    category_id: $("incidentCategory")?.value,
+    location_id: $("incidentLocation")?.value,
+    incident_datetime: $("incidentDateTime")?.value,
+    description: $("incidentDescription")?.value.trim(),
+    severity: $("incidentSeverity")?.value,
+    is_anonymous: Boolean($("incidentAnonymous")?.checked)
+  };
+
+  const submitButton = form.querySelector('[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+
+  try {
+    await api(PAGE_ENDPOINTS.incidents, {
+      method: "POST",
+      body: JSON.stringify(payload)
     });
 
-    window.addEventListener("hashchange", () => {
-      const view = location.hash.slice(1);
-      if (view !== currentView) showView(view);
-    });
+    form.reset();
+    $("incidentFormPanel").hidden = true;
 
-    $("menuButton")?.addEventListener("click", () => {
-      setSidebar(!$("sidebar")?.classList.contains("open"));
-    });
+    showMessage("Incident report submitted successfully.");
+    await loadIncidents();
+    await loadOverview();
+  } catch (error) {
+    showMessage(error.message, "error");
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
+}
 
-    $("sidebarBackdrop")?.addEventListener("click", () => setSidebar(false));
+/* =========================================================
+   USER MANAGEMENT
+   Requires the actual users and approval routes in config.js.
+   ========================================================= */
 
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && $("sidebar")?.classList.contains("open")) {
-        setSidebar(false);
-        $("menuButton")?.focus();
+async function loadUsers() {
+  if (!isAdmin()) {
+    showMessage("Only administrators can manage users.", "error");
+    return;
+  }
+
+  if (!PAGE_ENDPOINTS.users) {
+    renderEmpty(
+      "usersTable",
+      6,
+      "User API is not configured. Set routes.users in config.js to your real backend endpoint."
+    );
+    updateUserCounts();
+    return;
+  }
+
+  try {
+    const result = await api(PAGE_ENDPOINTS.users);
+    state.users = unwrap(result, ["users", "accounts", "registrations"]);
+    renderUsersTable();
+    updateUserCounts();
+  } catch (error) {
+    renderEmpty("usersTable", 6, error.message);
+    showMessage(`Unable to load users: ${error.message}`, "error");
+  }
+}
+
+function userStatus(user) {
+  return String(
+    getValue(user, ["status", "account_status", "approval_status"], "Unknown")
+  );
+}
+
+function isPendingUser(user) {
+  return ["pending", "awaiting_approval", "awaiting approval"].includes(
+    normalized(userStatus(user))
+  );
+}
+
+function updateUserCounts() {
+  const pending = state.users.filter(isPendingUser).length;
+  const active = state.users.filter((user) =>
+    ["active", "approved"].includes(normalized(userStatus(user)))
+  ).length;
+
+  if ($("usersPendingCount")) $("usersPendingCount").textContent = pending;
+  if ($("usersActiveCount")) $("usersActiveCount").textContent = active;
+  if ($("usersTotalCount")) $("usersTotalCount").textContent = state.users.length;
+
+  const badge = $("pendingUsersBadge");
+  if (badge) {
+    badge.textContent = pending;
+    badge.hidden = !isAdmin() || pending === 0;
+  }
+
+  if ($("pendingRegistrations")) {
+    $("pendingRegistrations").textContent = pending;
+  }
+}
+
+function renderUsersTable() {
+  const query = $("userSearch")?.value || "";
+  const status = $("userStatusFilter")?.value || "";
+
+  const items = state.users.filter((user) => {
+    const text = [
+      user.full_name,
+      user.name,
+      user.username,
+      user.email,
+      user.registration_number,
+      user.registration_no
+    ].some((value) => normalized(value).includes(normalized(query)));
+
+    const statusMatches =
+      !status || normalized(userStatus(user)) === normalized(status);
+
+    return text && statusMatches;
+  });
+
+  const tbody = $("usersTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("usersTable", 6, "No matching users found.");
+    return;
+  }
+
+  items.forEach((user) => {
+    const row = document.createElement("tr");
+    const name = getValue(user, ["full_name", "name", "username"]);
+    const email = getValue(user, ["email"]);
+    const registration = getValue(user, [
+      "registration_number",
+      "registration_no",
+      "reg_no"
+    ]);
+    const role = getValue(user, ["role", "requested_role", "user_role"]);
+    const statusValue = userStatus(user);
+
+    makeCell(row, name);
+    makeCell(row, email);
+    makeCell(row, registration);
+    makeCell(row, role);
+    renderStatusCell(row, statusValue);
+
+    const actionsCell = document.createElement("td");
+
+    if (isPendingUser(user) && isAdmin()) {
+      const approveRoute = ROUTES.approveUser;
+      const rejectRoute = ROUTES.rejectUser;
+      const id = getValue(user, ["user_id", "id"], "");
+
+      if (approveRoute && rejectRoute && id !== "") {
+        actionsCell.append(
+          makeButton("Approve", "primary", () =>
+            changeUserStatus(id, "approve", approveRoute)
+          ),
+          makeButton("Reject", "secondary", () =>
+            changeUserStatus(id, "reject", rejectRoute)
+          )
+        );
+      } else {
+        actionsCell.textContent = "Configure approval routes";
       }
-    });
-
-    window.matchMedia("(max-width: 760px)")
-      .addEventListener("change", () => setSidebar(false));
-
-    $("logoutButton")?.addEventListener("click", redirectToLogin);
-    $("profileLogoutButton")?.addEventListener("click", redirectToLogin);
-
-    $("refreshButton")?.addEventListener("click", async () => {
-      setBusy($("refreshButton"), true, "Refreshing...");
-      try {
-        await loadView(currentView);
-      } finally {
-        setBusy($("refreshButton"), false);
-      }
-    });
-
-    $("period")?.addEventListener("change", loadDashboard);
-    $("refreshEmergency")?.addEventListener("click", loadEmergencies);
-    $("refreshVisitors")?.addEventListener("click", loadVisitors);
-
-    $("incidentSearch")?.addEventListener("input", renderIncidents);
-    $("incidentStatusFilter")?.addEventListener("change", renderIncidents);
-    $("emergencySearch")?.addEventListener("input", renderEmergencies);
-    $("emergencyStatusFilter")?.addEventListener("change", renderEmergencies);
-    $("visitorSearch")?.addEventListener("input", renderVisitors);
-    $("visitorStatusFilter")?.addEventListener("change", renderVisitors);
-
-    $("toggleIncidentForm")?.addEventListener("click", () => {
-      setIncidentForm(Boolean($("incidentFormPanel")?.hidden));
-    });
-
-    $("cancelIncidentForm")?.addEventListener("click", () => {
-      resetIncidentForm();
-      setIncidentForm(false);
-      $("toggleIncidentForm")?.focus();
-    });
-
-    $("incidentForm")?.addEventListener("submit", submitIncident);
-
-    if (!ALLOW_ANONYMOUS && $("anonymousLabel")) {
-      $("anonymousLabel").hidden = true;
+    } else {
+      actionsCell.textContent = "—";
     }
 
-    if (!VISITORS_INCLUDE_HISTORY && $("visitorStatusFilter")) {
-      $("visitorStatusFilter")
-        .querySelector('option[value="checked-out"]')?.remove();
+    row.appendChild(actionsCell);
+    tbody.appendChild(row);
+  });
+}
+
+async function changeUserStatus(userId, action, routeTemplate) {
+  if (!isAdmin()) {
+    showMessage("Only administrators can approve registrations.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    action === "approve"
+      ? "Approve this registration?"
+      : "Reject this registration?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const route = routeTemplate.replace(
+      ":id",
+      encodeURIComponent(String(userId))
+    );
+
+    await api(route, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+
+    showMessage(
+      action === "approve"
+        ? "Registration approved."
+        : "Registration rejected."
+    );
+
+    await loadUsers();
+    await loadOverview();
+  } catch (error) {
+    showMessage(`Registration update failed: ${error.message}`, "error");
+  }
+}
+
+/* =========================================================
+   LOST AND FOUND
+   Requires routes.lostFound and compatible backend endpoints.
+   ========================================================= */
+
+async function loadLostFound() {
+  if (!PAGE_ENDPOINTS.lostFound) {
+    renderEmpty(
+      "lostFoundTable",
+      6,
+      "Lost and Found API is not configured. Set routes.lostFound in config.js."
+    );
+    return;
+  }
+
+  try {
+    const result = await api(PAGE_ENDPOINTS.lostFound);
+    state.lostFound = unwrap(result, ["items", "records", "lostFound"]);
+    renderLostFound();
+  } catch (error) {
+    renderEmpty("lostFoundTable", 6, error.message);
+    showMessage(`Unable to load Lost and Found: ${error.message}`, "error");
+  }
+}
+
+function renderLostFound() {
+  const query = $("lostFoundSearch")?.value || "";
+  const status = $("lostFoundStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.lostFound,
+    query,
+    ["item_name", "name", "description", "location", "reference_no"],
+    status,
+    ["status", "type"]
+  );
+
+  const tbody = $("lostFoundTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("lostFoundTable", 6, "No matching property records found.");
+    return;
+  }
+
+  items.forEach((item) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(item, ["item_name", "name", "title"]));
+    makeCell(row, getValue(item, ["type", "item_type"]));
+    makeCell(row, getValue(item, ["location", "location_name"]));
+    makeCell(row, formatDate(getValue(item, ["date", "created_at", "reported_at"])));
+    renderStatusCell(row, getValue(item, ["status"], "Open"));
+
+    const actions = document.createElement("td");
+    actions.textContent = "—";
+    row.appendChild(actions);
+
+    tbody.appendChild(row);
+  });
+}
+
+async function submitLostFound(event) {
+  event.preventDefault();
+
+  const form = $("lostFoundForm");
+  if (!form || !form.reportValidity()) return;
+
+  if (!PAGE_ENDPOINTS.lostFound) {
+    showMessage("Configure the Lost and Found backend route before submitting.", "error");
+    return;
+  }
+
+  const payload = {
+    type: $("lostFoundType").value,
+    item_name: $("lostFoundItemName").value.trim(),
+    location: $("lostFoundLocation").value.trim(),
+    date: $("lostFoundDate").value,
+    description: $("lostFoundDescription").value.trim()
+  };
+
+  try {
+    await api(PAGE_ENDPOINTS.lostFound, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    form.reset();
+    $("lostFoundFormPanel").hidden = true;
+    showMessage("Property record saved.");
+    await loadLostFound();
+  } catch (error) {
+    showMessage(`Unable to save record: ${error.message}`, "error");
+  }
+}
+
+/* =========================================================
+   EMERGENCY ALERTS
+   ========================================================= */
+
+async function loadEmergency() {
+  const result = await api(PAGE_ENDPOINTS.emergency);
+  state.emergencies = unwrap(result, ["alerts", "emergencies"]);
+  renderEmergency();
+}
+
+function renderEmergency() {
+  const query = $("emergencySearch")?.value || "";
+  const status = $("emergencyStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.emergencies,
+    query,
+    ["title", "message", "description", "location", "alert_type"],
+    status,
+    ["status"]
+  );
+
+  const tbody = $("emergencyTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("emergencyTable", 6, "No matching emergency alerts found.");
+    return;
+  }
+
+  items.forEach((alert) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(alert, ["title", "alert_type", "message", "description"]));
+    makeCell(row, getValue(alert, ["location", "location_name"]));
+    renderSeverityCell(row, getValue(alert, ["severity", "priority"], "Medium"));
+    renderStatusCell(row, getValue(alert, ["status"], "Unknown"));
+    makeCell(row, formatDate(getValue(alert, ["created_at", "createdAt", "timestamp"])));
+
+    const actions = document.createElement("td");
+    actions.textContent = "—";
+    row.appendChild(actions);
+
+    tbody.appendChild(row);
+  });
+}
+
+/* =========================================================
+   VISITORS AND GATE RECORDS
+   ========================================================= */
+
+async function loadVisitors() {
+  const result = await api(PAGE_ENDPOINTS.visitors);
+  state.visitors = unwrap(result, ["visitors", "records"]);
+  renderVisitors();
+}
+
+function renderVisitors() {
+  const query = $("visitorSearch")?.value || "";
+  const status = $("visitorStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.visitors,
+    query,
+    ["visitor_name", "name", "email", "purpose", "host_name"],
+    status,
+    ["status"]
+  );
+
+  const tbody = $("visitorsTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("visitorsTable", 6, "No matching visitor records found.");
+    return;
+  }
+
+  items.forEach((visitor) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(visitor, ["visitor_name", "name", "full_name"]));
+    makeCell(row, getValue(visitor, ["purpose", "visit_purpose"]));
+    makeCell(row, getValue(visitor, ["host_name", "host", "person_to_visit"]));
+    makeCell(row, formatDate(getValue(visitor, ["entry_time", "check_in", "created_at"])));
+    renderStatusCell(row, getValue(visitor, ["status"], "On Campus"));
+
+    const actions = document.createElement("td");
+    actions.textContent = "—";
+    row.appendChild(actions);
+
+    tbody.appendChild(row);
+  });
+}
+
+async function loadGate() {
+  const result = await api(PAGE_ENDPOINTS.gate);
+  state.gateRecords = unwrap(result, ["records", "visitors", "entries"]);
+  renderGate();
+}
+
+function renderGate() {
+  const query = $("gateSearch")?.value || "";
+  const status = $("gateStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.gateRecords,
+    query,
+    ["name", "visitor_name", "person_name", "gate_name", "recorded_by"],
+    status,
+    ["record_type", "type", "direction"]
+  );
+
+  const tbody = $("gateTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("gateTable", 5, "No matching gate records found.");
+    return;
+  }
+
+  items.forEach((record) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(record, ["person_name", "visitor_name", "name"]));
+    makeCell(row, getValue(record, ["record_type", "type", "direction"]));
+    makeCell(row, getValue(record, ["gate_name", "gate", "location"]));
+    makeCell(row, getValue(record, ["recorded_by", "officer_name"]));
+    makeCell(row, formatDate(getValue(record, ["created_at", "timestamp", "entry_time"])));
+
+    tbody.appendChild(row);
+  });
+}
+
+/* =========================================================
+   PATROLS AND AUDIT LOGS
+   ========================================================= */
+
+async function loadPatrols() {
+  if (!PAGE_ENDPOINTS.patrols) {
+    renderEmpty("patrolsTable", 6, "Patrol API is not configured in config.js.");
+    return;
+  }
+
+  const result = await api(PAGE_ENDPOINTS.patrols);
+  state.patrols = unwrap(result, ["patrols", "records"]);
+  renderPatrols();
+}
+
+function renderPatrols() {
+  const query = $("patrolSearch")?.value || "";
+  const status = $("patrolStatusFilter")?.value || "";
+
+  const items = filtered(
+    state.patrols,
+    query,
+    ["name", "patrol_name", "officer_name", "checkpoint"],
+    status,
+    ["status"]
+  );
+
+  const tbody = $("patrolsTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("patrolsTable", 6, "No matching patrol records found.");
+    return;
+  }
+
+  items.forEach((patrol) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(patrol, ["patrol_name", "name", "reference_no"]));
+    makeCell(row, getValue(patrol, ["officer_name", "officer"]));
+    makeCell(row, getValue(patrol, ["checkpoint", "location"]));
+    renderStatusCell(row, getValue(patrol, ["status"], "Unknown"));
+    makeCell(row, formatDate(getValue(patrol, ["start_time", "created_at"])));
+
+    const actions = document.createElement("td");
+    actions.textContent = "—";
+    row.appendChild(actions);
+
+    tbody.appendChild(row);
+  });
+}
+
+async function loadAuditLogs() {
+  if (!isAdmin()) {
+    showMessage("Only administrators can view audit logs.", "error");
+    return;
+  }
+
+  if (!PAGE_ENDPOINTS.auditLogs) {
+    renderEmpty("auditLogsTable", 5, "Audit log API is not configured in config.js.");
+    return;
+  }
+
+  const result = await api(PAGE_ENDPOINTS.auditLogs);
+  state.auditLogs = unwrap(result, ["logs", "audit_logs", "records"]);
+  renderAuditLogs();
+}
+
+function renderAuditLogs() {
+  const query = $("auditSearch")?.value || "";
+  const items = state.auditLogs.filter((item) =>
+    [
+      item.actor,
+      item.actor_name,
+      item.action,
+      item.resource,
+      item.details
+    ].some((value) => normalized(value).includes(normalized(query)))
+  );
+
+  const tbody = $("auditLogsTable");
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!items.length) {
+    renderEmpty("auditLogsTable", 5, "No matching audit records found.");
+    return;
+  }
+
+  items.forEach((log) => {
+    const row = document.createElement("tr");
+
+    makeCell(row, getValue(log, ["actor_name", "actor", "username"]));
+    makeCell(row, getValue(log, ["action", "event_type"]));
+    makeCell(row, getValue(log, ["resource", "entity_type"]));
+    makeCell(row, getValue(log, ["details", "description", "message"]));
+    makeCell(row, formatDate(getValue(log, ["created_at", "timestamp"])));
+
+    tbody.appendChild(row);
+  });
+}
+
+/* =========================================================
+   REPORTS
+   ========================================================= */
+
+async function loadIncidentReport() {
+  try {
+    await loadIncidents();
+
+    const output = $("incidentReportOutput");
+    if (!output) return;
+
+    output.replaceChildren();
+
+    const counts = {};
+    state.incidents.forEach((item) => {
+      const key = getValue(item, ["status"], "Unknown");
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    renderChart(
+      "incidentReportOutput",
+      Object.entries(counts).map(([label, value]) => ({ label, value }))
+    );
+  } catch (error) {
+    showMessage(`Unable to load incident report: ${error.message}`, "error");
+  }
+}
+
+async function loadAccessReport() {
+  try {
+    await loadVisitors();
+
+    const output = $("accessReportOutput");
+    if (!output) return;
+
+    output.replaceChildren();
+
+    const counts = {};
+    state.visitors.forEach((visitor) => {
+      const key = getValue(visitor, ["status"], "Unknown");
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    renderChart(
+      "accessReportOutput",
+      Object.entries(counts).map(([label, value]) => ({ label, value }))
+    );
+  } catch (error) {
+    showMessage(`Unable to load access report: ${error.message}`, "error");
+  }
+}
+
+/* =========================================================
+   PAGE LOADING
+   ========================================================= */
+
+async function safeLoad(label, callback) {
+  try {
+    await callback();
+  } catch (error) {
+    showMessage(`${label}: ${error.message}`, "error");
+  }
+}
+
+async function loadPage(page) {
+  if (state.busy) return;
+
+  state.busy = true;
+
+  try {
+    switch (page) {
+      case "overview":
+        await safeLoad("Unable to load overview", loadOverview);
+        break;
+
+      case "users":
+        await safeLoad("Unable to load users", loadUsers);
+        break;
+
+      case "incidents":
+        await safeLoad("Unable to load incidents", async () => {
+          await Promise.all([loadIncidents(), loadIncidentLookups()]);
+        });
+        break;
+
+      case "lost-found":
+        await safeLoad("Unable to load Lost and Found", loadLostFound);
+        break;
+
+      case "emergency":
+        await safeLoad("Unable to load alerts", loadEmergency);
+        break;
+
+      case "gate":
+        await safeLoad("Unable to load gate records", loadGate);
+        break;
+
+      case "visitors":
+        await safeLoad("Unable to load visitors", loadVisitors);
+        break;
+
+      case "patrols":
+        await safeLoad("Unable to load patrols", loadPatrols);
+        break;
+
+      case "audit-logs":
+        await safeLoad("Unable to load audit logs", loadAuditLogs);
+        break;
+
+      case "reports":
+        break;
+
+      case "profile":
+        renderProfile();
+        break;
     }
+  } finally {
+    state.busy = false;
+  }
+}
+
+/* =========================================================
+   EVENT HANDLERS
+   ========================================================= */
+
+function on(id, event, callback) {
+  $(id)?.addEventListener(event, callback);
+}
+
+function setupNavigation() {
+  document.querySelectorAll("[data-page]").forEach((element) => {
+    element.addEventListener("click", (event) => {
+      event.preventDefault();
+      showPage(element.dataset.page);
+    });
+  });
+
+  on("menuButton", "click", () => {
+    if ($("sidebar")?.classList.contains("open")) closeMobileSidebar();
+    else openMobileSidebar();
+  });
+
+  on("sidebarBackdrop", "click", closeMobileSidebar);
+
+  window.addEventListener("hashchange", () => {
+    const page = location.hash.replace(/^#/, "");
+    if (PAGE_INFO[page] && page !== state.page) showPage(page, false);
+  });
+
+  on("logoutButton", "click", () => {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    window.location.replace("/home.html");
+  });
+}
+
+function setupIncidentForm() {
+  on("toggleIncidentForm", "click", () => {
+    const panel = $("incidentFormPanel");
+    if (panel) panel.hidden = !panel.hidden;
+  });
+
+  on("cancelIncidentForm", "click", () => {
+    if ($("incidentFormPanel")) $("incidentFormPanel").hidden = true;
+  });
+
+  on("incidentForm", "submit", submitIncident);
+
+  on("incidentSearch", "input", renderIncidentsTable);
+  on("incidentStatusFilter", "change", renderIncidentsTable);
+
+  on("refreshButton", "click", () =>
+    safeLoad("Unable to refresh incidents", loadIncidents)
+  );
+}
+
+function setupUserManagement() {
+  on("refreshUsers", "click", () => safeLoad("Unable to refresh users", loadUsers));
+  on("userSearch", "input", renderUsersTable);
+  on("userStatusFilter", "change", renderUsersTable);
+}
+
+function setupLostFound() {
+  on("toggleLostFoundForm", "click", () => {
+    const panel = $("lostFoundFormPanel");
+    if (panel) panel.hidden = !panel.hidden;
+  });
+
+  on("cancelLostFoundForm", "click", () => {
+    if ($("lostFoundFormPanel")) $("lostFoundFormPanel").hidden = true;
+  });
+
+  on("lostFoundForm", "submit", submitLostFound);
+  on("lostFoundSearch", "input", renderLostFound);
+  on("lostFoundStatusFilter", "change", renderLostFound);
+
+  on("refreshLostFound", "click", () =>
+    safeLoad("Unable to refresh Lost and Found", loadLostFound)
+  );
+}
+
+function setupOtherPages() {
+  on("refreshEmergency", "click", () =>
+    safeLoad("Unable to refresh alerts", loadEmergency)
+  );
+  on("emergencySearch", "input", renderEmergency);
+  on("emergencyStatusFilter", "change", renderEmergency);
+
+  on("refreshVisitors", "click", () =>
+    safeLoad("Unable to refresh visitors", loadVisitors)
+  );
+  on("visitorSearch", "input", renderVisitors);
+  on("visitorStatusFilter", "change", renderVisitors);
+
+  on("refreshGate", "click", () =>
+    safeLoad("Unable to refresh gate records", loadGate)
+  );
+  on("gateSearch", "input", renderGate);
+  on("gateStatusFilter", "change", renderGate);
+
+  on("refreshPatrols", "click", () =>
+    safeLoad("Unable to refresh patrols", loadPatrols)
+  );
+  on("patrolSearch", "input", renderPatrols);
+  on("patrolStatusFilter", "change", renderPatrols);
+
+  on("refreshAuditLogs", "click", () =>
+    safeLoad("Unable to refresh audit logs", loadAuditLogs)
+  );
+  on("auditSearch", "input", renderAuditLogs);
+
+  on("loadIncidentReport", "click", loadIncidentReport);
+  on("loadAccessReport", "click", loadAccessReport);
+}
+
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+
+function initDashboard() {
+  const token = getToken();
+  state.user = readUser();
+
+  if (!token) {
+    window.location.replace("/home.html");
+    return;
   }
 
-  function start() {
-    if (!sessionStorage.getItem("csrs_token")) {
-      redirectToLogin();
-      return;
-    }
+  renderProfile();
+  applyRoleVisibility();
 
-    bindEvents();
-    setSidebar(false);
-    updateUserDisplay();
-    resetIncidentForm();
-    showView(location.hash.slice(1) || "overview");
-  }
+  setupNavigation();
+  setupIncidentForm();
+  setupUserManagement();
+  setupLostFound();
+  setupOtherPages();
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
-  } else {
-    start();
-  }
-})();
+  openInitialPage();
+}
+
+document.addEventListener("DOMContentLoaded", initDashboard);
