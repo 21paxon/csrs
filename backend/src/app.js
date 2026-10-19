@@ -133,11 +133,13 @@ function health(req, res) {
 }
 app.get('/health', health);
 app.get('/api/health', health);
+app.use('/api/settings', require('./routes/settings'));
 
 // --------------------------------------------------
 // Authentication and user management
 // --------------------------------------------------
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth/mfa', require('./routes/mfa'));
 app.use('/api/users', require('./routes/users'));
 
 // Admin user management and registration approval

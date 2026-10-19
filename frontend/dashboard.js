@@ -44,6 +44,7 @@ const PAGE_INFO = {
   patrols: ["Security Patrols", "Monitor patrol activities"],
   reports: ["Reports", "Review security activity"],
   "audit-logs": ["Audit Logs", "Review administrative activity"],
+  settings: ["System Settings", "Manage college contact details and account registration"],
   profile: ["My Profile", "View account information"]
 };
 
@@ -58,6 +59,7 @@ const PAGE_I18N = {
   patrols: ["dashboard_patrols", "dashboard_patrols_description"],
   reports: ["dashboard_reports", "dashboard_reports_description"],
   "audit-logs": ["dashboard_audit_logs", "dashboard_audit_logs_description"],
+  settings: ["system_settings", "system_settings_description"],
   profile: ["dashboard_profile", "dashboard_profile_description"]
 };
 
@@ -357,7 +359,7 @@ function filtered(items, query, fields, status = "", statusFields = []) {
    ========================================================= */
 
 function canOpenPage(page) {
-  if (["users", "audit-logs"].includes(page) && !isAdmin()) {
+  if (["users", "audit-logs", "settings"].includes(page) && !isAdmin()) {
     return false;
   }
 
@@ -1555,6 +1557,45 @@ async function loadBackupStatus() {
   }
 }
 
+async function loadSystemSettings() {
+  const result = await api('/api/admin/settings');
+  const settings = result.settings || {};
+  if ($('settingSupportEmail')) $('settingSupportEmail').value = settings.support_email || '';
+  if ($('settingEmergencyPhone')) $('settingEmergencyPhone').value = settings.emergency_phone || '';
+  if ($('settingRegistrationEnabled')) $('settingRegistrationEnabled').checked = Boolean(settings.registration_enabled);
+  const status = $('integrationStatus');
+  if (status) {
+    status.replaceChildren();
+    const labels = { email: 'Email delivery', sms: 'SMS delivery', push: 'Browser push', public_app_url: 'Password reset links' };
+    Object.entries(labels).forEach(([key, label]) => {
+      const row = document.createElement('p');
+      row.className = 'profile-note';
+      row.textContent = `${label}: ${result.integrations?.[key] ? 'Configured' : 'Not configured'}`;
+      status.appendChild(row);
+    });
+  }
+}
+
+async function saveSystemSettings(event) {
+  event.preventDefault();
+  const form = $('systemSettingsForm');
+  if (!form?.reportValidity()) return;
+  try {
+    await api('/api/admin/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        support_email: $('settingSupportEmail').value.trim(),
+        emergency_phone: $('settingEmergencyPhone').value.trim(),
+        registration_enabled: $('settingRegistrationEnabled').checked
+      })
+    });
+    showMessage('System settings saved.');
+    await loadSystemSettings();
+  } catch (error) {
+    showMessage(`Unable to save system settings: ${error.message}`, 'error');
+  }
+}
+
 /* =========================================================
    PAGE LOADING
    ========================================================= */
@@ -1610,6 +1651,9 @@ async function loadPage(page) {
 
       case "audit-logs":
         await safeLoad("Unable to load audit logs", loadAuditLogs);
+        break;
+      case "settings":
+        await safeLoad("Unable to load system settings", loadSystemSettings);
         break;
 
       case "reports":
@@ -1683,6 +1727,134 @@ function setupUserManagement() {
   on("refreshUsers", "click", () => safeLoad("Unable to refresh users", loadUsers));
   on("userSearch", "input", renderUsersTable);
   on("userStatusFilter", "change", renderUsersTable);
+  const template = $('downloadUserImportTemplate');
+  if (template) template.href = URL.createObjectURL(new Blob([
+    'registration_number,full_name,email,phone,role\nRP-0001,Sample Student,student@example.edu,+250700000000,student\n'
+  ], { type: 'text/csv;charset=utf-8' }));
+  on('userImportForm', 'submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    const result = $('userImportResult');
+    const output = $('userImportCredentials');
+    if (result) result.textContent = 'Importing accounts...';
+    if (output) { output.replaceChildren(); output.hidden = true; }
+    try {
+      const response = await api('/api/users/import', { method: 'POST', body: new FormData(form) });
+      if (result) result.textContent = `Imported ${response.created} account(s); skipped ${response.skipped?.length || 0} row(s). Temporary passwords are displayed once below.`;
+      if (output && response.accounts?.length) {
+        const table = document.createElement('table');
+        const head = document.createElement('thead');
+        const header = document.createElement('tr');
+        ['Username', 'Temporary password'].forEach((label) => {
+          const cell = document.createElement('th'); cell.textContent = label; header.appendChild(cell);
+        });
+        head.appendChild(header); table.appendChild(head);
+        const body = document.createElement('tbody');
+        response.accounts.forEach((account) => {
+          const row = document.createElement('tr');
+          [account.username, account.temporary_password].forEach((value) => {
+            const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell);
+          });
+          body.appendChild(row);
+        });
+        table.appendChild(body); output.appendChild(table); output.hidden = false;
+      }
+      if (response.skipped?.length && result) {
+        result.textContent += ` Skipped: ${response.skipped.map((item) => `${item.record || 'row'} — ${item.reason}`).join('; ')}`;
+      }
+      form.reset();
+      await loadUsers();
+    } catch (error) {
+      if (result) result.textContent = `Import failed: ${error.message}`;
+    }
+  });
+}
+
+function setupSystemSettings() {
+  on('systemSettingsForm', 'submit', saveSystemSettings);
+  on('refreshSystemSettings', 'click', () => safeLoad('Unable to refresh system settings', loadSystemSettings));
+}
+
+async function loadMfaStatus() {
+  const result = await api('/api/auth/mfa/status');
+  if ($('mfaStatus')) $('mfaStatus').textContent = result.enabled
+    ? 'Enabled. Sign-in requires a code from your authenticator app.'
+    : 'Optional. Add an authenticator code as a second sign-in step.';
+  if ($('startMfaSetup')) $('startMfaSetup').hidden = Boolean(result.enabled);
+  if ($('mfaPasswordForm')) $('mfaPasswordForm').hidden = Boolean(result.enabled);
+  if ($('disableMfaForm')) $('disableMfaForm').hidden = !result.enabled;
+  if ($('mfaSetupPanel')) $('mfaSetupPanel').hidden = true;
+  if ($('mfaRecoveryPanel')) $('mfaRecoveryPanel').hidden = true;
+}
+
+function setupMfaControls() {
+  void loadMfaStatus().catch((error) => {
+    if ($('mfaStatus')) $('mfaStatus').textContent = `Unable to load MFA status: ${error.message}`;
+  });
+  on('startMfaSetup', 'click', () => {
+    if ($('mfaPasswordForm')) $('mfaPasswordForm').hidden = false;
+    $('mfaCurrentPassword')?.focus();
+  });
+  on('mfaPasswordForm', 'submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    try {
+      const result = await api('/api/auth/mfa/setup', {
+        method: 'POST', body: JSON.stringify({ password: $('mfaCurrentPassword').value })
+      });
+      $('mfaSecret').textContent = result.secret;
+      $('mfaSetupPanel').hidden = false;
+      $('mfaPasswordForm').hidden = true;
+      $('mfaMessage').textContent = 'Add this key to your authenticator app, then verify a code to finish setup.';
+      $('enableMfaCode')?.focus();
+    } catch (error) {
+      $('mfaMessage').textContent = error.message;
+    }
+  });
+  on('enableMfaForm', 'submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    try {
+      const result = await api('/api/auth/mfa/enable', {
+        method: 'POST', body: JSON.stringify({ code: $('enableMfaCode').value.trim() })
+      });
+      $('mfaRecoveryCodes').textContent = result.recovery_codes.join('\n');
+      $('mfaRecoveryPanel').hidden = false;
+      $('mfaSetupPanel').hidden = true;
+      $('mfaMessage').textContent = 'Two-factor sign-in is enabled. Save your one-time recovery codes now.';
+      await loadMfaStatus();
+      $('mfaRecoveryPanel').hidden = false;
+    } catch (error) {
+      $('mfaMessage').textContent = error.message;
+    }
+  });
+  on('disableMfaForm', 'submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity() || !window.confirm('Turn off two-factor sign-in for your account?')) return;
+    try {
+      await api('/api/auth/mfa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ password: $('disableMfaPassword').value, code: $('disableMfaCode').value.trim() })
+      });
+      $('mfaMessage').textContent = 'Two-factor sign-in is turned off.';
+      form.reset();
+      await loadMfaStatus();
+    } catch (error) {
+      $('mfaMessage').textContent = error.message;
+    }
+  });
+  on('copyMfaRecovery', 'click', async () => {
+    try {
+      await navigator.clipboard.writeText($('mfaRecoveryCodes').textContent);
+      $('mfaMessage').textContent = 'Recovery codes copied.';
+    } catch (_) {
+      $('mfaMessage').textContent = 'Copy was blocked. Select and copy the recovery codes manually.';
+    }
+  });
 }
 
 function setupLostFound() {
@@ -1770,6 +1942,8 @@ function initDashboard() {
   setupNavigation();
   setupIncidentForm();
   setupUserManagement();
+  setupSystemSettings();
+  setupMfaControls();
   setupLostFound();
   setupOtherPages();
 

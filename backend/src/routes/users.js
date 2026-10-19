@@ -2,11 +2,15 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const ExcelJS = require('exceljs');
+const multer = require('multer');
+const { Readable } = require('stream');
 const db = require('../db');
 const { authenticate, requireRole, ROLES } = require('../middleware/auth');
 const { audit } = require('../utils/audit');
 
 const router = express.Router();
+const importUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 function normalizeRole(value) {
   const aliases = {
@@ -279,11 +283,48 @@ router.post('/:id/reset-password', async (req, res, next) => {
 });
 
 // Bulk import users. Temporary passwords are returned only in this response.
-router.post('/import', async (req, res, next) => {
+router.post('/import', importUpload.single('file'), async (req, res, next) => {
   const client = await db.pool.connect();
 
   try {
-    const records = req.body?.records;
+    let records = req.body?.records;
+    if (req.file) {
+      const extension = String(req.file.originalname || '').split('.').pop().toLowerCase();
+      if (!['xlsx', 'csv'].includes(extension)) return res.status(400).json({ error: 'Upload an .xlsx workbook or .csv template.' });
+      const workbook = new ExcelJS.Workbook();
+      if (extension === 'xlsx') await workbook.xlsx.load(req.file.buffer);
+      else await workbook.csv.read(Readable.from([req.file.buffer]));
+      const sheet = workbook.worksheets[0];
+      if (!sheet || sheet.rowCount < 2) {
+        return res.status(400).json({ error: 'The workbook needs a header row and at least one user record.' });
+      }
+      const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const headers = new Map();
+      sheet.getRow(1).eachCell((cell, index) => headers.set(normalizeHeader(cell.text), index));
+      const column = (...names) => names.map(normalizeHeader).map((name) => headers.get(name)).find(Boolean);
+      const registrationColumn = column('registration_number', 'registration_no', 'reg_no', 'username');
+      const nameColumn = column('full_name', 'name');
+      const emailColumn = column('email', 'email_address');
+      const phoneColumn = column('phone', 'phone_number');
+      const roleColumn = column('role', 'account_type');
+      if (!registrationColumn || !nameColumn || !emailColumn) {
+        return res.status(400).json({ error: 'Required columns: registration_number, full_name, email. Optional: phone, role.' });
+      }
+      records = [];
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const value = (index) => index ? String(row.getCell(index).text || '').trim() : '';
+        if ([registrationColumn, nameColumn, emailColumn].some((index) => value(index))) {
+          records.push({
+            registration_number: value(registrationColumn),
+            full_name: value(nameColumn),
+            email: value(emailColumn),
+            phone: value(phoneColumn),
+            role: value(roleColumn) || ROLES.STUDENT
+          });
+        }
+      });
+    }
 
     if (!Array.isArray(records) || records.length < 1 || records.length > 1000) {
       return res.status(400).json({

@@ -40,6 +40,8 @@
   "dashboard_reports_description": "Review campus activity reports",
   "dashboard_audit_logs": "Audit Logs",
   "dashboard_audit_logs_description": "Review administrative activity",
+  "system_settings": "System Settings",
+  "system_settings_description": "Manage college contact details and account registration",
   "dashboard_profile": "My Profile",
   "dashboard_profile_description": "View your account information",
   "sign_out": "Sign out",

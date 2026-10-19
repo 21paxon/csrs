@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const signinForm = document.getElementById("homeLogin");
   const signinMessage = document.getElementById("homeLoginMessage");
   const signinButton = document.getElementById("homeLoginButton");
+  const mfaFields = document.getElementById("homeMfaFields");
+  const mfaCode = document.getElementById("homeMfaCode");
+  let loginChallenge = null;
   const registerModal = document.getElementById("registerModal");
   const registerForm = document.getElementById("homeRegister");
   const registerMessage = document.getElementById("homeRegisterMessage");
@@ -62,6 +65,21 @@ document.addEventListener("DOMContentLoaded", () => {
   registerType.addEventListener("change", updateRegistrationHint);
   updateRegistrationHint();
 
+  fetch(window.CSRS.apiUrl("/api/settings/public"))
+    .then((response) => response.ok ? response.json() : null)
+    .then((settings) => {
+      if (settings && settings.registration_enabled === false) {
+        const notice = document.getElementById("registrationNotice");
+        if (notice) {
+          notice.hidden = false;
+          notice.textContent = "New account registration is temporarily closed. Contact the college for assistance.";
+        }
+        registerButton.disabled = true;
+        registerButton.title = "Registration is currently closed";
+      }
+    })
+    .catch(() => {});
+
   const signinParams = new URLSearchParams(window.location.search);
   if (signinParams.has("signin") || signinParams.has("returnTo")) openSignin();
 
@@ -77,16 +95,27 @@ document.addEventListener("DOMContentLoaded", () => {
     signinButton.disabled = true;
     signinMessage.textContent = "Signing in...";
     try {
-      const response = await fetch(window.CSRS.apiUrl("/api/auth/login"), {
+      const response = await fetch(window.CSRS.apiUrl(loginChallenge ? "/api/auth/login/mfa" : "/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: document.getElementById("homeUsername").value.trim(),
-          password: document.getElementById("homePassword").value
-        })
+        body: JSON.stringify(loginChallenge
+          ? { challenge_token: loginChallenge, code: mfaCode.value.trim() }
+          : {
+              username: document.getElementById("homeUsername").value.trim(),
+              password: document.getElementById("homePassword").value
+            })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Sign-in failed.");
+      if (data.mfa_required && data.challenge_token) {
+        loginChallenge = data.challenge_token;
+        mfaFields.hidden = false;
+        mfaCode.required = true;
+        signinButton.textContent = "Verify and sign in";
+        signinMessage.textContent = "Multi-factor verification is required. Enter your authenticator or recovery code.";
+        mfaCode.focus();
+        return;
+      }
       if (!data.token || !data.user) throw new Error("The server returned an invalid login response.");
       window.CSRS.setSession(data.token, data.user);
       window.location.assign(data.user.mustChangePassword
@@ -94,6 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         : window.CSRS.postLoginPath(data.user.role));
     } catch (error) {
       signinMessage.textContent = error.message;
+      if (loginChallenge) mfaCode.focus();
     } finally {
       signinButton.disabled = false;
     }

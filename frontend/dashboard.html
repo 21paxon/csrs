@@ -67,6 +67,9 @@
         <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-admin-only="true" data-i18n="dashboard_audit_logs">
           <span>◷</span> Audit Logs
         </a>
+        <a href="#settings" class="nav-link" data-page="settings" data-admin-only="true" data-i18n="system_settings">
+          <span aria-hidden="true">⚙</span> System Settings
+        </a>
         <a href="#profile" class="nav-link" data-page="profile" data-i18n="dashboard_profile">
           <span>♙</span> My Profile
         </a>
@@ -241,6 +244,21 @@
               <p>Registered system users</p>
             </article>
           </div>
+
+          <article class="panel">
+            <h3>Import student or staff accounts</h3>
+            <p class="profile-note">Upload an .xlsx workbook or the CSV template with registration_number, full_name and email columns. Optional columns: phone and role. New accounts receive temporary passwords and must change them at first sign-in.</p>
+            <div class="form-actions">
+              <a class="button secondary" id="downloadUserImportTemplate" download="csrs-user-import-template.csv">Download template</a>
+              <form id="userImportForm" class="inline-form">
+                <label class="sr-only" for="userImportFile">Excel workbook</label>
+                <input id="userImportFile" name="file" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required>
+                <button class="button primary" type="submit">Upload and import</button>
+              </form>
+            </div>
+            <div id="userImportResult" class="profile-note" role="status" aria-live="polite"></div>
+            <div id="userImportCredentials" class="table-scroll" hidden></div>
+          </article>
 
           <article class="panel">
             <div class="table-toolbar">
@@ -726,6 +744,74 @@
                 <strong id="profileRoleDetail">—</strong>
               </div>
             </div>
+          </article>
+          <article class="panel mfa-panel">
+            <div class="panel-heading">
+              <div><h3>Two-factor sign-in</h3><p class="profile-note" id="mfaStatus">Loading security status...</p></div>
+              <button class="button secondary" type="button" id="startMfaSetup">Set up authenticator</button>
+            </div>
+            <form id="mfaPasswordForm" class="mfa-form" hidden>
+              <label for="mfaCurrentPassword">Current password</label>
+              <input id="mfaCurrentPassword" type="password" autocomplete="current-password" required>
+              <button class="button primary" type="submit">Continue setup</button>
+            </form>
+            <div id="mfaSetupPanel" hidden>
+              <p>In your authenticator app, add an account using this secret key:</p>
+              <code class="mfa-secret" id="mfaSecret"></code>
+              <p class="profile-note">This key is shown only during setup. Keep it private. Then enter the six-digit code from the app.</p>
+              <form id="enableMfaForm" class="mfa-form">
+                <label for="enableMfaCode">Authenticator code</label>
+                <input id="enableMfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+                <button class="button primary" type="submit">Enable two-factor sign-in</button>
+              </form>
+            </div>
+            <div id="mfaRecoveryPanel" hidden>
+              <h4>Save your recovery codes</h4>
+              <p class="profile-note">Each code works once if you lose access to your authenticator. Store them somewhere private.</p>
+              <pre class="mfa-recovery" id="mfaRecoveryCodes"></pre>
+              <button class="button secondary" type="button" id="copyMfaRecovery">Copy recovery codes</button>
+            </div>
+            <form id="disableMfaForm" class="mfa-form" hidden>
+              <label for="disableMfaPassword">Current password</label>
+              <input id="disableMfaPassword" type="password" autocomplete="current-password" required>
+              <label for="disableMfaCode">Authenticator or unused recovery code</label>
+              <input id="disableMfaCode" autocomplete="one-time-code" required>
+              <button class="button danger" type="submit">Turn off two-factor sign-in</button>
+            </form>
+            <p class="profile-note" id="mfaMessage" role="status" aria-live="polite"></p>
+          </article>
+        </section>
+
+        <section class="page-section" id="page-settings" hidden>
+          <div class="page-heading">
+            <div>
+              <h2 data-i18n="system_settings">System Settings</h2>
+              <p class="page-description" data-i18n="system_settings_description">Manage college contact details and account registration.</p>
+            </div>
+            <button type="button" class="button secondary" id="refreshSystemSettings" data-i18n="refresh">Refresh</button>
+          </div>
+          <article class="panel">
+            <h3>College contact and access</h3>
+            <form id="systemSettingsForm" class="form-grid">
+              <label>Support email
+                <input id="settingSupportEmail" type="email" maxlength="100" autocomplete="email">
+              </label>
+              <label>Emergency contact phone
+                <input id="settingEmergencyPhone" type="tel" maxlength="30" autocomplete="tel">
+              </label>
+              <label class="checkbox-label full-width">
+                <input id="settingRegistrationEnabled" type="checkbox">
+                Allow new account registrations
+              </label>
+              <div class="form-actions full-width">
+                <button type="submit" class="button primary">Save settings</button>
+              </div>
+            </form>
+          </article>
+          <article class="panel">
+            <h3>Integration readiness</h3>
+            <p class="profile-note">Secret keys are managed in the backend host environment and are never shown here.</p>
+            <div id="integrationStatus" class="chart-list" aria-live="polite">Loading integration status...</div>
           </article>
         </section>
 

@@ -40,6 +40,8 @@
   "dashboard_reports_description": "Suzuma raporo z'ibikorwa bya kaminuza",
   "dashboard_audit_logs": "Inyandiko z'igenzura",
   "dashboard_audit_logs_description": "Suzuma ibikorwa by'ubuyobozi",
+  "system_settings": "Igenamiterere rya sisitemu",
+  "system_settings_description": "Cunga amakuru yo kuvugana na kaminuza no kwiyandikisha kwa konti",
   "dashboard_profile": "Umwirondoro wanjye",
   "dashboard_profile_description": "Reba amakuru ya konti yawe",
   "sign_out": "Sohoka",

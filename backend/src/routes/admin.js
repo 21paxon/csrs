@@ -23,6 +23,83 @@ router.get('/backups/status', async (req, res, next) => {
   }
 });
 
+router.get('/settings', async (_req, res, next) => {
+  try {
+    const { rows } = await db.query('SELECT setting_key, setting_value FROM system_settings');
+    const values = Object.fromEntries(rows.map((row) => [row.setting_key, row.setting_value]));
+    return res.json({
+      settings: {
+        registration_enabled: values.registration_enabled !== 'false',
+        support_email: values.support_email || '',
+        emergency_phone: values.emergency_phone || ''
+      },
+      integrations: {
+        email: Boolean(process.env.EMAIL_API_URL && process.env.EMAIL_API_KEY),
+        sms: Boolean(process.env.SMS_API_URL && process.env.SMS_API_KEY),
+        push: Boolean(
+          (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) ||
+          (process.env.PUSH_API_URL && process.env.PUSH_API_KEY)
+        ),
+        public_app_url: Boolean(process.env.PUBLIC_APP_URL)
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.patch('/settings', async (req, res, next) => {
+  const updates = req.body || {};
+  const values = {};
+  if (Object.hasOwn(updates, 'registration_enabled')) {
+    if (typeof updates.registration_enabled !== 'boolean') {
+      return res.status(400).json({ error: 'registration_enabled must be true or false.' });
+    }
+    values.registration_enabled = String(updates.registration_enabled);
+  }
+  if (Object.hasOwn(updates, 'support_email')) {
+    const email = String(updates.support_email || '').trim().toLowerCase();
+    if (email && (email.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      return res.status(400).json({ error: 'Enter a valid support email address.' });
+    }
+    values.support_email = email;
+  }
+  if (Object.hasOwn(updates, 'emergency_phone')) {
+    const phone = String(updates.emergency_phone || '').trim();
+    if (phone.length > 30 || (phone && !/^[+0-9().\-\s]+$/.test(phone))) {
+      return res.status(400).json({ error: 'Enter a valid emergency contact phone number.' });
+    }
+    values.emergency_phone = phone;
+  }
+  if (!Object.keys(values).length || Object.keys(updates).some((key) => !Object.hasOwn(values, key))) {
+    return res.status(400).json({ error: 'Provide one or more supported settings.' });
+  }
+
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const [key, value] of Object.entries(values)) {
+      await client.query(
+        `INSERT INTO system_settings (setting_key, setting_value, updated_by, updated_at)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+         ON CONFLICT (setting_key) DO UPDATE
+           SET setting_value = EXCLUDED.setting_value,
+               updated_by = EXCLUDED.updated_by,
+               updated_at = CURRENT_TIMESTAMP`,
+        [key, value, req.user.id]
+      );
+    }
+    await client.query('COMMIT');
+    await audit(req, { userId: req.user.id, action: 'UPDATE SYSTEM SETTINGS', targetTable: 'system_settings' });
+    return res.json({ success: true, settings: values });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    return next(err);
+  } finally {
+    client.release();
+  }
+});
+
 const VALID_ROLES = [
   ROLES.ADMIN,
   ROLES.HEAD_OF_SECURITY,

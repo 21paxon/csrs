@@ -11,6 +11,7 @@ const config = require('../config');
 const { authenticate } = require('../middleware/auth');
 const { audit } = require('../utils/audit');
 const { queueSensitiveEmail } = require('../utils/notify');
+const totp = require('../utils/totp');
 
 const router = express.Router();
 const MAX_FAILED_ATTEMPTS = 5;
@@ -32,6 +33,23 @@ const REGISTRATION_ROLE_LABELS = {
   management: 'College management',
   dean: 'Dean of students'
 };
+
+async function verifyLoginFactor(user, code) {
+  if (!user.totp_enabled || !user.totp_secret) return false;
+  if (totp.verifyCode(totp.unseal(user.totp_secret), code)) return true;
+  const recoveryHash = totp.hashRecoveryCode(code);
+  const { rowCount } = await db.query(
+    `UPDATE users
+        SET totp_recovery_codes = (
+          SELECT COALESCE(jsonb_agg(stored_code), '[]'::jsonb)
+            FROM jsonb_array_elements_text(totp_recovery_codes) AS codes(stored_code)
+           WHERE stored_code <> $2
+        )
+      WHERE id = $1 AND totp_recovery_codes @> jsonb_build_array($2::text)`,
+    [user.id, recoveryHash]
+  );
+  return rowCount === 1;
+}
 
 // Limit login attempts.
 const loginLimiter = rateLimit({
@@ -85,6 +103,13 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     const cleanPhone = String(phone || '').trim();
     const cleanAccountType = String(accountType || 'student').trim().toLowerCase();
     const roleLabel = REGISTRATION_ROLE_LABELS[cleanAccountType];
+
+    const registrationSetting = await db.query(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'registration_enabled'`
+    );
+    if (registrationSetting.rows[0]?.setting_value === 'false') {
+      return res.status(403).json({ error: 'New account registration is temporarily closed. Contact the college.' });
+    }
 
     if (
       !cleanFullName ||
@@ -299,7 +324,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
     const { rows } = await db.query(
       `SELECT id, full_name, username, email, reg_no, password_hash, is_active, role,
-              failed_attempts, locked_until, must_change_password, auth_version
+              failed_attempts, locked_until, must_change_password, auth_version,
+              totp_enabled, totp_secret, totp_recovery_codes
       FROM users
        WHERE username = $1 OR email = $1 OR reg_no = $1
        LIMIT 1`,
@@ -354,6 +380,21 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       });
     }
 
+    if (user.totp_enabled) {
+      if (!req.body?.mfa_code) {
+        const challengeToken = jwt.sign(
+          { sub: user.id, ver: Number(user.auth_version || 0), purpose: 'mfa_login' },
+          config.jwtSecret,
+          { expiresIn: '5m' }
+        );
+        return res.json({ mfa_required: true, challenge_token: challengeToken });
+      }
+      if (!await verifyLoginFactor(user, req.body.mfa_code)) {
+        await audit(req, { userId: user.id, action: 'LOGIN MFA', targetTable: 'users', recordId: user.id, status: 'Failed' });
+        return res.status(401).json({ error: 'Invalid authenticator or recovery code.' });
+      }
+    }
+
     const token = jwt.sign(
       {
         sub: user.id,
@@ -394,6 +435,52 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         status: 'active',
         mustChangePassword: user.must_change_password,
         role: user.role
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/login/mfa', loginLimiter, async (req, res, next) => {
+  try {
+    let challenge;
+    try {
+      challenge = jwt.verify(String(req.body?.challenge_token || ''), config.jwtSecret);
+    } catch (_) {
+      return res.status(401).json({ error: 'The sign-in challenge expired. Sign in again.' });
+    }
+    if (challenge.purpose !== 'mfa_login' || !challenge.sub) {
+      return res.status(401).json({ error: 'Invalid sign-in challenge.' });
+    }
+    const { rows } = await db.query(
+      `SELECT id, full_name, username, email, reg_no, role, is_active,
+              auth_version, must_change_password, totp_enabled, totp_secret,
+              totp_recovery_codes
+         FROM users WHERE id = $1`,
+      [challenge.sub]
+    );
+    const user = rows[0];
+    if (!user || !user.is_active || !user.totp_enabled || Number(user.auth_version || 0) !== Number(challenge.ver || 0)) {
+      return res.status(401).json({ error: 'Sign-in challenge is no longer valid. Sign in again.' });
+    }
+    if (!await verifyLoginFactor(user, req.body?.code)) {
+      await audit(req, { userId: user.id, action: 'LOGIN MFA', targetTable: 'users', recordId: user.id, status: 'Failed' });
+      return res.status(401).json({ error: 'Invalid authenticator or recovery code.' });
+    }
+    const token = jwt.sign(
+      { sub: user.id, username: user.username, role: user.role, ver: Number(user.auth_version || 0) },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+    await db.query('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = $1', [user.id]);
+    await audit(req, { userId: user.id, action: 'LOGIN', targetTable: 'users', recordId: user.id, status: 'MFA verified' });
+    return res.json({
+      token,
+      user: {
+        id: user.id, full_name: user.full_name, username: user.username,
+        email: user.email, registrationNumber: user.reg_no, reg_no: user.reg_no,
+        status: 'active', mustChangePassword: user.must_change_password, role: user.role
       }
     });
   } catch (err) {
