@@ -14,6 +14,66 @@ const OFFICERS = [
   ROLES.SECURITY_OFFICER
 ];
 
+router.get('/', authenticate, wrap(async (req, res) => {
+  const { limit, offset } = paging(req);
+  const params = [];
+  const conditions = [];
+
+  if (!OFFICERS.includes(req.user.role)) {
+    params.push(req.user.id);
+    conditions.push(`i.reported_by = $${params.length}`);
+  }
+
+  if (req.query.kind) {
+    params.push(req.query.kind);
+    conditions.push(`i.kind = $${params.length}`);
+  }
+
+  if (req.query.status) {
+    params.push(req.query.status);
+    conditions.push(`i.status = $${params.length}`);
+  }
+
+  if (req.query.q) {
+    params.push(`%${req.query.q}%`);
+    conditions.push(
+      `(i.title ILIKE $${params.length} OR
+        COALESCE(i.description, '') ILIKE $${params.length} OR
+        COALESCE(i.category, '') ILIKE $${params.length} OR
+        COALESCE(i.location_text, '') ILIKE $${params.length})`
+    );
+  }
+
+  if (req.query.from) {
+    params.push(req.query.from);
+    conditions.push(`i.created_at >= $${params.length}`);
+  }
+
+  if (req.query.to) {
+    params.push(req.query.to);
+    conditions.push(`i.created_at <= $${params.length}`);
+  }
+
+  params.push(limit, offset);
+  const clause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const { rows } = await db.query(
+    `SELECT i.id, i.kind, i.kind AS type, i.reported_by AS user_id,
+            i.title, i.title AS item_name, i.description, i.category,
+            i.location_text, i.location_text AS location,
+            i.event_date, i.event_date AS date, i.status,
+            i.matched_item_id, i.photo_name, i.created_at
+       FROM items i
+      ${clause}
+      ORDER BY i.id DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  res.json(rows);
+}));
+
+
 // POST /api/lost-found/lost
 router.post('/lost', authenticate, upload.single('photo'), wrap(async (req, res) => {
   try {
@@ -22,7 +82,7 @@ router.post('/lost', authenticate, upload.single('photo'), wrap(async (req, res)
 
     if (!title) throw new HttpError(400, 'item_name is required');
 
-    const eventDate = b.date_lost || null;
+    const eventDate = b.date_lost || b.date || null;
     if (eventDate && !isDate(eventDate)) {
       throw new HttpError(400, 'date_lost is not a valid date');
     }
@@ -38,7 +98,7 @@ router.post('/lost', authenticate, upload.single('photo'), wrap(async (req, res)
         title,
         b.description || null,
         b.category || null,
-        b.location_lost || b.location_text || null,
+        b.location_lost || b.location || b.location_text || null,
         eventDate,
         req.file ? req.file.filename : null,
         req.user.id,
@@ -102,7 +162,7 @@ router.post('/found', authenticate, requireRole(...OFFICERS), upload.single('pho
 
     if (!title) throw new HttpError(400, 'item_name is required');
 
-    const eventDate = b.date_found || null;
+    const eventDate = b.date_found || b.date || null;
     if (eventDate && !isDate(eventDate)) {
       throw new HttpError(400, 'date_found is not a valid date');
     }
@@ -118,7 +178,7 @@ router.post('/found', authenticate, requireRole(...OFFICERS), upload.single('pho
         title,
         b.description || null,
         b.category || null,
-        b.location_found || b.location_text || null,
+        b.location_found || b.location || b.location_text || null,
         eventDate,
         req.file ? req.file.filename : null,
         req.user.id,

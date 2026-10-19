@@ -189,7 +189,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const loginName = username.trim();
 
     const { rows } = await db.query(
-      `SELECT id, username, email, reg_no, password_hash, is_active, role,
+      `SELECT id, full_name, username, email, reg_no, password_hash, is_active, role,
               failed_attempts, locked_until, must_change_password
        FROM users
        WHERE username = $1 OR email = $1 OR reg_no = $1
@@ -285,9 +285,12 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       token,
       user: {
         id: user.id,
+        full_name: user.full_name,
         username: user.username,
         email: user.email,
         registrationNumber: user.reg_no,
+        reg_no: user.reg_no,
+        status: 'active',
         mustChangePassword: user.must_change_password,
         role: user.role
       }
@@ -304,7 +307,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, full_name, username, email, reg_no, phone, role
+      `SELECT id, full_name, username, email, reg_no, phone, role,
+              is_active, must_change_password, lang
        FROM users
        WHERE id = $1`,
       [req.user.id]
@@ -316,7 +320,12 @@ router.get('/me', authenticate, async (req, res, next) => {
       });
     }
 
-    return res.json(rows[0]);
+    const profile = rows[0];
+    return res.json({
+      ...profile,
+      registrationNumber: profile.reg_no,
+      status: profile.is_active ? 'active' : 'pending'
+    });
   } catch (err) {
     return next(err);
   }

@@ -18,6 +18,65 @@ const STAFFED = [
 
 router.use(authenticate);
 
+router.get('/', requireRole(...STAFFED), wrap(async (req, res) => {
+  req.query = req.query || {};
+  const w = where();
+
+  if (req.user.role === ROLES.SECURITY_OFFICER) {
+    w.add('p.officer_id = ?', req.user.id);
+  }
+
+  const { limit, offset } = paging(req);
+  const { rows } = await db.query(
+    `SELECT p.id, p.officer_id, COALESCE(u.full_name, u.username) AS officer,
+            COALESCE(u.full_name, u.username) AS officer_name,
+            c.name AS checkpoint, c.name AS name, p.scanned_at,
+            p.scanned_at AS start_time, p.notes,
+            'Completed' AS status
+       FROM patrol_logs p
+       JOIN checkpoints c ON c.id = p.checkpoint_id
+       JOIN users u ON u.id = p.officer_id
+       ${w.clause}
+      ORDER BY p.scanned_at DESC
+      LIMIT ${limit} OFFSET ${offset}`,
+    w.params
+  );
+
+  res.json(rows);
+}));
+
+router.get('/missed', requireRole(...STAFFED), wrap(async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT d.id, d.officer_id, COALESCE(u.full_name, u.username) AS officer,
+            c.name AS checkpoint, d.start_at, d.end_at, r.name AS route
+       FROM duty_rosters d
+       JOIN users u ON u.id = d.officer_id
+       JOIN patrol_routes r ON r.id = d.route_id
+       JOIN route_checkpoints rc ON rc.route_id = d.route_id
+       JOIN checkpoints c ON c.id = rc.checkpoint_id
+      WHERE d.end_at < CURRENT_TIMESTAMP
+        AND d.start_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+        AND NOT EXISTS (
+          SELECT 1 FROM patrol_logs p
+           WHERE p.officer_id = d.officer_id
+             AND p.checkpoint_id = c.id
+             AND p.scanned_at BETWEEN d.start_at AND d.end_at
+        )
+      ORDER BY d.end_at DESC`
+  );
+
+  if (rows.length && [ROLES.ADMIN, ROLES.HEAD_OF_SECURITY].includes(req.user.role)) {
+    await notify(
+      [req.user.id],
+      'Missed patrol checkpoints',
+      `${rows.length} checkpoint(s) were missed in the last 7 days.`,
+      'patrol'
+    );
+  }
+
+  res.json(rows);
+}));
+
 // List patrol routes and their checkpoints.
 router.get('/routes', requireRole(...STAFFED), wrap(async (req, res) => {
   const { rows } = await db.query(`
@@ -153,7 +212,8 @@ router.post('/routes/:id/checkpoints', requireRole(...MANAGE), wrap(async (req, 
 // Record an officer's checkpoint scan.
 router.post('/scan', requireRole(
   ROLES.SECURITY_OFFICER,
-  ROLES.HEAD_OF_SECURITY
+  ROLES.HEAD_OF_SECURITY,
+  ROLES.ADMIN
 ), wrap(async (req, res) => {
   const { qr_code, notes } = req.body || {};
 
@@ -305,14 +365,16 @@ router.post('/rosters', requireRole(...MANAGE), wrap(async (req, res) => {
     throw new HttpError(400, 'Active security officer not found');
   }
 
+  const routeId = toInt(b.route_id);
   const { rows } = await db.query(
     `INSERT INTO duty_rosters
-       (officer_id, start_at, end_at, handover_notes, created_by)
-     VALUES ($1, $2, $3, $4, $5)
+       (officer_id, route_id, start_at, end_at, handover_notes, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, officer_id, route_id, start_at, end_at,
                handover_notes, created_by`,
     [
       officerId,
+      routeId,
       startAt.toISOString(),
       endAt.toISOString(),
       b.handover_notes || null,

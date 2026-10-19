@@ -58,7 +58,8 @@ router.get('/users', async (req, res, next) => {
 
     const { rows } = await db.query(
       `SELECT id, full_name, username, email, reg_no, phone,
-              role, is_active, must_change_password
+              role, is_active, must_change_password,
+              CASE WHEN is_active THEN 'active' ELSE 'pending' END AS status
          FROM users
          ${condition}
         ORDER BY id DESC`
@@ -246,7 +247,7 @@ router.post('/users/:id/activate', async (req, res, next) => {
 // DELETE /api/admin/users/:id/reject
 // Permanently removes an inactive registration request.
 // This is not a soft-delete operation.
-router.delete('/users/:id/reject', async (req, res, next) => {
+async function rejectUser(req, res, next) {
   try {
     const id = parseUserId(req.params.id);
 
@@ -284,6 +285,9 @@ router.delete('/users/:id/reject', async (req, res, next) => {
   } catch (err) {
     return handleError(err, res, next);
   }
-});
+}
+
+router.delete('/users/:id/reject', rejectUser);
+router.post('/users/:id/reject', rejectUser);
 
 module.exports = router;

@@ -180,12 +180,19 @@ router.post('/:logId/check-out', wrap(async (req, res) => {
 }));
 
 const LOG_SELECT = `
-  SELECT v.id, v.id AS visitor_id, v.full_name, v.id_number,
+  SELECT v.id, v.id AS visitor_id, v.full_name, v.full_name AS name,
+         v.full_name AS visitor_name, v.id_number,
          v.phone, v.purpose, v.host_user_id, v.host_text,
+         COALESCE(h.full_name, h.username, v.host_text) AS host_name,
          v.vehicle_plate, v.badge_no, v.badge_no AS badge_number,
          v.entry_at, v.entry_at AS entry_time,
-         v.exit_at, v.exit_at AS exit_time, v.registered_by
-    FROM visitors v`;
+         v.exit_at, v.exit_at AS exit_time, v.registered_by,
+         COALESCE(g.full_name, g.username) AS recorded_by,
+         CASE WHEN v.exit_at IS NULL THEN 'On Campus' ELSE 'Checked Out' END AS status,
+         CASE WHEN v.exit_at IS NULL THEN 'entry' ELSE 'exit' END AS record_type
+    FROM visitors v
+    LEFT JOIN users h ON h.id = v.host_user_id
+    LEFT JOIN users g ON g.id = v.registered_by`;
 
 // GET /api/gate/logs?date=YYYY-MM-DD
 router.get('/logs', wrap(async (req, res) => {

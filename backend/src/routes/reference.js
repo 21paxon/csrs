@@ -12,15 +12,17 @@ const manage = [
   requireRole(ROLES.ADMIN, ROLES.HEAD_OF_SECURITY)
 ];
 
-// GET /api/categories
-router.get('/categories', wrap(async (req, res) => {
+async function listCategories(req, res) {
   const { rows } = await db.query(
     `SELECT id, name, description
        FROM incident_categories
       ORDER BY name`
   );
   res.json(rows);
-}));
+}
+
+router.get('/categories', wrap(listCategories));
+router.get('/incident-categories', wrap(listCategories));
 
 // POST /api/categories
 router.post('/categories', ...manage, wrap(async (req, res) => {

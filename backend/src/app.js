@@ -10,7 +10,20 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org", "https://unpkg.com"],
+      connectSrc: ["'self'", ...config.frontendOrigins, "https://csrs-backend.onrender.com"],
+      fontSrc: ["'self'", "data:"],
+      manifestSrc: ["'self'"],
+      workerSrc: ["'self'"]
+    }
+  }
+}));
 
 app.use(cors({
   origin(origin, callback) {

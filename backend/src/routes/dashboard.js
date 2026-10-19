@@ -19,7 +19,8 @@ router.use(
     ROLES.ADMIN,
     ROLES.HEAD_OF_SECURITY,
     ROLES.COLLEGE_MANAGEMENT,
-    ROLES.DEAN
+    ROLES.DEAN,
+    ROLES.SECURITY_OFFICER
   )
 );
 
@@ -40,7 +41,10 @@ router.get(
       hotspots,
       trend,
       alerts,
-      visitors
+      visitors,
+      users,
+      overdue,
+      missed
     ] = await Promise.all([
       // Incident totals and open critical incidents.
       db.query(
@@ -156,19 +160,57 @@ router.get(
         `SELECT COUNT(*)::int AS on_campus
          FROM visitors
          WHERE exit_at IS NULL`
+      ),
+      db.query(
+        `SELECT
+            COUNT(*)::int AS registered_users,
+            COUNT(*) FILTER (WHERE is_active = TRUE)::int AS active_users,
+            COUNT(*) FILTER (WHERE is_active = FALSE)::int AS pending_registrations
+         FROM users`
+      ),
+      db.query(
+        `SELECT COUNT(*)::int AS overdue
+           FROM incidents
+          WHERE due_at IS NOT NULL
+            AND due_at < CURRENT_TIMESTAMP
+            AND status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')`
+      ),
+      db.query(
+        `SELECT COUNT(*)::int AS missed
+           FROM duty_rosters d
+           JOIN route_checkpoints rc ON rc.route_id = d.route_id
+          WHERE d.end_at < CURRENT_TIMESTAMP
+            AND d.start_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+            AND NOT EXISTS (
+              SELECT 1 FROM patrol_logs p
+               WHERE p.officer_id = d.officer_id
+                 AND p.checkpoint_id = rc.checkpoint_id
+                 AND p.scanned_at BETWEEN d.start_at AND d.end_at
+            )`
       )
     ]);
 
+    const incidentTotals = totals.rows[0];
+    const userTotals = users.rows[0];
+
     res.json({
       period_days: days,
-      incidents: totals.rows[0],
+      incidents: incidentTotals,
+      total_incidents: incidentTotals.total,
       by_severity: bySeverity.rows,
+      severity_breakdown: bySeverity.rows,
       by_status: byStatus.rows,
+      status_breakdown: byStatus.rows,
       by_category: byCategory.rows,
       hotspots: hotspots.rows,
       daily_trend: trend.rows,
       pending_emergency_alerts: alerts.rows[0].pending,
-      visitors_on_campus: visitors.rows[0].on_campus
+      pending_alerts: alerts.rows[0].pending,
+      visitors_on_campus: visitors.rows[0].on_campus,
+      registered_users: userTotals.registered_users,
+      pending_registrations: userTotals.pending_registrations,
+      overdue_incidents: overdue.rows[0].overdue,
+      missed_patrols: missed.rows[0].missed
     });
   })
 );

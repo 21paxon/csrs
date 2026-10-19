@@ -30,6 +30,13 @@ const REPORTS = {
 
     if (q.severity) w.add('i.severity = ?', q.severity);
     if (q.status) w.add('i.status = ?', q.status);
+    if (q.location_id) w.add('i.location_id = ?', Number(q.location_id));
+    if (q.assigned_to) {
+      w.add(`EXISTS (
+        SELECT 1 FROM incident_assignments ia
+         WHERE ia.incident_id = i.id AND ia.officer_id = ?
+      )`, Number(q.assigned_to));
+    }
 
     return [
       `SELECT i.reference_no,
@@ -80,7 +87,7 @@ const REPORTS = {
     const w = where();
     range(w, 'v.entry_at', q);
 
-    if (q.on_campus === 'true') w.add('v.exit_at IS NULL', undefined);
+    if (q.on_campus === 'true') w.raw('v.exit_at IS NULL');
 
     return [
       `SELECT v.id,

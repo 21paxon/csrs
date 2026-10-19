@@ -32,7 +32,14 @@ const SELECT_INCIDENT = `
          COALESCE(l.name, i.location_text) AS location,
          i.description, i.incident_datetime, i.reported_datetime,
          i.severity, i.status, i.is_anonymous, i.reporter_id,
+         i.due_at, i.resolution_summary, i.referred_to_discipline,
          i.closed_datetime,
+         CASE
+           WHEN i.due_at IS NOT NULL
+            AND i.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')
+            AND i.due_at < CURRENT_TIMESTAMP
+           THEN TRUE ELSE FALSE
+         END AS overdue,
          (SELECT ia.officer_id
             FROM incident_assignments ia
            WHERE ia.incident_id = i.id
@@ -96,6 +103,7 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
       ? crypto.randomBytes(5).toString('hex').toUpperCase()
       : null;
     const accessHash = accessCode ? await bcrypt.hash(accessCode, 10) : null;
+    const dueHours = { Critical: 4, High: 12, Medium: 48, Low: 168 }[severity] || 48;
 
     const client = await db.pool.connect();
     let incident;
@@ -110,13 +118,14 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
         `INSERT INTO incidents
           (reference_no, category_id, location_id, description,
            incident_datetime, reporter_id, is_anonymous,
-           access_code_hash, severity, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Submitted')
-         RETURNING id, reference_no, severity, status`,
+           access_code_hash, severity, status, due_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Submitted',
+                 CURRENT_TIMESTAMP + make_interval(hours => $10))
+         RETURNING id, reference_no, severity, status, due_at`,
         [
           ref, categoryId, locationId, b.description,
           b.incident_datetime, anonymous ? null : req.user.id,
-          anonymous, accessHash, severity
+          anonymous, accessHash, severity, dueHours
         ]
       );
 
@@ -261,6 +270,22 @@ router.get('/', authenticate, wrap(async (req, res) => {
   if (q.severity) w.add('i.severity = ?', q.severity);
   if (q.category_id) w.add('i.category_id = ?', toInt(q.category_id));
   if (q.location_id) w.add('i.location_id = ?', toInt(q.location_id));
+  if (q.assigned_to) w.add(`EXISTS (
+    SELECT 1 FROM incident_assignments ia
+     WHERE ia.incident_id = i.id AND ia.officer_id = ?
+  )`, toInt(q.assigned_to));
+  if (q.q) {
+    w.add(`(
+      i.reference_no ILIKE ? OR
+      i.description ILIKE ? OR
+      COALESCE(i.location_text, '') ILIKE ?
+    )`, `%${q.q}%`);
+  }
+  if (toBool(q.overdue)) {
+    w.raw(`i.due_at IS NOT NULL
+      AND i.due_at < CURRENT_TIMESTAMP
+      AND i.status NOT IN ('Resolved', 'Closed', 'Rejected', 'Duplicate')`);
+  }
   if (q.from) w.add('i.reported_datetime >= ?', q.from);
   if (q.to) w.add('i.reported_datetime <= ?', q.to);
 
@@ -312,22 +337,32 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
     throw new HttpError(403, 'Only the assigned officer can update this incident');
   }
 
-  const { status, notes, internal } = req.body || {};
-  if (!status && !notes) throw new HttpError(400, 'status or notes is required');
+  const { status, notes, internal, resolution_summary, referred_to_discipline } = req.body || {};
+  if (!status && !notes && resolution_summary == null && referred_to_discipline == null) {
+    throw new HttpError(400, 'status, notes, resolution_summary or referred_to_discipline is required');
+  }
   if (status && !INCIDENT_STATUSES.includes(status)) {
     throw new HttpError(400, `status must be one of: ${INCIDENT_STATUSES.join(', ')}`);
   }
 
   const newStatus = status || inc.status;
+  const resolution = resolution_summary != null
+    ? String(resolution_summary).trim() || null
+    : inc.resolution_summary;
+  const referred = referred_to_discipline == null
+    ? inc.referred_to_discipline
+    : toBool(referred_to_discipline);
 
   await db.query(
     `UPDATE incidents
         SET status = $1,
-            closed_datetime = CASE WHEN $1 = 'Closed'
+            resolution_summary = $3,
+            referred_to_discipline = $4,
+            closed_datetime = CASE WHEN $1 IN ('Closed', 'Resolved')
               THEN COALESCE(closed_datetime, CURRENT_TIMESTAMP)
               ELSE NULL END
       WHERE id = $2`,
-    [newStatus, id]
+    [newStatus, id, resolution, referred]
   );
 
   await db.query(
@@ -343,6 +378,13 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
     }
     if (newStatus === 'Escalated') {
       await notifyRoles([ROLES.COLLEGE_MANAGEMENT, ROLES.DEAN], 'Incident escalated', `${inc.reference_no} was escalated.`);
+    }
+    if (referred && !inc.referred_to_discipline) {
+      await notifyRoles(
+        [ROLES.DEAN],
+        'Disciplinary referral',
+        `${inc.reference_no} was referred to the Discipline Committee.`
+      );
     }
   }
 
@@ -376,7 +418,10 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
 
   await db.query(
     `INSERT INTO incident_assignments (incident_id, officer_id, assigned_by)
-     VALUES ($1, $2, $3)`,
+     VALUES ($1, $2, $3)
+     ON CONFLICT (incident_id, officer_id)
+     DO UPDATE SET assigned_by = EXCLUDED.assigned_by,
+                   assigned_at = CURRENT_TIMESTAMP`,
     [id, officerId, req.user.id]
   );
 
