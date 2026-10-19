@@ -160,14 +160,6 @@
     }
   }
 
-  // Frames load the first time their section is opened.
-  function loadFrame(id) {
-    const frame = $(id);
-    if (frame && !frame.getAttribute("src") && frame.dataset.src) {
-      frame.setAttribute("src", frame.dataset.src);
-    }
-  }
-
   function showView(name, { focus = false } = {}) {
     const view = Object.prototype.hasOwnProperty.call(VIEWS, name)
       ? name
@@ -200,7 +192,7 @@
     }
 
     if ($("reportDetails")) $("reportDetails").hidden = true;
-    if (view === "lost-found") loadFrame("lostFoundFrame");
+    if (view === "lost-found") loadLostFound();
 
     setSidebar(false);
     clearMessage();
@@ -339,6 +331,141 @@
     }
   }
 
+  function fillSelect(select, records, placeholder) {
+    if (!select) return;
+    select.replaceChildren(new Option(placeholder, ""));
+    records.forEach((record) => select.add(new Option(record.name, record.id)));
+  }
+
+  async function loadIncidentOptions() {
+    try {
+      const [categories, locations] = await Promise.all([
+        api("/api/categories"),
+        api("/api/locations")
+      ]);
+      fillSelect($("incidentCategory"), safeArray(categories) || [], "Select category");
+      fillSelect($("incidentLocation"), safeArray(locations) || [], "Select campus location");
+    } catch (error) {
+      const message = $("incidentFormMessage");
+      if (message) message.textContent = `Could not load categories and locations: ${error.message}`;
+    }
+  }
+
+  $("dashboardIncidentForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $("incidentSubmit");
+    const message = $("incidentFormMessage");
+    if (!form.reportValidity() || button.disabled) return;
+
+    setLoading(button, true, "Submit incident", "Submitting...");
+    if (message) message.textContent = "Submitting incident...";
+    try {
+      const files = $("incidentEvidence").files;
+      let incident;
+      if (files.length) {
+        const body = new FormData();
+        body.append("category_id", $("incidentCategory").value);
+        body.append("location_id", $("incidentLocation").value);
+        body.append("incident_datetime", new Date($("incidentDate").value).toISOString());
+        body.append("severity", $("incidentSeverity").value);
+        body.append("description", $("incidentDescription").value.trim());
+        body.append("is_anonymous", $("incidentAnonymous").checked ? "true" : "false");
+        Array.from(files).slice(0, 5).forEach((file) => body.append("evidence", file));
+        incident = await api("/api/incidents", { method: "POST", body });
+      } else {
+        incident = await api("/api/incidents", {
+          method: "POST",
+          body: JSON.stringify({
+            category_id: Number($("incidentCategory").value),
+            location_id: Number($("incidentLocation").value),
+            incident_datetime: new Date($("incidentDate").value).toISOString(),
+            severity: $("incidentSeverity").value,
+            description: $("incidentDescription").value.trim(),
+            is_anonymous: $("incidentAnonymous").checked
+          })
+        });
+      }
+      form.reset();
+      if (message) message.textContent = `Incident submitted. Reference: ${incident.reference_no || "Not provided"}${incident.access_code ? ` | Anonymous access code: ${incident.access_code} (save this code to track the report)` : ""}`;
+      await loadPortal();
+    } catch (error) {
+      if (message) message.textContent = `Submission failed: ${error.message}`;
+    } finally {
+      setLoading(button, false, "Submit incident");
+    }
+  });
+
+  function renderLostFoundRows(id, items, found = false) {
+    const body = $(id);
+    if (!body) return;
+    body.replaceChildren();
+    if (!items.length) {
+      body.appendChild(emptyRow(5, found ? "No open found items are listed." : "No lost-item reports found."));
+      return;
+    }
+    items.forEach((item) => {
+      const row = document.createElement("tr");
+      const values = found
+        ? [item.item_name || item.title, item.category, item.location_found, formatDate(item.date_found), item.description]
+        : [item.item_name || item.title, item.category, item.location_lost, formatDate(item.date_lost), item.status];
+      values.forEach((value) => cell(row, value == null || value === "" ? "—" : String(value)));
+      body.appendChild(row);
+    });
+  }
+
+  let lostFoundRequest = 0;
+  async function loadLostFound() {
+    const request = ++lostFoundRequest;
+    const message = $("lostFoundMessage");
+    if (message) message.textContent = "Loading lost and found items...";
+    const results = await Promise.allSettled([
+      api("/api/lost-found/lost"),
+      api("/api/lost-found/found")
+    ]);
+    if (request !== lostFoundRequest) return;
+    if (results[0].status === "fulfilled") renderLostFoundRows("studentLostRows", safeArray(results[0].value) || []);
+    if (results[1].status === "fulfilled") renderLostFoundRows("studentFoundRows", safeArray(results[1].value) || [], true);
+    const errors = results.filter((result) => result.status === "rejected")
+      .map((result) => result.reason?.message || "Could not load items.");
+    if (message) message.textContent = errors.length ? errors.join(" ") : "Lost and found items are up to date.";
+  }
+
+  $("dashboardLostForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $("lostItemSubmit");
+    if (!form.reportValidity() || button.disabled) return;
+    setLoading(button, true, "Submit lost-item report", "Submitting...");
+    const message = $("lostFoundMessage");
+    if (message) message.textContent = "Submitting lost-item report...";
+    try {
+      await api("/api/lost-found/lost", { method: "POST", body: new FormData(form) });
+      form.reset();
+      await loadLostFound();
+      await loadPortal();
+      if (message) message.textContent = "Lost-item report submitted.";
+    } catch (error) {
+      if (message) message.textContent = `Could not submit report: ${error.message}`;
+    } finally {
+      setLoading(button, false, "Submit lost-item report");
+    }
+  });
+
+  $("lostItemsTab")?.addEventListener("click", () => {
+    $("studentLostPanel").hidden = false;
+    $("studentFoundPanel").hidden = true;
+    $("lostItemsTab").setAttribute("aria-selected", "true");
+    $("foundItemsTab").setAttribute("aria-selected", "false");
+  });
+  $("foundItemsTab")?.addEventListener("click", () => {
+    $("studentLostPanel").hidden = true;
+    $("studentFoundPanel").hidden = false;
+    $("lostItemsTab").setAttribute("aria-selected", "false");
+    $("foundItemsTab").setAttribute("aria-selected", "true");
+  });
+  $("refreshLostFound")?.addEventListener("click", loadLostFound);
+
   function renderReports(reports) {
     const body = $("reportsBody");
     if (!body) return;
@@ -473,7 +600,6 @@
     $("newReportButton")?.setAttribute("aria-expanded", String(open));
 
     if (open) {
-      loadFrame("incidentFrame");
       panel.scrollIntoView({ behavior: "smooth", block: "start" });
     } else {
       // Pick up anything that was just submitted.
