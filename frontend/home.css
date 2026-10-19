@@ -1199,6 +1199,7 @@ h1, h2 {
   .security-panel, .module-card { padding: 22px; }
   .header-container .csrs-header-controls {
     width: 100%;
+    flex: 1 0 100%;
     justify-content: flex-end;
     margin: 0;
     padding: 4px 0 0;

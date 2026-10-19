@@ -1257,6 +1257,7 @@ button:disabled {
     min-height: 68px;
     padding: 13px 14px;
     gap: 10px;
+    flex-wrap: wrap;
   }
 
   .topbar-left {
@@ -1285,6 +1286,8 @@ button:disabled {
   }
 
   .topbar-right {
+    flex: 1 0 100%;
+    justify-content: flex-end;
     gap: 7px;
     flex-wrap: wrap;
     min-width: 0;
@@ -1323,6 +1326,7 @@ button:disabled {
   .main > .topbar .topbar-right {
     flex: 1 1 100%;
     justify-content: flex-end;
+    min-width: 0;
   }
 
   .main > .topbar .csrs-header-controls {
