@@ -790,14 +790,14 @@
             </div>
             <button type="button" class="button secondary" id="refreshSystemSettings" data-i18n="refresh">Refresh</button>
           </div>
-          <article class="panel">
+          <article class="panel settings-panel">
             <h3>College contact and access</h3>
-            <form id="systemSettingsForm" class="form-grid">
-              <label>Support email
-                <input id="settingSupportEmail" type="email" maxlength="100" autocomplete="email">
+            <form id="systemSettingsForm" class="form-grid settings-form">
+              <label for="settingSupportEmail">Support email
+                <input id="settingSupportEmail" type="email" maxlength="100" autocomplete="email" placeholder="security@college.rw">
               </label>
-              <label>Emergency contact phone
-                <input id="settingEmergencyPhone" type="tel" maxlength="30" autocomplete="tel">
+              <label for="settingEmergencyPhone">Emergency contact phone
+                <input id="settingEmergencyPhone" type="tel" maxlength="30" autocomplete="tel" placeholder="+250 7XX XXX XXX">
               </label>
               <label class="checkbox-label full-width">
                 <input id="settingRegistrationEnabled" type="checkbox">
@@ -808,7 +808,7 @@
               </div>
             </form>
           </article>
-          <article class="panel">
+          <article class="panel settings-panel">
             <h3>Integration readiness</h3>
             <p class="profile-note">Secret keys are managed in the backend host environment and are never shown here.</p>
             <div id="integrationStatus" class="chart-list" aria-live="polite">Loading integration status...</div>
