@@ -214,9 +214,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
           recordId: user.id,
           status: 'Pending approval'
         });
-        return res.status(403).json({
-          error: 'Your account is awaiting administrator approval. Please try again after it has been activated.'
-        });
+        return res.status(401).json({ error: 'Incorrect login details' });
       }
 
       if (user && user.is_active && !isLocked && !passwordMatches) {
@@ -242,15 +240,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         status: 'Failed'
       });
 
-      if (isLocked || (user && user.is_active && !passwordMatches &&
-        Number(user.failed_attempts || 0) + 1 >= MAX_FAILED_ATTEMPTS)) {
-        return res.status(423).json({
-          error: `Account temporarily locked. Try again in ${LOCKOUT_MINUTES} minutes.`
-        });
-      }
-
       return res.status(401).json({
-        error: 'Invalid credentials.'
+        error: 'Incorrect login details'
       });
     }
 

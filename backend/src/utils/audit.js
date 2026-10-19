@@ -8,7 +8,8 @@ async function audit(req, {
   action,
   targetTable = null,
   recordId = null,
-  status = 'Successful'
+  status = 'Successful',
+  anonymous = false
 }) {
   try {
     await db.query(
@@ -17,11 +18,11 @@ async function audit(req, {
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         userId,
-        req.user?.username || null,
+        anonymous ? null : (req.user?.username || null),
         action,
         targetTable,
         recordId == null ? null : String(recordId),
-        req.ip || null,
+        anonymous ? null : (req.ip || null),
         status
       ]
     );

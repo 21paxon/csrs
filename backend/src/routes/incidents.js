@@ -1,5 +1,6 @@
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -11,12 +12,19 @@ const {
 const { upload, fileKind, discard, UPLOAD_ROOT } = require('../middleware/upload');
 const {
   wrap, toInt, toBool, isDate, SEVERITIES,
-  INCIDENT_STATUSES, paging, where, HttpError
+  INCIDENT_STATUSES, INCIDENT_TRANSITIONS, paging, where, HttpError
 } = require('../utils/helpers');
 const { notify, notifyRoles } = require('../utils/notify');
 const { audit } = require('../utils/audit');
 
 const router = express.Router();
+const anonymousTrackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many tracking attempts. Please try again later.' }
+});
 
 const SEE_ALL = [
   ROLES.ADMIN,
@@ -161,7 +169,8 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
       userId: req.user?.id ?? null,
       action: 'CREATE INCIDENT',
       targetTable: 'incidents',
-      recordId: incident.id
+      recordId: incident.id,
+      anonymous
     });
 
     const out = { ...incident, anonymous };
@@ -178,7 +187,7 @@ router.post('/', optionalAuth, upload.array('evidence', 5), wrap(async (req, res
 }));
 
 // Track anonymous reports.
-router.get('/track/:ref', wrap(async (req, res) => {
+router.get('/track/:ref', anonymousTrackLimiter, wrap(async (req, res) => {
   const code = req.headers['x-access-code'];
 
   const { rows } = await db.query(
@@ -214,7 +223,7 @@ router.get('/track/:ref', wrap(async (req, res) => {
 }));
 
 // Anonymous reporter reply.
-router.post('/track/:ref/reply', wrap(async (req, res) => {
+router.post('/track/:ref/reply', anonymousTrackLimiter, wrap(async (req, res) => {
   const code = req.headers['x-access-code'];
   const message = (req.body || {}).message;
 
@@ -346,6 +355,18 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
   }
 
   const newStatus = status || inc.status;
+  if (status && status !== inc.status && !INCIDENT_TRANSITIONS[inc.status]?.includes(status)) {
+    throw new HttpError(409, `Incident cannot move from ${inc.status} to ${status}`);
+  }
+  if (status === 'Closed' && !MANAGE.includes(req.user.role)) {
+    throw new HttpError(403, 'Only the Head of Security or Admin can approve incident closure');
+  }
+  if (status === 'Closed' && inc.status !== 'Resolved') {
+    throw new HttpError(409, 'An incident must be resolved before closure can be approved');
+  }
+  if (['Resolved', 'Closed'].includes(status) && !String(resolution_summary || inc.resolution_summary || '').trim()) {
+    throw new HttpError(400, 'A resolution summary is required before resolving or closing an incident');
+  }
   const resolution = resolution_summary != null
     ? String(resolution_summary).trim() || null
     : inc.resolution_summary;

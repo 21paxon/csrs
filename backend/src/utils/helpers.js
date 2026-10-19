@@ -21,6 +21,16 @@ const isDate = (v) => typeof v === 'string' && !Number.isNaN(Date.parse(v));
 
 const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
 const INCIDENT_STATUSES = ['Submitted', 'Verified', 'In Progress', 'Resolved', 'Closed', 'Rejected', 'Duplicate', 'Escalated'];
+const INCIDENT_TRANSITIONS = Object.freeze({
+  Submitted: ['Verified', 'Rejected', 'Duplicate', 'Escalated'],
+  Verified: ['In Progress', 'Rejected', 'Duplicate', 'Escalated'],
+  'In Progress': ['Resolved', 'Escalated'],
+  Resolved: ['In Progress', 'Closed'],
+  Escalated: ['Verified', 'In Progress', 'Resolved', 'Rejected', 'Duplicate'],
+  Closed: [],
+  Rejected: [],
+  Duplicate: []
+});
 const SHIFT_TYPES = ['Morning', 'Afternoon', 'Night'];
 
 // ?limit=&offset= with sane caps.
@@ -49,4 +59,4 @@ class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
 }
 
-module.exports = { wrap, toInt, toNum, toBool, isDate, SEVERITIES, INCIDENT_STATUSES, SHIFT_TYPES, paging, where, HttpError };
+module.exports = { wrap, toInt, toNum, toBool, isDate, SEVERITIES, INCIDENT_STATUSES, INCIDENT_TRANSITIONS, SHIFT_TYPES, paging, where, HttpError };
