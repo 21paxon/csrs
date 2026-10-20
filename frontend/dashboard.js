@@ -1354,14 +1354,16 @@ function renderVisitors() {
 
   items.forEach((visitor) => {
     const row = document.createElement("tr");
+    row.className = "responsive-data-row";
 
-    makeCell(row, getValue(visitor, ["visitor_name", "name", "full_name"]));
-    makeCell(row, getValue(visitor, ["purpose", "visit_purpose"]));
-    makeCell(row, getValue(visitor, ["host_name", "host", "person_to_visit"]));
-    makeCell(row, formatDate(getValue(visitor, ["entry_time", "check_in", "created_at"])));
-    renderStatusCell(row, getValue(visitor, ["status"], "On Campus"));
+    makeCell(row, getValue(visitor, ["visitor_name", "name", "full_name"])).dataset.label = "Visitor";
+    makeCell(row, getValue(visitor, ["purpose", "visit_purpose"])).dataset.label = "Purpose";
+    makeCell(row, getValue(visitor, ["host_name", "host", "person_to_visit"])).dataset.label = "Host";
+    makeCell(row, formatDate(getValue(visitor, ["entry_time", "check_in", "created_at"]))).dataset.label = "Entry time";
+    renderStatusCell(row, getValue(visitor, ["status"], "On Campus"), "Status");
 
     const actions = document.createElement("td");
+    actions.dataset.label = "Actions";
     actions.textContent = "—";
     row.appendChild(actions);
 
@@ -1399,12 +1401,13 @@ function renderGate() {
 
   items.forEach((record) => {
     const row = document.createElement("tr");
+    row.className = "responsive-data-row";
 
-    makeCell(row, getValue(record, ["person_name", "visitor_name", "name"]));
-    makeCell(row, getValue(record, ["record_type", "type", "direction"]));
-    makeCell(row, getValue(record, ["gate_name", "gate", "location"]));
-    makeCell(row, getValue(record, ["recorded_by", "officer_name"]));
-    makeCell(row, formatDate(getValue(record, ["created_at", "timestamp", "entry_time"])));
+    makeCell(row, getValue(record, ["person_name", "visitor_name", "name"])).dataset.label = "Person";
+    makeCell(row, getValue(record, ["record_type", "type", "direction"])).dataset.label = "Record type";
+    makeCell(row, getValue(record, ["gate_name", "gate", "location"])).dataset.label = "Gate";
+    makeCell(row, getValue(record, ["recorded_by", "officer_name"])).dataset.label = "Recorded by";
+    makeCell(row, formatDate(getValue(record, ["created_at", "timestamp", "entry_time"]))).dataset.label = "Date and time";
 
     tbody.appendChild(row);
   });
@@ -1449,14 +1452,16 @@ function renderPatrols() {
 
   items.forEach((patrol) => {
     const row = document.createElement("tr");
+    row.className = "responsive-data-row";
 
-    makeCell(row, getValue(patrol, ["patrol_name", "name", "reference_no"]));
-    makeCell(row, getValue(patrol, ["officer_name", "officer"]));
-    makeCell(row, getValue(patrol, ["checkpoint", "location"]));
-    renderStatusCell(row, getValue(patrol, ["status"], "Unknown"));
-    makeCell(row, formatDate(getValue(patrol, ["start_time", "created_at"])));
+    makeCell(row, getValue(patrol, ["patrol_name", "name", "reference_no"])).dataset.label = "Patrol";
+    makeCell(row, getValue(patrol, ["officer_name", "officer"])).dataset.label = "Officer";
+    makeCell(row, getValue(patrol, ["checkpoint", "location"])).dataset.label = "Checkpoint";
+    renderStatusCell(row, getValue(patrol, ["status"], "Unknown"), "Status");
+    makeCell(row, formatDate(getValue(patrol, ["start_time", "created_at"]))).dataset.label = "Start time";
 
     const actions = document.createElement("td");
+    actions.dataset.label = "Actions";
     actions.textContent = "—";
     row.appendChild(actions);
 

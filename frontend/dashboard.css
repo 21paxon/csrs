@@ -1417,12 +1417,27 @@ button:disabled {
     overflow: visible;
   }
 
+  #page-gate .table-scroll,
+  #page-visitors .table-scroll,
+  #page-patrols .table-scroll {
+    overflow: visible;
+  }
+
   #page-users table,
-  #page-users tbody {
+  #page-users tbody,
+  #page-gate table,
+  #page-gate tbody,
+  #page-visitors table,
+  #page-visitors tbody,
+  #page-patrols table,
+  #page-patrols tbody {
     display: block;
   }
 
-  #page-users thead {
+  #page-users thead,
+  #page-gate thead,
+  #page-visitors thead,
+  #page-patrols thead {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -1444,7 +1459,30 @@ button:disabled {
     box-shadow: var(--shadow);
   }
 
+  #gateTable .responsive-data-row,
+  #visitorsTable .responsive-data-row,
+  #patrolsTable .responsive-data-row {
+    display: block;
+    margin-bottom: 14px;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: var(--shadow);
+  }
+
   #usersTable .user-row > td {
+    display: grid;
+    grid-template-columns: minmax(105px, 0.35fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 11px 2px;
+    overflow-wrap: anywhere;
+  }
+
+  #gateTable .responsive-data-row > td,
+  #visitorsTable .responsive-data-row > td,
+  #patrolsTable .responsive-data-row > td {
     display: grid;
     grid-template-columns: minmax(105px, 0.35fr) minmax(0, 1fr);
     gap: 12px;
@@ -1460,7 +1498,26 @@ button:disabled {
     font-weight: 700;
   }
 
+  #gateTable .responsive-data-row > td::before,
+  #visitorsTable .responsive-data-row > td::before,
+  #patrolsTable .responsive-data-row > td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
   #usersTable .user-row > td:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    border-bottom: 0;
+  }
+
+  #gateTable .responsive-data-row > td:last-child,
+  #visitorsTable .responsive-data-row > td:last-child,
+  #patrolsTable .responsive-data-row > td:last-child {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -1470,6 +1527,13 @@ button:disabled {
 
   #usersTable .user-row > td:last-child::before {
     flex-basis: 100%;
+  }
+
+  #gateTable tr:not(.responsive-data-row) .empty-cell,
+  #visitorsTable tr:not(.responsive-data-row) .empty-cell,
+  #patrolsTable tr:not(.responsive-data-row) .empty-cell {
+    display: block;
+    padding: 18px 10px;
   }
 
   #usersTable td:last-child .user-role-select {
