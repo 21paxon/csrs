@@ -1069,7 +1069,7 @@ async function saveUserRole(userId, role) {
     await api(`/api/users/${encodeURIComponent(userId)}`, {
       method: "PATCH", body: JSON.stringify({ role })
     });
-    showMessage("User role updated.");
+    showMessage("User role updated. They must sign out and sign in again for the new role permissions to take effect.");
     await loadUsers();
   } catch (error) {
     showMessage(`Unable to update user role: ${error.message}`, "error");
