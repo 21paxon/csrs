@@ -885,6 +885,30 @@ function isPendingUser(user) {
   );
 }
 
+function appendUserRoleControl(actionsCell, user, id, name) {
+  const role = getValue(user, ["role", "requested_role", "user_role"]);
+  const currentUser = Number(id) === Number(state.user?.id);
+  const roleSelect = document.createElement("select");
+  roleSelect.className = "user-role-select";
+  roleSelect.setAttribute("aria-label", `Role for ${name}`);
+  roleSelect.disabled = currentUser;
+  [
+    ["student", "Student"], ["staff", "Staff"], ["dean", "Dean"],
+    ["management", "College management"], ["security_officer", "Security officer"],
+    ["head_security", "Head of Security"], ["admin", "Administrator"]
+  ].forEach(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    option.selected = normalized(role) === value;
+    roleSelect.appendChild(option);
+  });
+  actionsCell.appendChild(roleSelect);
+  if (!currentUser) {
+    actionsCell.appendChild(makeButton("Save role", "secondary", () => saveUserRole(id, roleSelect.value)));
+  }
+}
+
 function updateUserCounts() {
   const pending = state.users.filter(isPendingUser).length;
   const active = state.users.filter((user) =>
@@ -975,28 +999,13 @@ function renderUsersTable() {
       } else {
         actionsCell.textContent = "Configure approval routes";
       }
+      appendUserRoleControl(actionsCell, user, id, name);
     } else if (isAdmin()) {
       const id = getValue(user, ["user_id", "id"], "");
       const active = user.is_active === true || user.is_active === "true";
       const currentUser = Number(id) === Number(state.user?.id);
-      const roleSelect = document.createElement("select");
-      roleSelect.className = "user-role-select";
-      roleSelect.setAttribute("aria-label", `Role for ${name}`);
-      roleSelect.disabled = currentUser;
-      [
-        ["student", "Student"], ["staff", "Staff"], ["dean", "Dean"],
-        ["management", "College management"], ["security_officer", "Security officer"],
-        ["head_security", "Head of Security"], ["admin", "Administrator"]
-      ].forEach(([value, label]) => {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = label;
-        option.selected = normalized(role) === value;
-        roleSelect.appendChild(option);
-      });
-      actionsCell.appendChild(roleSelect);
+      appendUserRoleControl(actionsCell, user, id, name);
       if (!currentUser) {
-        actionsCell.appendChild(makeButton("Save role", "secondary", () => saveUserRole(id, roleSelect.value)));
         actionsCell.appendChild(makeButton("Reset password", "secondary", () => resetUserPassword(id, name)));
       }
       const route = active ? ROUTES.deactivateUser : ROUTES.activateUser;
