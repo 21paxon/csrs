@@ -278,7 +278,7 @@
     ];
 
     if (canGate(role)) {
-      items.push({ id: "gate", href: "/gate.html", label: "Visitors" });
+      items.push({ id: "gate", href: "/dashboard.html#visitors", label: "Visitors" });
     }
 
     items.push({ id: "logout", href: "#logout", label: "Sign out" });

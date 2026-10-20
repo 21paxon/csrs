@@ -1,4 +1,4 @@
-const CACHE_NAME = 'csrs-shell-v4';
+const CACHE_NAME = 'csrs-shell-v5';
 const SHELL = [
   '/home.html', '/incidents.html', '/emergency.html', '/forgot-password.html', '/reset-password.html',
   '/student-dashboard.html', '/dashboard.html',

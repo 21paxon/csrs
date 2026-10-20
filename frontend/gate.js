@@ -4,14 +4,13 @@ const { $, requireAuth, canGate, roleOf, api, mountShell, formatDate,
 
 if (!requireAuth()) {
   /* redirected */
+} else if (canGate(roleOf())) {
+  // Keep every visitor workflow in the role-aware dashboard.
+  window.location.replace("/dashboard.html#visitors");
 } else {
   mountShell({ current: "gate" });
-  if (!canGate(roleOf())) {
-    $("deniedPanel").hidden = false;
-    $("gateWorkspace").hidden = true;
-  } else {
-    startGate();
-  }
+  $("deniedPanel").hidden = false;
+  $("gateWorkspace").hidden = true;
 }
 
 function startGate() {
