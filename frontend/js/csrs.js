@@ -261,6 +261,7 @@
         { id: "home", href: "/home.html", label: "Home" },
         { id: "incidents", href: "/incidents.html", label: "Report incident" },
         { id: "emergency", href: "/emergency.html", label: "Emergency" },
+        { id: "help", href: "/help.html", label: "Help guide" },
         { id: "signin", href: "/home.html?signin=1", label: "Sign in" },
         { id: "register", href: "/register.html", label: "Register" }
       ];
@@ -281,6 +282,7 @@
       items.push({ id: "gate", href: "/dashboard.html#visitors", label: "Visitors" });
     }
 
+    items.push({ id: "help", href: "/help.html", label: "Help guide" });
     items.push({ id: "logout", href: "#logout", label: "Sign out" });
     return items;
   }

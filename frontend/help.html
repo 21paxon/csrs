@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#123b70">
+  <meta name="description" content="Role-based guide to using the Campus Security and Reporting System.">
+  <title>CSRS Help Guide</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    .help-intro { margin-bottom: 1.25rem; }
+    .help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+    .help-card { padding: 18px; border: 1px solid #e4eaf2; border-radius: 12px; background: #fff; }
+    .help-card h3 { margin-top: 0; color: #14243a; }
+    .help-card li + li { margin-top: .55rem; }
+    .help-role { color: #285be7; font-weight: 700; }
+    .help-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .help-links a { display: inline-flex; align-items: center; min-height: 42px; padding: 9px 14px; border: 1px solid #d6e0ee; border-radius: 8px; text-decoration: none; font-weight: 650; }
+  </style>
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="brand" href="/home.html">
+        <img class="rp-mark" src="/images/rp-logo.jpg" alt="Rwanda Polytechnic logo">
+        <div><strong>Rwanda Polytechnic</strong><span>Musanze College</span><small>Campus Security and Reporting System</small></div>
+      </a>
+      <div class="app-page-title"><h1>CSRS Help Guide</h1><p>Learn how to use the system and the actions available to your role.</p><div class="app-user" id="appUser"></div></div>
+    </div>
+  </header>
+  <nav id="appNav" class="app-nav" aria-label="Main navigation"></nav>
+  <main class="app-main">
+    <section class="panel help-intro">
+      <h2>Welcome to CSRS</h2>
+      <p>Use this guide to report campus safety concerns, follow your work, and find the tools available to your account.</p>
+      <p>Your current role: <span class="help-role" id="helpRole">Visitor</span></p>
+      <p id="helpSignedOut" class="muted" hidden>Sign in to open your dashboard. Your account role controls which protected actions and records you can access.</p>
+    </section>
+    <section class="help-grid" aria-label="CSRS instructions">
+      <article class="help-card">
+        <h3>Getting started</h3>
+        <ol>
+          <li>Sign in with your username, email, or registration number.</li>
+          <li>Use the navigation menu to open the sections available to your role.</li>
+          <li>Open <strong>My Profile</strong> to check your account details or set up two-factor sign-in.</li>
+          <li>Use <strong>Change Password</strong> if you need to update your password.</li>
+        </ol>
+      </article>
+      <article class="help-card">
+        <h3>Report and follow up</h3>
+        <ol>
+          <li>Open <strong>Incidents</strong> or <strong>My Reports</strong> and choose the report action.</li>
+          <li>Choose the closest category and campus location, then describe what happened clearly.</li>
+          <li>Submit the report and use its status or reference to follow up.</li>
+          <li>For an immediate threat, use the <strong>Emergency</strong> section and contact campus security.</li>
+        </ol>
+      </article>
+      <article class="help-card" data-help-role="student,staff">
+        <h3>Student and staff tools</h3>
+        <ul>
+          <li>Use <strong>My Reports</strong> to see reports linked to your account.</li>
+          <li>Use the emergency centre to request urgent help and provide your location.</li>
+          <li>In Lost and Found, report property you lost and review found-item notices.</li>
+        </ul>
+      </article>
+      <article class="help-card" data-help-role="security_officer">
+        <h3>Security officer tools</h3>
+        <ul>
+          <li>In <strong>Visitor Management</strong>, register visitors, select their host, and check them in.</li>
+          <li>Use the visitor list to check a visitor out when they leave campus.</li>
+          <li>In <strong>Security Patrols</strong>, enter the checkpoint QR code and add any observation.</li>
+          <li>Review and respond to campus emergency alerts assigned to security.</li>
+        </ul>
+      </article>
+      <article class="help-card" data-help-role="head_security">
+        <h3>Head of Security tools</h3>
+        <ul>
+          <li>Review and coordinate incident response, assign officers, and update case status.</li>
+          <li>Manage campus visitors and review gate activity.</li>
+          <li>Create patrol routes, add checkpoints, assign duty shifts, and review scans.</li>
+          <li>Review emergency alerts, reports, found property, and audit activity available to your role.</li>
+        </ul>
+      </article>
+      <article class="help-card" data-help-role="management">
+        <h3>College management tools</h3>
+        <ul>
+          <li>Use the dashboard to review campus safety activity available to management.</li>
+          <li>Open Reports for operational summaries and follow up with the responsible security team.</li>
+          <li>Use emergency channels for urgent matters rather than waiting for a report review.</li>
+        </ul>
+      </article>
+      <article class="help-card" data-help-role="dean">
+        <h3>Dean tools</h3>
+        <ul>
+          <li>Review student incident activity and reports available to the Dean role.</li>
+          <li>Use report summaries to follow cases with the security team.</li>
+          <li>Direct immediate emergencies to the campus emergency centre.</li>
+        </ul>
+      </article>
+      <article class="help-card" data-help-role="admin">
+        <h3>Administrator tools</h3>
+        <ul>
+          <li>In <strong>User Management</strong>, approve accounts, activate or deactivate users, and assign the role matching their college duties.</li>
+          <li>Role assignment automatically gives the actions permitted by that role. Users must sign in again after a role change.</li>
+          <li>Use <strong>System Settings</strong> for college contact details and registration access.</li>
+          <li>Review audit logs and reports for system activity.</li>
+        </ul>
+      </article>
+      <article class="help-card">
+        <h3>When something does not work</h3>
+        <ul>
+          <li>Refresh the section and check your internet connection.</li>
+          <li>If access is denied, ask an administrator to confirm your account role and status.</li>
+          <li>If your role was just changed, sign out and sign in again.</li>
+          <li>For urgent safety issues, contact campus security directly.</li>
+        </ul>
+      </article>
+    </section>
+    <div class="help-links">
+      <a id="helpDashboardLink" href="/dashboard.html" hidden>Open my dashboard</a>
+      <a href="/incidents.html">Report an incident</a>
+      <a href="/emergency.html">Open emergency centre</a>
+      <a href="/home.html">Return home</a>
+    </div>
+  </main>
+  <script src="/config.js"></script>
+  <script src="/js/csrs.js"></script>
+  <script src="/help.js"></script>
+  <script src="/pwa.js" defer></script>
+</body>
+</html>

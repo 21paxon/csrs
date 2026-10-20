@@ -1,10 +1,10 @@
-const CACHE_NAME = 'csrs-shell-v5';
+const CACHE_NAME = 'csrs-shell-v6';
 const SHELL = [
-  '/home.html', '/incidents.html', '/emergency.html', '/forgot-password.html', '/reset-password.html',
+  '/home.html', '/incidents.html', '/emergency.html', '/help.html', '/forgot-password.html', '/reset-password.html',
   '/student-dashboard.html', '/dashboard.html',
   '/css/app.css', '/css/theme.css', '/css/dashboards.css',
   '/home.css', '/dashboard.css', '/config.js', '/js/csrs.js',
-  '/home.js', '/incidents.js', '/emergency.js',
+  '/home.js', '/incidents.js', '/emergency.js', '/help.js',
   '/student-dashboard.js', '/dashboard.js', '/forgot-password.js', '/reset-password.js',
   '/manifest.webmanifest', '/icons/csrs-icon.svg', '/images/rp-logo.jpg',
   '/pwa.js', '/i18n/en.json', '/i18n/rw.json'
