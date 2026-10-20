@@ -1353,9 +1353,50 @@ async function checkoutVisitor(visitorId) {
 }
 
 async function loadVisitors() {
-  const result = await api("/api/gate/logs?limit=200");
+  const [result, onCampusResult] = await Promise.all([
+    api("/api/gate/logs?limit=200"),
+    api("/api/gate/on-campus")
+  ]);
   state.visitors = unwrap(result, ["visitors", "records"]);
+  const currentCount = unwrap(onCampusResult, ["visitors", "records"]).length;
+  if ($("visitorCampusCount")) {
+    $("visitorCampusCount").textContent = `${currentCount} ${currentCount === 1 ? "visitor is" : "visitors are"} currently on campus.`;
+  }
   renderVisitors();
+}
+
+async function loadVisitorHosts() {
+  const select = $("dashboardVisitorHost");
+  if (!select || !canUseSecurityOperations()) return;
+  const hosts = unwrap(await api("/api/users/hosts"), ["hosts", "users"]);
+  fillSelect(select, hosts, "Select the person being visited", (host) => {
+    const name = host.full_name || host.username || `User #${host.id}`;
+    return host.role ? `${name} · ${host.role}` : name;
+  }, (host) => host.id);
+  if (!hosts.length && $("dashboardVisitorFormMessage")) {
+    $("dashboardVisitorFormMessage").textContent = "No active visitor hosts were found.";
+  }
+}
+
+async function submitDashboardVisitorCheckIn(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  if ($("dashboardVisitorFormMessage")) $("dashboardVisitorFormMessage").textContent = "Registering visitor...";
+  try {
+    const payload = formObject(form);
+    payload.host_user_id = Number(payload.host_user_id);
+    const visitor = await api("/api/gate/check-in", { method: "POST", body: JSON.stringify(payload) });
+    form.reset();
+    if ($("dashboardVisitorFormMessage")) {
+      $("dashboardVisitorFormMessage").textContent = `Visitor checked in. Badge number: ${visitor.badge_no || visitor.badge_number || "issued"}.`;
+    }
+    await Promise.all([loadVisitors(), loadGate()]);
+  } catch (error) {
+    if ($("dashboardVisitorFormMessage")) $("dashboardVisitorFormMessage").textContent = `Unable to check in visitor: ${error.message}`;
+  } finally { button.disabled = false; }
 }
 
 function renderVisitors() {
@@ -1874,7 +1915,9 @@ async function loadPage(page) {
         break;
 
       case "visitors":
-        await safeLoad("Unable to load visitors", loadVisitors);
+        await safeLoad("Unable to load visitors", async () => {
+          await Promise.all([loadVisitors(), loadVisitorHosts()]);
+        });
         break;
 
       case "patrols":
@@ -2127,6 +2170,7 @@ function setupOtherPages() {
   on("refreshVisitors", "click", () =>
     safeLoad("Unable to refresh visitors", loadVisitors)
   );
+  on("dashboardVisitorCheckInForm", "submit", submitDashboardVisitorCheckIn);
   on("visitorSearch", "input", renderVisitors);
   on("visitorStatusFilter", "change", renderVisitors);
 

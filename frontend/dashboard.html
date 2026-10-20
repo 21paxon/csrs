@@ -500,7 +500,7 @@
               <h2>Gate Management</h2>
               <p class="page-description">Review campus access records and gate activity.</p>
             </div>
-            <div class="button-row"><a class="button primary" href="/gate.html" data-security-only>Check in / out visitor</a><button class="button secondary" type="button" id="refreshGate">Refresh</button></div>
+            <div class="button-row"><a class="button primary" href="#visitors" data-page="visitors" data-security-only>Manage campus visitors</a><button class="button secondary" type="button" id="refreshGate">Refresh</button></div>
           </div>
           <article class="panel">
             <div class="table-toolbar">
@@ -538,8 +538,23 @@
               <h2>Visitor Management</h2>
               <p class="page-description">Track visitor registration, campus entry and departure.</p>
             </div>
-            <div class="button-row"><a class="button primary" href="/gate.html" data-security-only>Register visitor</a><button class="button secondary" type="button" id="refreshVisitors">Refresh</button></div>
+            <div class="button-row"><a class="button primary" href="#visitorCheckIn">Check in visitor</a><button class="button secondary" type="button" id="refreshVisitors">Refresh</button></div>
           </div>
+          <article class="panel" id="visitorCheckIn" data-security-only>
+            <h3>Register and check in a campus visitor</h3>
+            <p id="visitorCampusCount" class="profile-note" aria-live="polite">Loading campus visitors...</p>
+            <form id="dashboardVisitorCheckInForm" class="form-grid">
+              <label>Visitor full name<input name="full_name" required maxlength="160" autocomplete="name"></label>
+              <label>ID or passport number<input name="id_number" required maxlength="80"></label>
+              <label>Phone number<input name="phone" required maxlength="50" autocomplete="tel"></label>
+              <label>Purpose of visit<input name="purpose" required maxlength="500"></label>
+              <label>Person being visited<select name="host_user_id" id="dashboardVisitorHost" required><option value="">Loading hosts...</option></select></label>
+              <label>Vehicle plate (optional)<input name="vehicle_plate" maxlength="40"></label>
+              <label class="full-width">Host / office details (optional)<input name="host_text" maxlength="160"></label>
+              <div class="form-actions full-width"><button class="button primary" type="submit">Register and check in</button></div>
+            </form>
+            <p id="dashboardVisitorFormMessage" class="profile-note" role="status" aria-live="polite"></p>
+          </article>
           <article class="panel">
             <div class="table-toolbar">
               <input id="visitorSearch" type="search" placeholder="Search visitors..." aria-label="Search visitors">
