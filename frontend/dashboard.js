@@ -117,6 +117,16 @@ function canManageLostFoundAndEmergencies() {
     .includes(roleOf());
 }
 
+function canUseSecurityOperations() {
+  return ["admin", "administrator", "super_admin", "superadmin", "head_security", "security_officer"]
+    .includes(roleOf());
+}
+
+function canManagePatrols() {
+  return ["admin", "administrator", "super_admin", "superadmin", "head_security"]
+    .includes(roleOf());
+}
+
 function userName() {
   const user = state.user || {};
   return (
@@ -363,6 +373,7 @@ function canOpenPage(page) {
   if (["users", "audit-logs", "settings"].includes(page) && !isAdmin()) {
     return false;
   }
+  if (["gate", "visitors", "patrols"].includes(page) && !canUseSecurityOperations()) return false;
 
   return Boolean(PAGE_INFO[page]);
 }
@@ -434,6 +445,12 @@ function closeMobileSidebar() {
 function applyRoleVisibility() {
   document.querySelectorAll("[data-admin-only]").forEach((element) => {
     element.hidden = !isAdmin();
+  });
+  document.querySelectorAll("[data-security-only]").forEach((element) => {
+    element.hidden = !canUseSecurityOperations();
+  });
+  document.querySelectorAll("[data-patrol-manager]").forEach((element) => {
+    element.hidden = !canManagePatrols();
   });
 }
 
@@ -1324,8 +1341,19 @@ function renderEmergency() {
    VISITORS AND GATE RECORDS
    ========================================================= */
 
+async function checkoutVisitor(visitorId) {
+  if (!visitorId) return showMessage("This visitor record has no valid ID.", "error");
+  try {
+    await api(`/api/gate/${encodeURIComponent(visitorId)}/check-out`, { method: "POST" });
+    showMessage("Visitor checked out successfully.");
+    await Promise.all([loadVisitors(), loadGate()]);
+  } catch (error) {
+    showMessage(`Unable to check out visitor: ${error.message}`, "error");
+  }
+}
+
 async function loadVisitors() {
-  const result = await api(PAGE_ENDPOINTS.visitors);
+  const result = await api("/api/gate/logs?limit=200");
   state.visitors = unwrap(result, ["visitors", "records"]);
   renderVisitors();
 }
@@ -1359,12 +1387,13 @@ function renderVisitors() {
     makeCell(row, getValue(visitor, ["visitor_name", "name", "full_name"])).dataset.label = "Visitor";
     makeCell(row, getValue(visitor, ["purpose", "visit_purpose"])).dataset.label = "Purpose";
     makeCell(row, getValue(visitor, ["host_name", "host", "person_to_visit"])).dataset.label = "Host";
-    makeCell(row, formatDate(getValue(visitor, ["entry_time", "check_in", "created_at"]))).dataset.label = "Entry time";
+    makeCell(row, formatDate(getValue(visitor, ["entry_at", "entry_time", "check_in", "created_at"]))).dataset.label = "Entry time";
     renderStatusCell(row, getValue(visitor, ["status"], "On Campus"), "Status");
 
     const actions = document.createElement("td");
     actions.dataset.label = "Actions";
-    actions.textContent = "—";
+    if (visitor.status === "On Campus") actions.appendChild(makeButton("Check out", "secondary", () => checkoutVisitor(visitor.id)));
+    else actions.textContent = "—";
     row.appendChild(actions);
 
     tbody.appendChild(row);
@@ -1372,7 +1401,7 @@ function renderVisitors() {
 }
 
 async function loadGate() {
-  const result = await api(PAGE_ENDPOINTS.gate);
+  const result = await api("/api/gate/logs?limit=200");
   state.gateRecords = unwrap(result, ["records", "visitors", "entries"]);
   renderGate();
 }
@@ -1395,7 +1424,7 @@ function renderGate() {
   tbody.replaceChildren();
 
   if (!items.length) {
-    renderEmpty("gateTable", 5, "No matching gate records found.");
+    renderEmpty("gateTable", 6, "No matching gate records found.");
     return;
   }
 
@@ -1403,11 +1432,17 @@ function renderGate() {
     const row = document.createElement("tr");
     row.className = "responsive-data-row";
 
-    makeCell(row, getValue(record, ["person_name", "visitor_name", "name"])).dataset.label = "Person";
+    makeCell(row, getValue(record, ["person_name", "visitor_name", "full_name", "name"])).dataset.label = "Person";
     makeCell(row, getValue(record, ["record_type", "type", "direction"])).dataset.label = "Record type";
     makeCell(row, getValue(record, ["gate_name", "gate", "location"])).dataset.label = "Gate";
     makeCell(row, getValue(record, ["recorded_by", "officer_name"])).dataset.label = "Recorded by";
-    makeCell(row, formatDate(getValue(record, ["created_at", "timestamp", "entry_time"]))).dataset.label = "Date and time";
+    makeCell(row, formatDate(getValue(record, ["exit_at", "entry_at", "created_at", "timestamp", "entry_time"]))).dataset.label = "Date and time";
+
+    const actions = document.createElement("td");
+    actions.dataset.label = "Actions";
+    if (record.status === "On Campus") actions.appendChild(makeButton("Check out", "secondary", () => checkoutVisitor(record.id)));
+    else actions.textContent = "—";
+    row.appendChild(actions);
 
     tbody.appendChild(row);
   });
@@ -1423,9 +1458,140 @@ async function loadPatrols() {
     return;
   }
 
-  const result = await api(PAGE_ENDPOINTS.patrols);
+  const result = await api(`${PAGE_ENDPOINTS.patrols}/logs?limit=200`);
   state.patrols = unwrap(result, ["patrols", "records"]);
   renderPatrols();
+}
+
+function fillSelect(select, rows, placeholder, labelOf, valueOf) {
+  if (!select) return;
+  select.replaceChildren(new Option(placeholder, ""));
+  rows.forEach((row) => select.add(new Option(labelOf(row), String(valueOf(row)))));
+}
+
+async function loadPatrolSetup() {
+  if (!canManagePatrols()) return;
+  const [routesResult, locationsResult, officersResult, rostersResult] = await Promise.all([
+    api(`${PAGE_ENDPOINTS.patrols}/routes`),
+    api(PAGE_ENDPOINTS.locations),
+    api("/api/users/officers"),
+    api(`${PAGE_ENDPOINTS.patrols}/rosters`)
+  ]);
+  const routes = unwrap(routesResult, ["routes"]);
+  const locations = unwrap(locationsResult, ["locations"]);
+  const officers = unwrap(officersResult, ["officers", "users"]);
+  const rosters = unwrap(rostersResult, ["rosters"]);
+  fillSelect($("patrolCheckpointRoute"), routes, "Select route", (r) => r.name, (r) => r.id);
+  fillSelect($("patrolRosterRoute"), routes, "No route assigned", (r) => r.name, (r) => r.id);
+  fillSelect($("patrolCheckpointLocation"), locations, "Select location", (r) => r.name, (r) => r.id);
+  fillSelect($("patrolRosterOfficer"), officers, "Select officer", (u) => u.full_name || u.username, (u) => u.id);
+  renderPatrolRosters(rosters, routes);
+}
+
+function renderPatrolRosters(rosters, routes) {
+  const tbody = $("patrolRostersTable");
+  if (!tbody) return;
+  tbody.replaceChildren();
+  if (!rosters.length) {
+    renderEmpty("patrolRostersTable", 6, "No duty assignments found.");
+    return;
+  }
+  const routeNames = new Map(routes.map((route) => [String(route.id), route.name]));
+  rosters.forEach((roster) => {
+    const row = document.createElement("tr");
+    makeCell(row, roster.officer).dataset.label = "Officer";
+    makeCell(row, routeNames.get(String(roster.route_id)) || "Unassigned").dataset.label = "Route";
+    makeCell(row, formatDate(roster.start_at)).dataset.label = "Shift starts";
+    makeCell(row, formatDate(roster.end_at)).dataset.label = "Shift ends";
+    makeCell(row, roster.handover_notes || "—").dataset.label = "Handover notes";
+    const actions = document.createElement("td");
+    actions.dataset.label = "Actions";
+    actions.appendChild(makeButton("Cancel duty", "danger", async () => {
+      if (!window.confirm("Cancel this duty assignment?")) return;
+      try {
+        await api(`${PAGE_ENDPOINTS.patrols}/rosters/${encodeURIComponent(roster.id)}`, { method: "DELETE" });
+        showMessage("Duty assignment cancelled.");
+        await loadPatrolSetup();
+      } catch (error) { showMessage(`Unable to cancel duty: ${error.message}`, "error"); }
+    }));
+    row.appendChild(actions);
+    tbody.appendChild(row);
+  });
+}
+
+function formObject(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+function setupPatrolActions() {
+  on("patrolScanForm", "submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      const body = formObject(form);
+      await api(`${PAGE_ENDPOINTS.patrols}/scan`, { method: "POST", body: JSON.stringify(body) });
+      form.reset();
+      if ($("patrolActionMessage")) $("patrolActionMessage").textContent = "Checkpoint scan recorded.";
+      await loadPatrols();
+    } catch (error) {
+      if ($("patrolActionMessage")) $("patrolActionMessage").textContent = `Unable to record scan: ${error.message}`;
+    } finally { submit.disabled = false; }
+  });
+
+  on("patrolRouteForm", "submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      await api(`${PAGE_ENDPOINTS.patrols}/routes`, { method: "POST", body: JSON.stringify(formObject(form)) });
+      form.reset();
+      showMessage("Patrol route created.");
+      await loadPatrolSetup();
+    } catch (error) { showMessage(`Unable to create route: ${error.message}`, "error"); }
+    finally { submit.disabled = false; }
+  });
+
+  on("patrolCheckpointForm", "submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      const body = formObject(form);
+      const checkpoint = await api(`${PAGE_ENDPOINTS.patrols}/routes/${encodeURIComponent(body.route_id)}/checkpoints`, {
+        method: "POST", body: JSON.stringify({ name: body.name, location_id: body.location_id })
+      });
+      form.reset();
+      if ($("checkpointCreatedCode")) {
+        $("checkpointCreatedCode").textContent = `Checkpoint added. Print this QR code for the checkpoint: ${checkpoint.qr_code}`;
+      }
+      await loadPatrolSetup();
+    } catch (error) { showMessage(`Unable to add checkpoint: ${error.message}`, "error"); }
+    finally { submit.disabled = false; }
+  });
+
+  on("patrolRosterForm", "submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    const submit = form.querySelector('[type="submit"]');
+    submit.disabled = true;
+    try {
+      const body = formObject(form);
+      if (!body.route_id) delete body.route_id;
+      await api(`${PAGE_ENDPOINTS.patrols}/rosters`, { method: "POST", body: JSON.stringify(body) });
+      form.reset();
+      showMessage("Duty assignment saved and the officer has been notified.");
+      await loadPatrolSetup();
+    } catch (error) { showMessage(`Unable to assign duty: ${error.message}`, "error"); }
+    finally { submit.disabled = false; }
+  });
 }
 
 function renderPatrols() {
@@ -1454,15 +1620,15 @@ function renderPatrols() {
     const row = document.createElement("tr");
     row.className = "responsive-data-row";
 
-    makeCell(row, getValue(patrol, ["patrol_name", "name", "reference_no"])).dataset.label = "Patrol";
+    makeCell(row, getValue(patrol, ["route", "patrol_name", "name", "reference_no"], `Scan #${patrol.id || ""}`)).dataset.label = "Patrol";
     makeCell(row, getValue(patrol, ["officer_name", "officer"])).dataset.label = "Officer";
     makeCell(row, getValue(patrol, ["checkpoint", "location"])).dataset.label = "Checkpoint";
     renderStatusCell(row, getValue(patrol, ["status"], "Unknown"), "Status");
-    makeCell(row, formatDate(getValue(patrol, ["start_time", "created_at"]))).dataset.label = "Start time";
+    makeCell(row, formatDate(getValue(patrol, ["scanned_at", "start_time", "created_at"]))).dataset.label = "Start time";
 
     const actions = document.createElement("td");
-    actions.dataset.label = "Actions";
-    actions.textContent = "—";
+    actions.dataset.label = "Notes";
+    actions.textContent = patrol.notes || "—";
     row.appendChild(actions);
 
     tbody.appendChild(row);
@@ -1712,7 +1878,9 @@ async function loadPage(page) {
         break;
 
       case "patrols":
-        await safeLoad("Unable to load patrols", loadPatrols);
+        await safeLoad("Unable to load patrols", async () => {
+          await Promise.all([loadPatrols(), loadPatrolSetup()]);
+        });
         break;
 
       case "audit-logs":
@@ -1971,6 +2139,7 @@ function setupOtherPages() {
   on("refreshPatrols", "click", () =>
     safeLoad("Unable to refresh patrols", loadPatrols)
   );
+  setupPatrolActions();
   on("patrolSearch", "input", renderPatrols);
   on("patrolStatusFilter", "change", renderPatrols);
 

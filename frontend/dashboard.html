@@ -47,13 +47,13 @@
         <a href="#emergency" class="nav-link" data-page="emergency" data-i18n="dashboard_emergency">
           <span>!</span> Emergency Alerts
         </a>
-        <a href="#gate" class="nav-link" data-page="gate" data-i18n="dashboard_gate">
+        <a href="#gate" class="nav-link" data-page="gate" data-security-only>
           <span>↔</span> Gate Management
         </a>
-        <a href="#visitors" class="nav-link" data-page="visitors" data-i18n="dashboard_visitors">
+        <a href="#visitors" class="nav-link" data-page="visitors" data-security-only>
           <span>♧</span> Visitor Management
         </a>
-        <a href="#patrols" class="nav-link" data-page="patrols" data-i18n="dashboard_patrols">
+        <a href="#patrols" class="nav-link" data-page="patrols" data-security-only>
           <span>⌖</span> Security Patrols
         </a>
       </nav>
@@ -500,7 +500,7 @@
               <h2>Gate Management</h2>
               <p class="page-description">Review campus access records and gate activity.</p>
             </div>
-            <button class="button secondary" type="button" id="refreshGate">Refresh</button>
+            <div class="button-row"><a class="button primary" href="/gate.html" data-security-only>Check in / out visitor</a><button class="button secondary" type="button" id="refreshGate">Refresh</button></div>
           </div>
           <article class="panel">
             <div class="table-toolbar">
@@ -520,10 +520,11 @@
                     <th>Gate</th>
                     <th>Recorded By</th>
                     <th>Date and Time</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="gateTable">
-                  <tr><td colspan="5" class="empty-cell">Gate records will appear here.</td></tr>
+                  <tr><td colspan="6" class="empty-cell">Gate records will appear here.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -537,7 +538,7 @@
               <h2>Visitor Management</h2>
               <p class="page-description">Track visitor registration, campus entry and departure.</p>
             </div>
-            <button class="button secondary" type="button" id="refreshVisitors">Refresh</button>
+            <div class="button-row"><a class="button primary" href="/gate.html" data-security-only>Register visitor</a><button class="button secondary" type="button" id="refreshVisitors">Refresh</button></div>
           </div>
           <article class="panel">
             <div class="table-toolbar">
@@ -575,8 +576,48 @@
               <h2>Security Patrols</h2>
               <p class="page-description">Review patrol activities, checkpoints and observations.</p>
             </div>
-            <button class="button secondary" type="button" id="refreshPatrols">Refresh</button>
+            <div class="button-row"><button class="button secondary" type="button" id="refreshPatrols">Refresh</button></div>
           </div>
+          <article class="panel" data-security-only>
+            <h3>Record checkpoint scan</h3>
+            <p class="profile-note">Enter the QR code printed at the checkpoint. The backend validates the code and records your account and scan time.</p>
+            <form id="patrolScanForm" class="form-grid">
+              <label>Checkpoint QR code<input name="qr_code" required maxlength="120" autocomplete="off" placeholder="CSRS-CP-..."></label>
+              <label>Observation (optional)<input name="notes" maxlength="500" placeholder="Add a patrol note"></label>
+              <div class="form-actions full-width"><button class="button primary" type="submit">Record scan</button></div>
+            </form>
+            <p id="patrolActionMessage" class="profile-note" role="status" aria-live="polite"></p>
+          </article>
+          <article class="panel" id="patrolManagerPanel" data-patrol-manager hidden>
+            <h3>Patrol setup and duty roster</h3>
+            <div class="dashboard-grid">
+              <form id="patrolRouteForm" class="form-grid">
+                <h4 class="full-width">Create patrol route</h4>
+                <label class="full-width">Route name<input name="name" required maxlength="120"></label>
+                <div class="form-actions full-width"><button class="button primary" type="submit">Create route</button></div>
+              </form>
+              <form id="patrolCheckpointForm" class="form-grid">
+                <h4 class="full-width">Add checkpoint to route</h4>
+                <label>Route<select name="route_id" id="patrolCheckpointRoute" required></select></label>
+                <label>Campus location<select name="location_id" id="patrolCheckpointLocation" required></select></label>
+                <label class="full-width">Checkpoint name<input name="name" required maxlength="120"></label>
+                <div class="form-actions full-width"><button class="button primary" type="submit">Add checkpoint</button></div>
+                <p id="checkpointCreatedCode" class="profile-note full-width" role="status" aria-live="polite"></p>
+              </form>
+              <form id="patrolRosterForm" class="form-grid">
+                <h4 class="full-width">Assign officer duty</h4>
+                <label>Security officer<select name="officer_id" id="patrolRosterOfficer" required></select></label>
+                <label>Route (optional)<select name="route_id" id="patrolRosterRoute"><option value="">No route assigned</option></select></label>
+                <label>Date<input name="shift_date" type="date" required></label>
+                <label>Start time<input name="shift_start_time" type="time" required></label>
+                <label>End time<input name="shift_end_time" type="time" required></label>
+                <label class="full-width">Handover notes<input name="handover_notes" maxlength="1000"></label>
+                <div class="form-actions full-width"><button class="button primary" type="submit">Assign duty</button></div>
+              </form>
+            </div>
+            <h4>Current duty assignments</h4>
+            <div class="table-scroll"><table><thead><tr><th>Officer</th><th>Route</th><th>Shift starts</th><th>Shift ends</th><th>Handover notes</th><th>Actions</th></tr></thead><tbody id="patrolRostersTable"><tr><td colspan="6" class="empty-cell">Loading duty assignments...</td></tr></tbody></table></div>
+          </article>
           <article class="panel">
             <div class="table-toolbar">
               <input id="patrolSearch" type="search" placeholder="Search patrols..." aria-label="Search patrols">
@@ -596,7 +637,7 @@
                     <th>Checkpoint</th>
                     <th>Status</th>
                     <th>Start Time</th>
-                    <th>Actions</th>
+                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody id="patrolsTable">
