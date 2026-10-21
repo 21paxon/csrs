@@ -110,8 +110,9 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 | | `POST /api/lost-found/found`, `/match`, `/found/:id/collect`, `GET /unclaimed` | Admin, HoS, SO |
 | Gate | `POST /api/gate/check-in`, `POST /api/gate/:id/check-out`, `GET /api/gate/logs`, `GET /api/gate/on-campus` | Admin, HoS, SO |
 | | `PATCH /api/gate/visitors/:id/blacklist` | Admin, HoS |
-| Patrol | `POST /api/patrol/scan`, `GET /api/patrol/logs`, `GET /api/patrol/rosters` | SO (own), HoS, Admin |
-| | `POST /api/patrol/routes`, `.../routes/:id/checkpoints`, `POST/DELETE /api/patrol/rosters`, `GET /api/patrol/performance` | Admin, HoS |
+| Patrol | `GET /api/patrol/current`, `POST /api/patrol/scan` | SO (active assigned route; next checkpoint order enforced) |
+| | `GET /api/patrol/logs`, `GET /api/patrol/rosters`, `GET /api/patrol/routes` | SO (own), HoS, Admin |
+| | `GET /api/patrol/checkpoints/:id/qr`, `PATCH /api/patrol/routes/:id/checkpoints/order`, `POST /api/patrol/routes`, `.../routes/:id/checkpoints`, `POST/DELETE /api/patrol/rosters`, `GET /api/patrol/performance` | Admin, HoS |
 | Notifications | `GET /api/notifications`, `PATCH /:id/read`, `POST /read-all` | any user |
 | | `POST /api/notifications/announcements` | Admin, HoS |
 | Dashboard | `GET /api/dashboard?days=30` (totals, hotspots, trends, pending alerts, visitors on campus) | Admin, HoS, CM, Dean |
@@ -123,6 +124,14 @@ Roles: **Admin, Head of Security (HoS), Security Officer (SO), College Managemen
 Run `npm run db:migrate` to install the numbered migrations before starting this version. The worker starts with the API process, retries configured provider deliveries with exponential back-off, repeats unacknowledged emergency alerts every minute, and creates one missed-checkpoint notification for each completed roster/checkpoint pair. Missed checkpoints are evaluated when the rostered shift ends because the current roster model has no per-checkpoint timing window.
 
 In development, email and SMS deliveries use the console fake. In production, configure `EMAIL_API_URL` / `EMAIL_API_KEY` and `SMS_API_URL` / `SMS_API_KEY` as needed. Browser push can be delivered directly by the backend when `VAPID_PUBLIC_KEY` and its matching `VAPID_PRIVATE_KEY` are set; `VAPID_SUBJECT` should identify the college with a `mailto:` address or URL. Alternatively, configure `PUSH_API_URL` / `PUSH_API_KEY` for a gateway accepting JSON with `channel`, `to`, `title`, `message`, `type`, `link`, and browser subscription keys. The public and private VAPID keys must be a matching pair. Delivery state is visible at `GET /api/notifications/delivery-status` to Admin and Head of Security. Signed-in users can enable or disable browser push from the dashboard controls and register/remove subscriptions at `POST`/`DELETE /api/notifications/push-subscriptions`.
+
+### Patrol route workflow
+
+An Admin or Head of Security creates a route, adds checkpoints in walking order, and assigns the route to an officer for a dated shift. Campus locations need latitude and longitude for the route map preview. Each checkpoint has a unique code; use **Print QR label** in the route preview to print a sticker for that checkpoint. Checkpoint order can be adjusted with the route list controls.
+
+During an active assigned shift, the officer sees the route and completion progress. They can scan a printed QR with a supported phone browser or enter its code manually. The API accepts only the next checkpoint on that officer's active route and attaches optional device coordinates to the scan. Camera scanning requires HTTPS (or localhost) and browser support for `BarcodeDetector`; manual code entry remains available as a fallback. The route preview connects checkpoint coordinates in sequence with straight lines; it does not provide turn-by-turn walking directions or continuously track the officer.
+
+The migration `011-patrol-scan-coordinates.sql` adds optional GPS fields for checkpoint scans. The normal `npm start` command applies pending migrations before the API starts.
 
 Generate a VAPID pair once with `cd backend && npm run push:keys`, then set both printed keys and `VAPID_SUBJECT` in the backend host's environment settings. Keep the private key secret and use the same pair in production; changing keys later requires users to renew their browser subscriptions.
 

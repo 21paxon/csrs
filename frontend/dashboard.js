@@ -29,9 +29,16 @@ const state = {
   visitors: [],
   gateRecords: [],
   patrols: [],
+  patrolRoutes: [],
   auditLogs: [],
   busy: false
 };
+
+let patrolRouteMap;
+let patrolRouteLayer;
+let patrolCameraStream;
+let patrolQrDetector;
+let patrolQrTimer;
 
 const PAGE_INFO = {
   overview: ["Overview", "Campus security overview"],
@@ -383,6 +390,8 @@ function showPage(page, updateHash = true) {
     page = "overview";
   }
 
+  if (page !== "patrols") stopPatrolCamera();
+
   state.page = page;
 
   document.querySelectorAll(".page-section").forEach((section) => {
@@ -450,6 +459,9 @@ function applyRoleVisibility() {
   });
   document.querySelectorAll("[data-patrol-manager]").forEach((element) => {
     element.hidden = !canManagePatrols();
+  });
+  document.querySelectorAll("[data-patrol-officer]").forEach((element) => {
+    element.hidden = roleOf() !== "security_officer";
   });
   document.querySelectorAll("[data-emergency-responders]").forEach((element) => {
     element.hidden = !canUseSecurityOperations();
@@ -1568,6 +1580,7 @@ function fillSelect(select, rows, placeholder, labelOf, valueOf) {
 
 async function loadPatrolSetup() {
   if (!canManagePatrols()) return;
+  const selectedMapRoute = $("patrolMapRoute")?.value;
   const [routesResult, locationsResult, officersResult, rostersResult] = await Promise.all([
     api(`${PAGE_ENDPOINTS.patrols}/routes`),
     api(PAGE_ENDPOINTS.locations),
@@ -1575,14 +1588,224 @@ async function loadPatrolSetup() {
     api(`${PAGE_ENDPOINTS.patrols}/rosters`)
   ]);
   const routes = unwrap(routesResult, ["routes"]);
+  state.patrolRoutes = routes;
   const locations = unwrap(locationsResult, ["locations"]);
   const officers = unwrap(officersResult, ["officers", "users"]);
   const rosters = unwrap(rostersResult, ["rosters"]);
   fillSelect($("patrolCheckpointRoute"), routes, "Select route", (r) => r.name, (r) => r.id);
-  fillSelect($("patrolRosterRoute"), routes, "No route assigned", (r) => r.name, (r) => r.id);
+  fillSelect($("patrolRosterRoute"), routes, "Select route", (r) => r.name, (r) => r.id);
   fillSelect($("patrolCheckpointLocation"), locations, "Select location", (r) => r.name, (r) => r.id);
   fillSelect($("patrolRosterOfficer"), officers, "Select officer", (u) => u.full_name || u.username, (u) => u.id);
+  fillSelect($("patrolMapRoute"), routes, "Choose route", (r) => r.name, (r) => r.id);
+  if (routes.length && $("patrolMapRoute")) {
+    const keepSelection = routes.some((route) => String(route.id) === String(selectedMapRoute));
+    $("patrolMapRoute").value = keepSelection ? selectedMapRoute : String(routes[0].id);
+  }
   renderPatrolRosters(rosters, routes);
+  renderPatrolRouteMap(routes);
+}
+
+async function loadCurrentPatrol() {
+  const progress = $("patrolRouteProgress");
+  const list = $("patrolCheckpointProgress");
+  if (!progress || !list) return;
+  list.replaceChildren();
+  const result = await api(`${PAGE_ENDPOINTS.patrols}/current`);
+  if (!result.roster) {
+    progress.textContent = "No active duty assignment for your account right now.";
+    return;
+  }
+  if (!result.roster.route_id) {
+    progress.textContent = "Your active duty assignment has no route. Contact the Head of Security.";
+    return;
+  }
+  const checkpoints = result.checkpoints || [];
+  const completed = checkpoints.filter((checkpoint) => checkpoint.completed).length;
+  progress.textContent = `${result.roster.route_name}: ${completed} of ${checkpoints.length} checkpoints recorded.`;
+  checkpoints.forEach((checkpoint) => {
+    const item = document.createElement("li");
+    item.textContent = `${checkpoint.name} — ${checkpoint.location}${checkpoint.completed ? ` (recorded ${formatDate(checkpoint.scanned_at, true)})` : ""}`;
+    if (checkpoint.completed) item.classList.add("completed");
+    else if (result.next_checkpoint?.id === checkpoint.id) item.classList.add("next");
+    list.appendChild(item);
+  });
+  if (result.next_checkpoint) {
+    progress.textContent += ` Next: ${result.next_checkpoint.name} at ${result.next_checkpoint.location}.`;
+  } else if (checkpoints.length) {
+    progress.textContent += " Route complete.";
+  } else {
+    progress.textContent += " This route has no checkpoints.";
+  }
+}
+
+function renderPatrolRouteMap(routes) {
+  const container = $("patrolRouteMap");
+  const status = $("patrolMapStatus");
+  const routeId = $("patrolMapRoute")?.value;
+  if (!container || !status) return;
+  if (!window.L) {
+    status.textContent = "The map library is unavailable. Check your connection.";
+    return;
+  }
+  if (!patrolRouteMap) {
+    patrolRouteMap = L.map(container).setView([-1.5, 29.6], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(patrolRouteMap);
+  } else {
+    patrolRouteMap.invalidateSize();
+    if (patrolRouteLayer) patrolRouteMap.removeLayer(patrolRouteLayer);
+  }
+  const route = routes.find((item) => String(item.id) === String(routeId));
+  const checkpointList = $("patrolMapCheckpoints");
+  checkpointList?.replaceChildren();
+  if (!route) {
+    status.textContent = "Choose a route to preview its mapped checkpoints.";
+    return;
+  }
+  (route.checkpoints || []).forEach((checkpoint, index) => {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    label.textContent = `${checkpoint.seq}. ${checkpoint.name} — ${checkpoint.location}`;
+    item.appendChild(label);
+    const moveUp = makeButton("Move up", "secondary", () => reorderPatrolCheckpoint(route.id, route.checkpoints, index, -1));
+    moveUp.disabled = index === 0;
+    const moveDown = makeButton("Move down", "secondary", () => reorderPatrolCheckpoint(route.id, route.checkpoints, index, 1));
+    moveDown.disabled = index === route.checkpoints.length - 1;
+    item.append(moveUp, moveDown);
+    item.appendChild(makeButton("Print QR label", "secondary", () => printPatrolCheckpointQr(checkpoint.id)));
+    checkpointList?.appendChild(item);
+  });
+  const points = (route.checkpoints || []).filter((point) =>
+    point.lat !== null && point.lat !== "" && point.lng !== null && point.lng !== "" &&
+    Number.isFinite(Number(point.lat)) && Number.isFinite(Number(point.lng))
+  );
+  patrolRouteLayer = L.layerGroup();
+  const bounds = [];
+  const line = [];
+  points.forEach((point) => {
+    const coords = [Number(point.lat), Number(point.lng)];
+    bounds.push(coords);
+    line.push(coords);
+    L.marker(coords).bindPopup(`${point.seq}. ${point.name} — ${point.location}`).addTo(patrolRouteLayer);
+  });
+  if (line.length > 1) L.polyline(line, { color: "#285be7", weight: 4, opacity: 0.8 }).addTo(patrolRouteLayer);
+  patrolRouteLayer.addTo(patrolRouteMap);
+  if (bounds.length) patrolRouteMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 17 });
+  status.textContent = points.length
+    ? `${points.length} mapped checkpoint${points.length === 1 ? "" : "s"}. The line shows checkpoint order, not a walking navigation path.`
+    : "This route has no checkpoint coordinates. Add coordinates to its campus locations to map it.";
+}
+
+async function reorderPatrolCheckpoint(routeId, checkpoints, index, offset) {
+  const reordered = checkpoints.map((checkpoint) => checkpoint.id);
+  const target = index + offset;
+  [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+  try {
+    await api(`${PAGE_ENDPOINTS.patrols}/routes/${encodeURIComponent(routeId)}/checkpoints/order`, {
+      method: "PATCH",
+      body: JSON.stringify({ checkpoint_ids: reordered })
+    });
+    await loadPatrolSetup();
+  } catch (error) {
+    showMessage(`Unable to change route order: ${error.message}`, "error");
+  }
+}
+
+async function printPatrolCheckpointQr(checkpointId) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showMessage("Allow pop-ups to open the printable checkpoint label.", "error");
+    return;
+  }
+  printWindow.document.write("<!doctype html><html><head><title>Checkpoint QR label</title></head><body><p>Preparing checkpoint label...</p></body></html>");
+  try {
+    const label = await api(`${PAGE_ENDPOINTS.patrols}/checkpoints/${encodeURIComponent(checkpointId)}/qr`);
+    const svgDocument = new DOMParser().parseFromString(label.qr_svg, "image/svg+xml");
+    if (svgDocument.querySelector("parsererror")) throw new Error("The QR label could not be created.");
+    const doc = printWindow.document;
+    doc.open();
+    doc.write("<!doctype html><html><head><meta charset=\"utf-8\"><title>Checkpoint QR label</title><style>body{font:16px Arial,sans-serif;text-align:center;padding:28px}svg{width:280px;height:280px}.code{font-family:monospace;font-size:18px}@media print{button{display:none}}</style></head><body></body></html>");
+    doc.close();
+    const heading = doc.createElement("h1");
+    heading.textContent = "CSRS Patrol Checkpoint";
+    const name = doc.createElement("h2");
+    name.textContent = label.name;
+    const svg = doc.importNode(svgDocument.documentElement, true);
+    const code = doc.createElement("p");
+    code.className = "code";
+    code.textContent = label.code;
+    const printButton = doc.createElement("button");
+    printButton.textContent = "Print label";
+    printButton.addEventListener("click", () => printWindow.print());
+    doc.body.append(heading, name, svg, code, printButton);
+    printWindow.setTimeout(() => printWindow.print(), 300);
+  } catch (error) {
+    printWindow.close();
+    showMessage(`Unable to create checkpoint label: ${error.message}`, "error");
+  }
+}
+
+async function scanPatrolCamera() {
+  const status = $("patrolActionMessage");
+  const video = $("patrolCameraPreview");
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    status.textContent = "Camera scanning requires HTTPS or localhost. Enter the checkpoint code manually.";
+    return;
+  }
+  if (!("BarcodeDetector" in window)) {
+    status.textContent = "This browser cannot scan QR codes directly. Enter the checkpoint code manually.";
+    return;
+  }
+  try {
+    patrolQrDetector = new BarcodeDetector({ formats: ["qr_code"] });
+    patrolCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    video.srcObject = patrolCameraStream;
+    video.hidden = false;
+    $("startPatrolCamera").hidden = true;
+    $("stopPatrolCamera").hidden = false;
+    await video.play();
+    status.textContent = "Point the camera at the next checkpoint QR code.";
+    detectPatrolQr();
+  } catch (error) {
+    stopPatrolCamera();
+    status.textContent = `Unable to open the camera: ${error.message}. Enter the checkpoint code manually.`;
+  }
+}
+
+async function detectPatrolQr() {
+  const video = $("patrolCameraPreview");
+  if (!patrolCameraStream || !video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+    patrolQrTimer = window.setTimeout(detectPatrolQr, 250);
+    return;
+  }
+  try {
+    const codes = await patrolQrDetector.detect(video);
+    if (codes.length && codes[0].rawValue) {
+      $("patrolQrCode").value = codes[0].rawValue.trim();
+      $("patrolActionMessage").textContent = "QR code recognized. Recording checkpoint...";
+      stopPatrolCamera();
+      $("patrolScanForm").requestSubmit();
+      return;
+    }
+  } catch { /* Keep scanning while the camera sees an unreadable frame. */ }
+  patrolQrTimer = window.setTimeout(detectPatrolQr, 250);
+}
+
+function stopPatrolCamera() {
+  if (patrolQrTimer) window.clearTimeout(patrolQrTimer);
+  patrolQrTimer = null;
+  patrolCameraStream?.getTracks().forEach((track) => track.stop());
+  patrolCameraStream = null;
+  const video = $("patrolCameraPreview");
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.hidden = true;
+  }
+  if ($("startPatrolCamera")) $("startPatrolCamera").hidden = false;
+  if ($("stopPatrolCamera")) $("stopPatrolCamera").hidden = true;
 }
 
 function renderPatrolRosters(rosters, routes) {
@@ -1629,10 +1852,24 @@ function setupPatrolActions() {
     submit.disabled = true;
     try {
       const body = formObject(form);
+      const coords = await new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+        );
+      });
+      if (coords) {
+        body.lat = coords.lat;
+        body.lng = coords.lng;
+      }
       await api(`${PAGE_ENDPOINTS.patrols}/scan`, { method: "POST", body: JSON.stringify(body) });
       form.reset();
-      if ($("patrolActionMessage")) $("patrolActionMessage").textContent = "Checkpoint scan recorded.";
-      await loadPatrols();
+      if ($("patrolActionMessage")) $("patrolActionMessage").textContent = coords
+        ? "Checkpoint scan recorded with device location."
+        : "Checkpoint scan recorded. Device location was unavailable.";
+      await Promise.all([loadPatrols(), loadCurrentPatrol()]);
     } catch (error) {
       if ($("patrolActionMessage")) $("patrolActionMessage").textContent = `Unable to record scan: ${error.message}`;
     } finally { submit.disabled = false; }
@@ -1666,9 +1903,13 @@ function setupPatrolActions() {
       });
       form.reset();
       if ($("checkpointCreatedCode")) {
-        $("checkpointCreatedCode").textContent = `Checkpoint added. Print this QR code for the checkpoint: ${checkpoint.qr_code}`;
+        $("checkpointCreatedCode").textContent = `Checkpoint added. Use Print QR label in the route list to create its printable label. Code: ${checkpoint.qr_code}`;
       }
       await loadPatrolSetup();
+      if ($("patrolMapRoute")) {
+        $("patrolMapRoute").value = body.route_id;
+        renderPatrolRouteMap(state.patrolRoutes);
+      }
     } catch (error) { showMessage(`Unable to add checkpoint: ${error.message}`, "error"); }
     finally { submit.disabled = false; }
   });
@@ -1681,13 +1922,18 @@ function setupPatrolActions() {
     submit.disabled = true;
     try {
       const body = formObject(form);
-      if (!body.route_id) delete body.route_id;
       await api(`${PAGE_ENDPOINTS.patrols}/rosters`, { method: "POST", body: JSON.stringify(body) });
       form.reset();
       showMessage("Duty assignment saved and the officer has been notified.");
       await loadPatrolSetup();
     } catch (error) { showMessage(`Unable to assign duty: ${error.message}`, "error"); }
     finally { submit.disabled = false; }
+  });
+  on("patrolMapRoute", "change", () => renderPatrolRouteMap(state.patrolRoutes || []));
+  on("startPatrolCamera", "click", scanPatrolCamera);
+  on("stopPatrolCamera", "click", stopPatrolCamera);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopPatrolCamera();
   });
 }
 
@@ -1724,8 +1970,12 @@ function renderPatrols() {
     makeCell(row, formatDate(getValue(patrol, ["scanned_at", "start_time", "created_at"]))).dataset.label = "Start time";
 
     const actions = document.createElement("td");
-    actions.dataset.label = "Notes";
+    actions.dataset.label = "Notes and scan location";
     actions.textContent = patrol.notes || "—";
+    const scanLocation = patrol.lat != null && patrol.lng != null
+      ? `GPS ${Number(patrol.lat).toFixed(5)}, ${Number(patrol.lng).toFixed(5)}`
+      : "GPS unavailable";
+    actions.textContent += ` · ${scanLocation}`;
     row.appendChild(actions);
 
     tbody.appendChild(row);
@@ -1980,7 +2230,9 @@ async function loadPage(page) {
 
       case "patrols":
         await safeLoad("Unable to load patrols", async () => {
-          await Promise.all([loadPatrols(), loadPatrolSetup()]);
+          const tasks = [loadPatrols(), loadPatrolSetup()];
+          if (roleOf() === "security_officer") tasks.push(loadCurrentPatrol());
+          await Promise.all(tasks);
         });
         break;
 

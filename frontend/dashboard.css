@@ -1631,3 +1631,35 @@ button:disabled {
     width: 100%;
   }
 }
+/* Route preview, browser camera, and checkpoint progress elements. */
+.patrol-route-map {
+  min-height: 300px;
+  margin: 12px 0 20px;
+  border: 1px solid #dce4ed;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#patrolCameraPreview {
+  width: min(100%, 520px);
+  max-height: 360px;
+  margin: 12px 0;
+  border-radius: 12px;
+  background: #101828;
+}
+
+.patrol-checkpoint-progress {
+  display: grid;
+  gap: 8px;
+  padding-left: 28px;
+}
+
+.patrol-checkpoint-progress li.completed {
+  color: #18794e;
+  font-weight: 650;
+}
+
+.patrol-checkpoint-progress li.next {
+  color: #123b70;
+  font-weight: 750;
+}

@@ -101,7 +101,7 @@
             aria-expanded="false"
           >☰</button>
           <div>
-            <p class="eyebrow" data-i18n="campus_security_portal">CAMPUS SECURITY PORTAL FOR ALL</p>
+            <p class="eyebrow" data-i18n="campus_security_portal">CAMPUS SECURITY PORTAL</p>
             <h1 id="pageTitle" data-i18n="dashboard_overview">Overview</h1>
             <p class="breadcrumb">RP Musanze College / <span id="breadcrumbPage">Overview</span></p>
           </div>
@@ -607,11 +607,21 @@
             </div>
             <div class="button-row"><button class="button secondary" type="button" id="refreshPatrols">Refresh</button></div>
           </div>
-          <article class="panel" data-security-only>
+          <article class="panel" id="patrolCurrentRoute" data-patrol-officer hidden>
+            <h3>My active patrol route</h3>
+            <p id="patrolRouteProgress" class="profile-note" role="status" aria-live="polite">Loading your current duty assignment...</p>
+            <ol id="patrolCheckpointProgress" class="patrol-checkpoint-progress"></ol>
+          </article>
+          <article class="panel" data-patrol-officer hidden>
             <h3>Record checkpoint scan</h3>
-            <p class="profile-note">Enter the QR code printed at the checkpoint. The backend validates the code and records your account and scan time.</p>
+            <p class="profile-note">Scan the next checkpoint on your active assigned route. Use your camera or enter the code manually. If you allow location access, coordinates are attached to the scan.</p>
+            <div class="button-row">
+              <button class="button secondary" type="button" id="startPatrolCamera">Scan with camera</button>
+              <button class="button secondary" type="button" id="stopPatrolCamera" hidden>Stop camera</button>
+            </div>
+            <video id="patrolCameraPreview" playsinline muted hidden aria-label="Camera view for scanning a patrol checkpoint QR code"></video>
             <form id="patrolScanForm" class="form-grid">
-              <label>Checkpoint QR code<input name="qr_code" required maxlength="120" autocomplete="off" placeholder="CSRS-CP-..."></label>
+              <label>Checkpoint QR code<input id="patrolQrCode" name="qr_code" required maxlength="120" autocomplete="off" placeholder="CSRS-CP-..."></label>
               <label>Observation (optional)<input name="notes" maxlength="500" placeholder="Add a patrol note"></label>
               <div class="form-actions full-width"><button class="button primary" type="submit">Record scan</button></div>
             </form>
@@ -636,7 +646,7 @@
               <form id="patrolRosterForm" class="form-grid">
                 <h4 class="full-width">Assign officer duty</h4>
                 <label>Security officer<select name="officer_id" id="patrolRosterOfficer" required></select></label>
-                <label>Route (optional)<select name="route_id" id="patrolRosterRoute"><option value="">No route assigned</option></select></label>
+                <label>Patrol route<select name="route_id" id="patrolRosterRoute" required></select></label>
                 <label>Date<input name="shift_date" type="date" required></label>
                 <label>Start time<input name="shift_start_time" type="time" required></label>
                 <label>End time<input name="shift_end_time" type="time" required></label>
@@ -644,6 +654,11 @@
                 <div class="form-actions full-width"><button class="button primary" type="submit">Assign duty</button></div>
               </form>
             </div>
+            <h4>Route map preview</h4>
+            <label>Choose route<select id="patrolMapRoute"></select></label>
+            <p id="patrolMapStatus" class="profile-note" role="status" aria-live="polite">Choose a route to preview its mapped checkpoints.</p>
+            <div id="patrolRouteMap" class="patrol-route-map" role="img" aria-label="Map preview of the selected patrol route"></div>
+            <ol id="patrolMapCheckpoints" class="patrol-checkpoint-progress" aria-label="Checkpoints in route order"></ol>
             <h4>Current duty assignments</h4>
             <div class="table-scroll"><table><thead><tr><th>Officer</th><th>Route</th><th>Shift starts</th><th>Shift ends</th><th>Handover notes</th><th>Actions</th></tr></thead><tbody id="patrolRostersTable"><tr><td colspan="6" class="empty-cell">Loading duty assignments...</td></tr></tbody></table></div>
           </article>
@@ -666,7 +681,7 @@
                     <th>Checkpoint</th>
                     <th>Status</th>
                     <th>Start Time</th>
-                    <th>Notes</th>
+                    <th>Notes and scan location</th>
                   </tr>
                 </thead>
                 <tbody id="patrolsTable">
