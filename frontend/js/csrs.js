@@ -325,6 +325,53 @@
     if (year) year.textContent = String(new Date().getFullYear());
   }
 
+  function mountHelpDialog() {
+    if (document.getElementById("csrsHelpDialog")) return;
+    const dialog = document.createElement("dialog");
+    dialog.id = "csrsHelpDialog";
+    dialog.setAttribute("aria-labelledby", "csrsHelpTitle");
+    dialog.style.cssText = "width:min(1000px,94vw);max-width:none;max-height:90vh;padding:0;border:0;border-radius:14px;box-shadow:0 20px 70px #071a3380;color:var(--text,#182b43)";
+    dialog.innerHTML = '<div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#123b70;color:white"><h2 id="csrsHelpTitle" style="margin:0;font-size:1.2rem">CSRS Help Guide</h2><button type="button" aria-label="Close help guide" style="border:1px solid #ffffff80;border-radius:7px;background:transparent;color:white;padding:7px 12px;cursor:pointer">Close</button></div><div id="csrsHelpContent" style="padding:18px 22px;overflow:auto"></div>';
+    document.body.appendChild(dialog);
+    dialog.querySelector("button").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+
+    let loaded = false;
+    document.addEventListener("click", async (event) => {
+      const link = event.target.closest('a[href]');
+      if (!link) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.pathname !== "/help.html" || url.origin !== window.location.origin) return;
+      event.preventDefault();
+      if (!loaded) {
+        const response = await fetch("/help.html");
+        if (!response.ok) {
+          window.location.assign("/help.html");
+          return;
+        }
+        const doc = new DOMParser().parseFromString(await response.text(), "text/html");
+        const content = dialog.querySelector("#csrsHelpContent");
+        const styles = doc.querySelector("head style");
+        if (styles) content.appendChild(styles.cloneNode(true));
+        const main = doc.querySelector("main");
+        if (main) content.append(...Array.from(main.childNodes, (node) => node.cloneNode(true)));
+        loaded = true;
+      }
+      const role = roleOf(getUser());
+      dialog.querySelectorAll("[data-help-role]").forEach((card) => {
+        card.hidden = !card.dataset.helpRole.split(",").map((value) => value.trim()).includes(role);
+      });
+      const dashboardLink = dialog.querySelector("#helpDashboardLink");
+      if (dashboardLink && getToken()) {
+        dashboardLink.href = homePath(role);
+        dashboardLink.hidden = false;
+      }
+      dialog.showModal();
+    });
+  }
+
   function getDeviceLocation() {
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
@@ -395,5 +442,6 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     mountEmergencyFab();
+    mountHelpDialog();
   });
 })();

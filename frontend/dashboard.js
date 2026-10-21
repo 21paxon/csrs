@@ -374,6 +374,7 @@ function canOpenPage(page) {
     return false;
   }
   if (["gate", "visitors", "patrols"].includes(page) && !canUseSecurityOperations()) return false;
+  if (page === "emergency" && !canUseSecurityOperations()) return false;
 
   return Boolean(PAGE_INFO[page]);
 }
@@ -451,6 +452,9 @@ function applyRoleVisibility() {
   });
   document.querySelectorAll("[data-patrol-manager]").forEach((element) => {
     element.hidden = !canManagePatrols();
+  });
+  document.querySelectorAll("[data-emergency-responders]").forEach((element) => {
+    element.hidden = !canUseSecurityOperations();
   });
 }
 
