@@ -363,6 +363,50 @@ router.get('/:id', authenticate, wrap(async (req, res) => {
   res.json({ ...inc, evidence: evidence.rows, updates: updates.rows });
 }));
 
+// Allow a signed-in reporter to follow up on their own non-anonymous report.
+router.post('/:id/replies', authenticate, wrap(async (req, res) => {
+  const id = toInt(req.params.id);
+  if (!id || id < 1) throw new HttpError(400, 'Invalid incident id');
+
+  const message = String(req.body?.message || '').trim();
+  if (!message || message.length > 2000) {
+    throw new HttpError(400, 'Enter a message of up to 2000 characters');
+  }
+
+  const inc = await getIncident(id);
+  if (inc.reporter_id !== req.user.id || inc.is_anonymous) {
+    throw new HttpError(403, 'You can only follow up on your own signed-in reports');
+  }
+
+  await db.query(
+    `INSERT INTO incident_updates (incident_id, user_id, note, is_public)
+     VALUES ($1, $2, $3, TRUE)`,
+    [id, req.user.id, message]
+  );
+
+  await notifyRoles(
+    [ROLES.HEAD_OF_SECURITY],
+    'Reporter follow-up',
+    `${inc.reference_no} has a new message from its reporter.`
+  );
+  if (inc.assigned_to) {
+    await notify(
+      [inc.assigned_to],
+      'Reporter follow-up',
+      `${inc.reference_no} has a new message from its reporter.`
+    );
+  }
+
+  await audit(req, {
+    userId: req.user.id,
+    action: 'ADD INCIDENT FOLLOW-UP',
+    targetTable: 'incidents',
+    recordId: id
+  });
+
+  res.status(201).json({ message: 'Follow-up sent' });
+}));
+
 // Update incident status or add a note.
 router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER), wrap(async (req, res) => {
   const id = toInt(req.params.id);
