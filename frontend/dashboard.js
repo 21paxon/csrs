@@ -38,7 +38,7 @@ const PAGE_INFO = {
   users: ["User Management", "Review registration requests and manage accounts"],
   incidents: ["Incident Management", "Report and track security incidents"],
   "lost-found": ["Lost and Found", "Manage lost property and found items"],
-  emergency: ["Emergency Alerts", "Monitor emergency reports"],
+  emergency: ["Emergency Centre", "Request help or monitor alerts, depending on your role"],
   gate: ["Gate Management", "Review campus access records"],
   visitors: ["Visitor Management", "Manage campus visitors"],
   patrols: ["Security Patrols", "Monitor patrol activities"],
@@ -53,7 +53,7 @@ const PAGE_I18N = {
   users: ["dashboard_users", "dashboard_users_description"],
   incidents: ["dashboard_incidents", "dashboard_incidents_description"],
   "lost-found": ["dashboard_lost_found", "dashboard_lost_found_description"],
-  emergency: ["dashboard_emergency", "dashboard_emergency_description"],
+  emergency: [],
   gate: ["dashboard_gate", "dashboard_gate_description"],
   visitors: ["dashboard_visitors", "dashboard_visitors_description"],
   patrols: ["dashboard_patrols", "dashboard_patrols_description"],
@@ -374,8 +374,6 @@ function canOpenPage(page) {
     return false;
   }
   if (["gate", "visitors", "patrols"].includes(page) && !canUseSecurityOperations()) return false;
-  if (page === "emergency" && !canUseSecurityOperations()) return false;
-
   return Boolean(PAGE_INFO[page]);
 }
 
@@ -1264,6 +1262,51 @@ async function submitLostFound(event) {
    EMERGENCY ALERTS
    ========================================================= */
 
+async function submitDashboardEmergency(event) {
+  event.preventDefault();
+  const message = $("dashboardEmergencyMessage").value.trim();
+  const status = $("dashboardEmergencyMessageStatus");
+  const button = $("dashboardEmergencySubmit");
+  if (!message) {
+    status.textContent = "Enter the emergency details.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Sending...";
+  status.textContent = "Sending emergency alert...";
+  const payload = { message };
+  try {
+    const coords = await new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    });
+    if (coords) {
+      payload.latitude = coords.latitude;
+      payload.longitude = coords.longitude;
+    }
+    const alert = await api(PAGE_ENDPOINTS.emergency, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    $("dashboardEmergencyForm").reset();
+    $("dashboardEmergencyLocation").textContent = coords
+      ? "Your location was attached to the alert."
+      : "Location was unavailable; the alert was sent without it.";
+    status.textContent = `Emergency alert #${alert.id} sent to campus security.`;
+    if (canUseSecurityOperations()) await loadEmergency();
+  } catch (error) {
+    status.textContent = `Unable to send emergency alert: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Send emergency alert";
+  }
+}
+
 async function loadEmergency() {
   const result = await api(PAGE_ENDPOINTS.emergency);
   state.emergencies = unwrap(result, ["alerts", "emergencies"]);
@@ -1920,7 +1963,9 @@ async function loadPage(page) {
         break;
 
       case "emergency":
-        await safeLoad("Unable to load alerts", loadEmergency);
+        if (canUseSecurityOperations()) {
+          await safeLoad("Unable to load alerts", loadEmergency);
+        }
         break;
 
       case "gate":
@@ -2174,6 +2219,7 @@ function setupLostFound() {
 }
 
 function setupOtherPages() {
+  on("dashboardEmergencyForm", "submit", submitDashboardEmergency);
   on("refreshEmergency", "click", () =>
     safeLoad("Unable to refresh alerts", loadEmergency)
   );

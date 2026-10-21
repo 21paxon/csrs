@@ -44,11 +44,8 @@
         <a href="#lost-found" class="nav-link" data-page="lost-found" data-i18n="dashboard_lost_found">
           <span>◇</span> Lost and Found
         </a>
-        <a href="#emergency" class="nav-link" data-page="emergency" data-emergency-responders data-i18n="dashboard_emergency">
-          <span>!</span> Emergency Alerts
-        </a>
-        <a href="/emergency.html" class="nav-link" data-emergency-request>
-          <span aria-hidden="true">!</span> Request Emergency Help
+        <a href="#emergency" class="nav-link" data-page="emergency">
+          <span>!</span> Emergency Centre
         </a>
         <a href="#gate" class="nav-link" data-page="gate" data-security-only>
           <span>↔</span> Gate Management
@@ -459,12 +456,23 @@
         <section class="page-section" id="page-emergency" hidden>
           <div class="page-heading">
             <div>
-              <h2>Emergency Alerts</h2>
-              <p class="page-description">Monitor emergencies and track response status.</p>
+              <h2>Emergency Centre</h2>
+              <p class="page-description">Request urgent assistance from campus security.</p>
             </div>
-            <button class="button secondary" type="button" id="refreshEmergency">Refresh</button>
+            <button class="button secondary" type="button" id="refreshEmergency" data-emergency-responders>Refresh alerts</button>
           </div>
           <article class="panel">
+            <h3>Request emergency assistance</h3>
+            <p class="profile-note">Describe the emergency. Your request will be sent to the security response team. Location is optional.</p>
+            <form id="dashboardEmergencyForm" class="form-grid">
+              <label class="full-width">Emergency details<textarea id="dashboardEmergencyMessage" maxlength="1000" required placeholder="Briefly describe the emergency and where help is needed."></textarea></label>
+              <p class="profile-note full-width" id="dashboardEmergencyLocation">Your device may ask to share your location when you send the alert.</p>
+              <div class="form-actions full-width"><button class="button danger" type="submit" id="dashboardEmergencySubmit">Send emergency alert</button></div>
+              <p class="profile-note full-width" id="dashboardEmergencyMessageStatus" role="status" aria-live="polite"></p>
+            </form>
+          </article>
+          <article class="panel" data-emergency-responders>
+            <h3>Monitor emergency alerts</h3>
             <div class="table-toolbar">
               <input id="emergencySearch" type="search" placeholder="Search alerts..." aria-label="Search emergency alerts">
               <select id="emergencyStatusFilter" aria-label="Filter emergency alerts">
