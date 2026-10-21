@@ -1,3 +1,4 @@
+// Purpose: Backend setup for db services.
 const { Pool } = require('pg');
 const config = require('./config');
 

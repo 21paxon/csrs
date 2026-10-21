@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the forgot password workflow.
 const forgotForm = document.getElementById('forgotPasswordForm');
 forgotForm.addEventListener('submit', async (event) => {
   event.preventDefault();

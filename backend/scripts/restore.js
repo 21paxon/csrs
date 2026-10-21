@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for restore tasks.
 require('dotenv').config();
 const fs = require('fs/promises');
 const path = require('path');

@@ -1,3 +1,4 @@
+-- Purpose: Database migration that updates the schema for 009 mfa and settings features.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS totp_secret TEXT,
   ADD COLUMN IF NOT EXISTS totp_pending_secret TEXT,

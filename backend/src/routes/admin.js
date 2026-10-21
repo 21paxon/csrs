@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for admin operations.
 
 const express = require('express');
 

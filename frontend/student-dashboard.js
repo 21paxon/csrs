@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the student dashboard workflow.
 (() => {
   "use strict";
 

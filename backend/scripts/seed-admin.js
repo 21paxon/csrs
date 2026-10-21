@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for seed admin tasks.
 
 require('dotenv').config();
 const bcrypt = require('bcryptjs');

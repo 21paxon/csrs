@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the incidents workflow.
 const C = window.CSRS;
 const { $, getToken, getUser, roleOf, api, mountShell, formatDate, addCell, statusCell, emptyRow,
   showMessage, setLoading } = C;

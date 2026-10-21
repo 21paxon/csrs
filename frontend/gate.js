@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the gate workflow.
 const C = window.CSRS;
 const { $, requireAuth, canGate, roleOf, api, mountShell, formatDate,
   showMessage, setLoading, addCell, emptyRow } = C;

@@ -1,3 +1,4 @@
+// Purpose: Request middleware for auth handling.
 
 const jwt = require('jsonwebtoken');
 const config = require('../config');

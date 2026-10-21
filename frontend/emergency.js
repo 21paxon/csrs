@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the emergency workflow.
 const C = window.CSRS;
 let previousAlertIds = null;
 const { $, requireAuth, roleOf, canSecurityOps, api, mountShell, formatDate,

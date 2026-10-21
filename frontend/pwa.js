@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the pwa workflow.
 (() => {
   const canInstallWorker = 'serviceWorker' in navigator &&
     (location.protocol === 'https:' || location.hostname === 'localhost');

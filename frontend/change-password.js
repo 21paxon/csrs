@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the change password workflow.
 const { requireAuth, getUser, roleOf, postLoginPath, apiUrl, setSession } = window.CSRS;
 
 if (requireAuth()) {

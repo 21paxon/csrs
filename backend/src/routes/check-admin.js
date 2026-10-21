@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for check admin operations.
 
 require('dotenv').config();
 const db = require('../src/db');

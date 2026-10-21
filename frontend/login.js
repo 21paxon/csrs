@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the login workflow.
 const loginForm = document.getElementById("login");
 const usernameInput = document.getElementById("u");
 const passwordInput = document.getElementById("p");

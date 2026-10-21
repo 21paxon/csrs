@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the register workflow.
 
 
 const yearEl = document.getElementById("year");

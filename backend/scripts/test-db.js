@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for test db tasks.
 
 const db = require('../src/db');
 

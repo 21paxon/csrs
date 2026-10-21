@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for generate vapid keys tasks.
 const webpush = require('web-push');
 
 const keys = webpush.generateVAPIDKeys();

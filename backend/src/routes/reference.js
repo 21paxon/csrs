@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for reference operations.
 
 const express = require('express');
 const db = require('../db');

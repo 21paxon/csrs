@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the service worker workflow.
 const CACHE_NAME = 'csrs-shell-v6';
 const SHELL = [
   '/home.html', '/incidents.html', '/emergency.html', '/help.html', '/forgot-password.html', '/reset-password.html',

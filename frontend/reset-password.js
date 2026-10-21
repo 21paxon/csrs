@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the reset password workflow.
 const resetForm = document.getElementById('resetPasswordForm');
 resetForm.addEventListener('submit', async (event) => {
   event.preventDefault();

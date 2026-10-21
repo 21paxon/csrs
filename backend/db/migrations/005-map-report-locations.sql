@@ -1,3 +1,4 @@
+-- Purpose: Database migration that updates the schema for 005 map report locations features.
 ALTER TABLE incidents ALTER COLUMN location_id DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_incidents_reference ON incidents(reference_no);

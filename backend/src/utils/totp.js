@@ -1,3 +1,4 @@
+// Purpose: Shared totp helpers used by backend features.
 const crypto = require('crypto');
 const config = require('../config');
 

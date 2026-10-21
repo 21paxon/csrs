@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for users operations.
 
 const express = require('express');
 const bcrypt = require('bcryptjs');

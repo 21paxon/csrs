@@ -1,3 +1,4 @@
+-- Purpose: Database migration that updates the schema for 006 emergency contacts features.
 CREATE TABLE IF NOT EXISTS emergency_contacts (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,

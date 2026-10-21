@@ -1,3 +1,4 @@
+// Purpose: Background processing for background worker and scheduled system work.
 const db = require('../db');
 const crypto = require('crypto');
 const webpush = require('web-push');

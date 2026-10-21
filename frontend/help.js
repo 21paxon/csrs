@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the help workflow.
 (() => {
   const CSRS = window.CSRS;
   if (!CSRS) return;

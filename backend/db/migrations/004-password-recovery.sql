@@ -1,3 +1,4 @@
+-- Purpose: Database migration that updates the schema for 004 password recovery features.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 0;
 

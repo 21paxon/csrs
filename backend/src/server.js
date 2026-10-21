@@ -1,3 +1,4 @@
+// Purpose: Backend setup for server services.
 
 const config = require('./config');
 const app = require('./app');

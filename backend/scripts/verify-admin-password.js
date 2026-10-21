@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for verify admin password tasks.
 
 require('dotenv').config();
 const bcrypt = require('bcryptjs');

@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the home workflow.
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {

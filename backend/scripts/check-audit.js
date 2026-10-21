@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for check audit tasks.
 
 require('dotenv').config();
 const db = require('../src/db');

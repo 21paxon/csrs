@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Page metadata controls encoding, mobile sizing, browser theme, and the tab title. -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#123b70">
   <title>Emergency Centre | CSRS</title>
+  <!-- Shared styles keep this page consistent with the rest of CSRS. -->
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/theme.css">
 </head>
 <body>
+  <!-- College branding and signed-in user information are shown in the page header. -->
   <header class="app-top">
     <div class="app-top-inner">
       <a class="brand" href="/home.html">
@@ -27,16 +30,21 @@
     </div>
   </header>
 
+  <!-- csrs.js fills this navigation based on the signed-in user's role. -->
   <nav id="appNav" class="app-nav" aria-label="Main navigation"></nav>
 
+  <!-- Main emergency tools: contact numbers and the form to send a new alert. -->
   <main class="app-main">
+    <!-- emergency.js loads the configured contact numbers into this list. -->
     <section class="panel" aria-labelledby="contactHeading">
       <h2 id="contactHeading">Emergency contacts</h2>
       <ul id="emergencyContacts"><li>Loading contact numbers…</li></ul>
     </section>
+    <!-- Any signed-in user can submit an alert; JavaScript adds location if available. -->
     <section class="panel">
       <h2 data-i18n="emergency_request">Request emergency assistance</h2>
       <p class="muted" data-i18n="emergency_intro">This notifies the security response team. If you allow location access, your coordinates are attached automatically.</p>
+      <!-- The IDs connect this form to the submit handler and its status messages. -->
       <form id="alertForm">
         <label for="alertMessage" data-i18n="emergency_details">Emergency details</label>
         <textarea id="alertMessage" maxlength="1000" required placeholder="Briefly describe the emergency and where help is needed."></textarea>
@@ -46,8 +54,10 @@
       </form>
     </section>
 
+    <!-- Responders see this panel for monitoring alerts and updating their status. -->
     <section class="panel hidden" id="responderSection">
       <h2>Emergency alert management</h2>
+      <!-- Controls for filtering, refreshing, and enabling browser notifications. -->
       <div class="toolbar">
         <div>
           <label for="statusFilter">Filter by status</label>
@@ -63,6 +73,7 @@
         <button type="button" id="enableDesktopAlerts" class="secondary">Enable desktop alerts</button>
       </div>
       <div id="listMessage" class="message" role="status"></div>
+      <!-- Alert rows and responder actions are inserted here by emergency.js. -->
       <div class="table-wrap">
         <table>
           <thead>
@@ -82,9 +93,11 @@
     </section>
   </main>
 
+  <!-- Load configuration and shared helpers before the page-specific emergency logic. -->
   <script src="/config.js"></script>
   <script src="/js/csrs.js"></script>
   <script src="/emergency.js"></script>
+  <!-- Register the app as a PWA after the page has loaded. -->
   <script src="/pwa.js" defer></script>
 </body>
 </html>

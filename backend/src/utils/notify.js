@@ -1,3 +1,4 @@
+// Purpose: Shared notify helpers used by backend features.
 const db = require('../db');
 const crypto = require('crypto');
 const config = require('../config');

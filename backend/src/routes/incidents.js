@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for incidents operations.
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');

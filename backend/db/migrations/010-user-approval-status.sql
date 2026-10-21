@@ -1,3 +1,4 @@
+-- Purpose: Database migration that updates the schema for 010 user approval status features.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'approved';
 

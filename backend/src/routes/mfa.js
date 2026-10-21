@@ -1,3 +1,4 @@
+// Purpose: API routes and access rules for mfa operations.
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');

@@ -1,3 +1,4 @@
+// Purpose: Browser-side behavior for the admin users workflow.
 
 (() => {
   "use strict";

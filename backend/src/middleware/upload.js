@@ -1,3 +1,4 @@
+// Purpose: Request middleware for upload handling.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');

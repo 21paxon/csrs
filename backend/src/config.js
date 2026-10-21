@@ -1,3 +1,4 @@
+// Purpose: Backend setup for config services.
 require('dotenv').config();
 
 const required = ['DATABASE_URL', 'JWT_SECRET'];

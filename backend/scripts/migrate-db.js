@@ -1,3 +1,4 @@
+// Purpose: Developer or deployment utility for migrate db tasks.
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
