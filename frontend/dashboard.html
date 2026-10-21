@@ -62,6 +62,9 @@
       <p class="nav-label account-heading" data-i18n="management">MANAGEMENT</p>
 
       <nav class="navigation" aria-label="Management navigation">
+        <a href="#announcements" class="nav-link" data-page="announcements" data-announcement-managers hidden>
+          <span aria-hidden="true">&#128226;</span> Safety Announcements
+        </a>
         <a href="#reports" class="nav-link" data-page="reports" data-i18n="dashboard_reports">
           <span>▤</span> Reports
         </a>
@@ -689,6 +692,35 @@
                 </tbody>
               </table>
             </div>
+          </article>
+        </section>
+
+        <!-- ANNOUNCEMENTS -->
+        <section class="page-section" id="page-announcements" data-announcement-managers hidden>
+          <div class="page-heading">
+            <div>
+              <h2>Safety Announcements</h2>
+              <p class="page-description">Send a campus safety update to students, staff, or both.</p>
+            </div>
+          </div>
+          <article class="panel">
+            <form id="announcementForm" class="form-grid">
+              <label class="full-width">Title
+                <input id="announcementTitle" name="title" maxlength="160" required>
+              </label>
+              <label class="full-width">Message
+                <textarea id="announcementMessage" name="message" rows="5" maxlength="5000" required></textarea>
+              </label>
+              <fieldset class="full-width">
+                <legend>Send to</legend>
+                <label><input type="checkbox" name="announcementAudience" value="student" checked> Students</label>
+                <label><input type="checkbox" name="announcementAudience" value="staff" checked> Staff</label>
+              </fieldset>
+              <div class="full-width button-row">
+                <button class="button primary" id="sendAnnouncementButton" type="submit">Send announcement</button>
+              </div>
+            </form>
+            <p id="announcementResult" class="profile-note" role="status" aria-live="polite"></p>
           </article>
         </section>
 

@@ -49,6 +49,7 @@ const PAGE_INFO = {
   gate: ["Gate Management", "Review campus access records"],
   visitors: ["Visitor Management", "Manage campus visitors"],
   patrols: ["Security Patrols", "Monitor patrol activities"],
+  announcements: ["Safety Announcements", "Send campus safety updates to students and staff"],
   reports: ["Reports", "Review security activity"],
   "audit-logs": ["Audit Logs", "Review administrative activity"],
   settings: ["System Settings", "Manage college contact details and account registration"],
@@ -130,6 +131,11 @@ function canUseSecurityOperations() {
 }
 
 function canManagePatrols() {
+  return ["admin", "administrator", "super_admin", "superadmin", "head_security"]
+    .includes(roleOf());
+}
+
+function canManageAnnouncements() {
   return ["admin", "administrator", "super_admin", "superadmin", "head_security"]
     .includes(roleOf());
 }
@@ -377,6 +383,7 @@ function filtered(items, query, fields, status = "", statusFields = []) {
    ========================================================= */
 
 function canOpenPage(page) {
+  if (page === "announcements" && !canManageAnnouncements()) return false;
   if (["users", "audit-logs", "settings"].includes(page) && !isAdmin()) {
     return false;
   }
@@ -465,6 +472,9 @@ function applyRoleVisibility() {
   });
   document.querySelectorAll("[data-emergency-responders]").forEach((element) => {
     element.hidden = !canUseSecurityOperations();
+  });
+  document.querySelectorAll("[data-announcement-managers]").forEach((element) => {
+    element.hidden = !canManageAnnouncements();
   });
 }
 
@@ -2255,6 +2265,46 @@ async function loadPage(page) {
   }
 }
 
+async function sendSafetyAnnouncement(event) {
+  event.preventDefault();
+  const form = $("announcementForm");
+  const result = $("announcementResult");
+  const button = $("sendAnnouncementButton");
+  if (!form || !result || !button || !canManageAnnouncements()) return;
+
+  const roles = Array.from(document.querySelectorAll('input[name="announcementAudience"]:checked'))
+    .map((input) => input.value);
+  if (!roles.length) {
+    result.textContent = "Select students, staff, or both as the audience.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Sending...";
+  result.textContent = "Sending announcement...";
+
+  try {
+    await api("/api/notifications/announcements", {
+      method: "POST",
+      body: JSON.stringify({
+        title: $("announcementTitle").value.trim(),
+        message: $("announcementMessage").value.trim(),
+        roles
+      })
+    });
+    result.textContent = `Announcement sent to ${roles.map((role) => role === "student" ? "students" : "staff").join(" and ")}.`;
+    form.reset();
+    document.querySelectorAll('input[name="announcementAudience"]').forEach((input) => {
+      input.checked = true;
+    });
+  } catch (error) {
+    result.textContent = `Unable to send announcement: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Send announcement";
+  }
+}
+
 /* =========================================================
    EVENT HANDLERS
    ========================================================= */
@@ -2471,6 +2521,7 @@ function setupLostFound() {
 }
 
 function setupOtherPages() {
+  on("announcementForm", "submit", sendSafetyAnnouncement);
   on("dashboardEmergencyForm", "submit", submitDashboardEmergency);
   on("refreshEmergency", "click", () =>
     safeLoad("Unable to refresh alerts", loadEmergency)

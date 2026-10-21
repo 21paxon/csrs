@@ -129,13 +129,22 @@ router.post(
   '/announcements',
   requireRole(ROLES.ADMIN, ROLES.HEAD_OF_SECURITY),
   wrap(async (req, res) => {
-    const { title, message } = req.body || {};
-    const roles = Array.isArray(req.body?.roles) && req.body.roles.length
-      ? req.body.roles
-      : Object.values(ROLES);
+    const title = String(req.body?.title || '').trim();
+    const message = String(req.body?.message || '').trim();
+    const allowedAudienceRoles = [ROLES.STUDENT, ROLES.STAFF];
+    const submittedRoles = req.body?.roles;
+    const roles = submittedRoles == null
+      ? allowedAudienceRoles
+      : Array.isArray(submittedRoles)
+        ? [...new Set(submittedRoles.map((role) => String(role).trim()))]
+        : [];
 
-    if (!title || !message) {
-      throw new HttpError(400, 'title and message are required');
+    if (!title || title.length > 160 || !message || message.length > 5000) {
+      throw new HttpError(400, 'Enter a title (up to 160 characters) and message (up to 5000 characters)');
+    }
+
+    if (!roles.length || roles.some((role) => !allowedAudienceRoles.includes(role))) {
+      throw new HttpError(400, 'Choose students, staff, or both as the announcement audience');
     }
 
     await notifyRoles(roles, `Announcement: ${title}`, message, 'announcement');
