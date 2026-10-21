@@ -300,6 +300,23 @@
           </button>
           <p class="subtitle" id="emergencyResult" role="status" style="margin:14px 0 0"></p>
         </article>
+
+        <article class="panel" style="margin-top:18px">
+          <div class="frame-header" style="padding:0 0 14px;margin-bottom:14px">
+            <div>
+              <h3>My emergency requests</h3>
+              <p class="subtitle" style="margin:4px 0 0">Check whether campus security has received, is handling, or has resolved your request.</p>
+            </div>
+            <button class="button secondary" id="refreshMyEmergencies" type="button">Refresh status</button>
+          </div>
+          <p class="subtitle" id="myEmergencyMessage" role="status" aria-live="polite">Loading your emergency requests...</p>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th scope="col">Request</th><th scope="col">Details</th><th scope="col">Location</th><th scope="col">Status</th><th scope="col">Last update</th></tr></thead>
+              <tbody id="myEmergencyRows"><tr><td colspan="5" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </article>
       </section>
 
       <!-- LOST & FOUND -->

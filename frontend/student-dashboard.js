@@ -692,6 +692,7 @@
         " Please follow campus security instructions.";
 
       messageField.value = "";
+      loadMyEmergencyAlerts();
     } catch (error) {
       result.textContent = error.message || "Unable to send the emergency alert.";
     } finally {
@@ -700,6 +701,62 @@
   }
 
   $("emergencyButton")?.addEventListener("click", submitEmergencyAlert);
+
+  // Load only the signed-in user's emergency requests and response status.
+  function emergencyStatusDescription(status) {
+    return ({
+      Triggered: "Sent — waiting for campus security to respond.",
+      Acknowledged: "Security has received your request and is responding.",
+      Arrived: "Security has arrived at the reported location.",
+      Resolved: "Resolved — the response has been completed."
+    })[status] || status || "Status unavailable";
+  }
+
+  async function loadMyEmergencyAlerts() {
+    const body = $("myEmergencyRows");
+    const message = $("myEmergencyMessage");
+    if (!body || !message) return;
+
+    message.textContent = "Loading your emergency requests...";
+    body.innerHTML = '<tr><td colspan="5" class="empty-cell">Loading...</td></tr>';
+
+    try {
+      const alerts = safeArray(await api("/api/emergency/mine")) || [];
+      if (!alerts.length) {
+        message.textContent = "Your emergency requests and their response updates will appear here.";
+        body.innerHTML = '<tr><td colspan="5" class="empty-cell">You have not sent an emergency alert.</td></tr>';
+        return;
+      }
+
+      message.textContent = "Status updates are provided by campus security.";
+      body.replaceChildren(...alerts.map((alert) => {
+        const row = document.createElement("tr");
+        const details = alert.message || "Emergency assistance requested";
+        const location = alert.lat != null && alert.lng != null
+          ? `${Number(alert.lat).toFixed(5)}, ${Number(alert.lng).toFixed(5)}`
+          : "Location not available";
+        const updatedAt = alert.resolved_at || alert.arrived_at || alert.acknowledged_at || alert.triggered_at;
+        const cells = [
+          `Alert #${alert.id}`,
+          details,
+          location,
+          emergencyStatusDescription(alert.status),
+          updatedAt ? new Date(updatedAt).toLocaleString() : "—"
+        ];
+        for (const value of cells) {
+          const cell = document.createElement("td");
+          cell.textContent = value;
+          row.appendChild(cell);
+        }
+        return row;
+      }));
+    } catch (error) {
+      message.textContent = error.message || "Unable to load your emergency status.";
+      body.innerHTML = '<tr><td colspan="5" class="empty-cell">Status could not be loaded.</td></tr>';
+    }
+  }
+
+  $("refreshMyEmergencies")?.addEventListener("click", loadMyEmergencyAlerts);
 
   // --------------------------------------------------
   // 9. START
@@ -710,5 +767,6 @@
   loadIncidentOptions();
   showView(location.hash.slice(1) || "overview");
   loadPortal();
+  loadMyEmergencyAlerts();
   loadProfile();
 })();

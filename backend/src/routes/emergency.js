@@ -99,6 +99,26 @@ router.post(
 
 // GET /api/emergency
 // Only authorized responders can list alerts.
+// GET /api/emergency/mine
+// Authenticated users can view status updates for their own alerts only.
+router.get(
+  '/mine',
+  authenticate,
+  wrap(async (req, res) => {
+    const { rows } = await db.query(
+      `SELECT id, lat, lng, message, status, triggered_at,
+              acknowledged_at, arrived_at, resolved_at
+         FROM emergency_alerts
+        WHERE user_id = $1
+        ORDER BY triggered_at DESC
+        LIMIT 50`,
+      [req.user.id]
+    );
+
+    res.json(rows);
+  })
+);
+
 router.get(
   '/',
   authenticate,
