@@ -795,7 +795,7 @@ function populateSelect(id, items, idFields, nameFields, placeholder) {
 
 async function loadIncidents() {
   const isOfficer = roleOf() === "security_officer";
-  const query = isOfficer ? `?assigned_to=${encodeURIComponent(state.user?.id || state.user?.user_id || "")}` : "";
+  const query = isOfficer ? `?assigned_to=${encodeURIComponent(state.user?.id || state.user?.user_id || "")}&limit=200` : "";
   const result = await api(`${PAGE_ENDPOINTS.incidents}${query}`);
   state.incidents = unwrap(result, ["incidents"]);
 
@@ -881,6 +881,8 @@ async function openAssignedIncident(incident) {
       statusSelect.appendChild(option);
     });
     statusSelect.disabled = options.length === 0;
+    $("assignedIncidentNote").disabled = options.length === 0;
+    $("saveAssignedIncidentUpdate").disabled = options.length === 0;
     $("assignedIncidentNote").value = "";
     $("assignedIncidentResolution").value = current.resolution_summary || "";
     $("resolutionSummaryField").hidden = true;
