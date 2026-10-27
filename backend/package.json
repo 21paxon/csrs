@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "prestart": "npm run db:migrate",
     "dev": "node --watch src/server.js",
+    "predev": "npm run db:migrate",
     "db:init": "node scripts/init-db.js",
     "db:migrate": "node scripts/migrate-db.js",
     "db:backup": "node scripts/backup.js",
