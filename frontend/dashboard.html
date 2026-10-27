@@ -65,7 +65,7 @@
         <a href="#announcements" class="nav-link" data-page="announcements" data-announcement-managers hidden>
           <span aria-hidden="true">&#128226;</span> Safety Announcements
         </a>
-        <a href="#reports" class="nav-link" data-page="reports" data-i18n="dashboard_reports">
+        <a href="#reports" class="nav-link" data-page="reports" data-report-access data-i18n="dashboard_reports">
           <span>▤</span> Reports
         </a>
         <a href="/help.html" class="nav-link"><span aria-hidden="true">?</span> Help guide</a>
@@ -500,7 +500,7 @@
             <ol id="assignedIncidentHistory" class="incident-history"></ol>
             <form id="assignedIncidentUpdateForm" class="form-grid">
               <label>Status
-                <select id="assignedIncidentStatus" required></select>
+                <select id="assignedIncidentStatus"></select>
               </label>
               <label id="resolutionSummaryField" class="full-width" hidden>Resolution summary
                 <textarea id="assignedIncidentResolution" rows="3" maxlength="5000"></textarea>
@@ -634,11 +634,12 @@
                     <th>Priority</th>
                     <th>Status</th>
                     <th>Time</th>
+                    <th>Response milestones</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="emergencyTable">
-                  <tr><td colspan="6" class="empty-cell">Emergency alerts will appear here.</td></tr>
+                  <tr><td colspan="7" class="empty-cell">Emergency alerts will appear here.</td></tr>
                 </tbody>
               </table>
             </div>

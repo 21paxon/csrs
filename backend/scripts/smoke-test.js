@@ -52,6 +52,7 @@ async function login(username, password) {
   }
   check('student cannot list users', (await call('GET', '/api/users', { token: tokens.student })).status === 403);
   check('Head of Security cannot administer users', (await call('GET', '/api/users', { token: tokens.head })).status === 403);
+  check('Head of Security cannot create accounts', (await call('POST', '/api/users', { token: tokens.head, body: { username: `blocked_${sfx}`, password: pw, role: 'Admin' } })).status === 403);
   check('Head of Security cannot view database backups', (await call('GET', '/api/admin/backups/status', { token: tokens.head })).status === 403);
 
   console.log('\nIncidents');
@@ -81,7 +82,10 @@ async function login(username, password) {
   check('assigned officer sees assigned incident', (await call('GET', `/api/incidents?assigned_to=${ids.officer}`, { token: tokens.officer })).data.some((incident) => incident.id === named.data.id));
   check('head reassigns incident', (await call('POST', `/api/incidents/${named.data.id}/assign`, { token: tokens.head, body: { officer_id: ids.officer2 } })).status === 201);
   check('previously assigned officer loses access after reassignment', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.officer, body: { notes: 'Should no longer be allowed' } })).status === 403);
+  check('previously assigned officer cannot open incident details', (await call('GET', `/api/incidents/${named.data.id}`, { token: tokens.officer })).status === 403);
+  check('previously assigned officer no longer sees incident in assigned filter', !(await call('GET', `/api/incidents?assigned_to=${ids.officer}`, { token: tokens.officer })).data.some((incident) => incident.id === named.data.id));
   check('newly assigned officer can add progress notes', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.officer2, body: { notes: 'Started the investigation.' } })).status === 200);
+  check('Security Officer cannot hide progress notes from the reporter', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.officer2, body: { notes: 'Internal text', internal: true } })).status === 403);
   check('resolution requires a summary', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.officer2, body: { status: 'Resolved', notes: 'Laptop recovered' } })).status === 400);
   check('assigned officer resolves with summary', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.officer2, body: { status: 'Resolved', notes: 'Laptop recovered', resolution_summary: 'Laptop recovered and returned to its owner.' } })).status === 200);
   check('HoS approves resolved incident closure', (await call('PATCH', `/api/incidents/${named.data.id}`, { token: tokens.head, body: { status: 'Closed' } })).status === 200);
@@ -137,6 +141,7 @@ async function login(username, password) {
   check('audit log recorded the assignment', auditRes.status === 200 && auditRes.data.length >= 1, auditRes.data);
   check('Head of Security can read audit logs', (await call('GET', '/api/audit-logs', { token: tokens.head })).status === 200);
   check('audit records cannot be changed through the API', (await call('POST', '/api/audit-logs', { token: tokens.head, body: { action: 'EDIT' } })).status === 404);
+  check('Head of Security can view notification delivery state', (await call('GET', '/api/notifications/delivery-status', { token: tokens.head })).status === 200);
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

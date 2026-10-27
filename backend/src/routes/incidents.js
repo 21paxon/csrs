@@ -425,6 +425,15 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
   if (status && !INCIDENT_STATUSES.includes(status)) {
     throw new HttpError(400, `status must be one of: ${INCIDENT_STATUSES.join(', ')}`);
   }
+  if (toBool(internal) && !MANAGE.includes(req.user.role)) {
+    throw new HttpError(403, 'Only the Head of Security or Admin can add internal notes');
+  }
+  if (notes != null && String(notes).length > 2000) {
+    throw new HttpError(400, 'notes must be 2000 characters or fewer');
+  }
+  if (resolution_summary != null && String(resolution_summary).length > 5000) {
+    throw new HttpError(400, 'resolution_summary must be 5000 characters or fewer');
+  }
 
   const newStatus = status || inc.status;
   if (status && status !== inc.status && !INCIDENT_TRANSITIONS[inc.status]?.includes(status)) {
@@ -485,7 +494,14 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
     userId: req.user.id,
     action: 'UPDATE INCIDENT STATUS',
     targetTable: 'incidents',
-    recordId: id
+    recordId: id,
+    details: {
+      old_status: inc.status,
+      new_status: newStatus,
+      note_added: Boolean(String(notes || '').trim()),
+      internal_note: toBool(internal),
+      resolution_summary_present: Boolean(String(resolution || '').trim())
+    }
   });
 
   res.json({ id, reference_no: inc.reference_no, status: newStatus });

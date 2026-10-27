@@ -16,7 +16,7 @@ async function audit(req, {
     await db.query(
       `INSERT INTO audit_log
         (user_id, actor, action, entity, entity_id, ip, status, details)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
       [
         userId,
         anonymous ? null : (req.user?.username || null),

@@ -38,6 +38,7 @@ router.get(
       AND ($3::int IS NULL OR EXISTS (
         SELECT 1 FROM incident_assignments ia
          WHERE ia.incident_id = i.id AND ia.officer_id = $3
+           AND ia.unassigned_at IS NULL
       ))`;
     const roleScopeValues = [
       req.user.role === ROLES.DEAN ? ROLES.STUDENT : null,
@@ -194,6 +195,7 @@ router.get(
             AND ($2::int IS NULL OR EXISTS (
               SELECT 1 FROM incident_assignments ia
                WHERE ia.incident_id = i.id AND ia.officer_id = $2
+                 AND ia.unassigned_at IS NULL
             ))`,
         roleScopeValues
       ),

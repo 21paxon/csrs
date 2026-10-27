@@ -39,6 +39,7 @@ const REPORTS = {
       w.add(`EXISTS (
         SELECT 1 FROM incident_assignments ia
          WHERE ia.incident_id = i.id AND ia.officer_id = ?
+           AND ia.unassigned_at IS NULL
       )`, Number(q.assigned_to));
     }
 

@@ -111,12 +111,16 @@ function getToken() {
 }
 
 function roleOf(user = state.user) {
-  return String(
+  const role = String(
     user?.role ||
     user?.user_role ||
     user?.account_role ||
     ""
   ).toLowerCase().replace(/[\s-]+/g, "_");
+  if (role === "head_of_security") return "head_security";
+  if (role === "college_management") return "management";
+  if (role === "dean_of_students") return "dean";
+  return role;
 }
 
 function isAdmin() {
@@ -398,7 +402,8 @@ function filtered(items, query, fields, status = "", statusFields = []) {
 function canOpenPage(page) {
   if (page === "announcements" && !canManageAnnouncements()) return false;
   if (page === "audit-logs" && !["admin", "administrator", "super_admin", "superadmin", "head_security"].includes(roleOf())) return false;
-  if (["users", "audit-logs", "settings"].includes(page) && !isAdmin()) {
+  if (page === "reports" && !["admin", "administrator", "super_admin", "superadmin", "head_security", "management", "dean"].includes(roleOf())) return false;
+  if (["users", "settings"].includes(page) && !isAdmin()) {
     return false;
   }
   if (["gate", "visitors", "patrols"].includes(page) && !canUseSecurityOperations()) return false;
@@ -478,6 +483,9 @@ function applyRoleVisibility() {
   document.querySelectorAll("[data-audit-access]").forEach((element) => {
     element.hidden = !canReadAuditLogs();
   });
+  document.querySelectorAll("[data-report-access]").forEach((element) => {
+    element.hidden = !["admin", "administrator", "super_admin", "superadmin", "head_security", "management", "dean"].includes(roleOf());
+  });
   document.querySelectorAll("[data-hos-operations], [data-incident-manager]").forEach((element) => {
     element.hidden = !canManageIncidents();
   });
@@ -489,7 +497,6 @@ function applyRoleVisibility() {
   if (isOfficer) {
     if ($("incidentListHeading")) $("incidentListHeading").textContent = "My assigned incidents";
     if ($("incidentListDescription")) $("incidentListDescription").textContent = "Incidents assigned to you, with status and progress tracking.";
-    if ($("incidentFormPanel")) $("incidentFormPanel").hidden = true;
   }
   document.querySelectorAll("[data-patrol-manager]").forEach((element) => {
     element.hidden = !canManagePatrols();
@@ -616,6 +623,7 @@ async function loadOverview() {
     label: new Date(item.day).toLocaleDateString(), value: Number(item.count) || 0
   })));
   renderHotspotMap(dashboard.hotspots || []);
+  if (canManageIncidents()) void loadNotificationDeliveryStatus();
 }
 
 let hotspotMap;
@@ -828,8 +836,11 @@ async function loadIncidents() {
   params.set("limit", "200");
   if ($("incidentStatusFilter")?.value) params.set("status", $("incidentStatusFilter").value);
   if ($("incidentSeverityFilter")?.value) params.set("severity", $("incidentSeverityFilter").value);
-  if ($("incidentFrom")?.value) params.set("from", new Date(`${$("incidentFrom").value}T00:00:00`).toISOString());
-  if ($("incidentTo")?.value) params.set("to", new Date(`${$("incidentTo").value}T23:59:59.999`).toISOString());
+  const from = $("incidentFrom")?.value || "";
+  const to = $("incidentTo")?.value || "";
+  if (from && to && from > to) throw new Error("The incident start date must be on or before the end date.");
+  if (from) params.set("from", new Date(`${from}T00:00:00`).toISOString());
+  if (to) params.set("to", new Date(`${to}T23:59:59.999`).toISOString());
   const result = await api(`${PAGE_ENDPOINTS.incidents}?${params}`);
   state.incidents = unwrap(result, ["incidents"]);
 
@@ -930,13 +941,16 @@ async function openAssignedIncident(incident) {
       statusSelect.appendChild(option);
     });
     statusSelect.disabled = options.length === 0;
-    $("assignedIncidentNote").disabled = options.length === 0;
-    $("saveAssignedIncidentUpdate").disabled = options.length === 0;
+    const canAddNotes = options.length > 0 || canManageIncidents();
+    $("assignedIncidentNote").disabled = !canAddNotes;
+    $("saveAssignedIncidentUpdate").disabled = !canAddNotes;
     $("assignedIncidentNote").value = "";
     $("assignedIncidentResolution").value = current.resolution_summary || "";
     $("resolutionSummaryField").hidden = true;
     $("assignedIncidentInternal").checked = false;
-    $("assignedIncidentMessage").textContent = options.length ? "Add a progress note or change status." : "This incident is in a final status and cannot be updated.";
+    $("assignedIncidentMessage").textContent = options.length
+      ? "Add a progress note or change status."
+      : canManageIncidents() ? "This incident is final; HoS may add a recorded internal note." : "This incident is in a final status and cannot be updated.";
   } catch (error) {
     if (message) message.textContent = `Unable to load incident history: ${error.message}`;
   }
@@ -1019,6 +1033,7 @@ async function saveAssignedIncidentUpdate(event) {
     $("resolutionSummaryField").hidden = false;
     return;
   }
+  if (status === "Closed" && !window.confirm("Approve closure of this resolved incident?")) return;
   const submit = $("saveAssignedIncidentUpdate");
   submit.disabled = true;
   $("assignedIncidentMessage").textContent = "Saving progress...";
@@ -1031,6 +1046,7 @@ async function saveAssignedIncidentUpdate(event) {
     await loadIncidents();
     const refreshed = state.incidents.find((item) => String(item.id) === String(incident.id)) || incident;
     await openAssignedIncident(refreshed);
+    $("assignedIncidentMessage").textContent = "Progress saved successfully.";
   } catch (error) {
     $("assignedIncidentMessage").textContent = `Unable to save progress: ${error.message}`;
   } finally {
@@ -1048,6 +1064,8 @@ async function assignCurrentIncident() {
     message.textContent = "Choose an active Security Officer.";
     return;
   }
+  if (incident.assigned_to && Number(incident.assigned_to) !== officerId &&
+      !window.confirm("Reassign this incident? The current officer will lose access to it.")) return;
   button.disabled = true;
   message.textContent = "Saving assignment...";
   try {
@@ -1654,7 +1672,7 @@ function renderEmergency() {
   tbody.replaceChildren();
 
   if (!items.length) {
-    renderEmpty("emergencyTable", 6, "No matching emergency alerts found.");
+    renderEmpty("emergencyTable", 7, "No matching emergency alerts found.");
     return;
   }
 
@@ -1670,6 +1688,15 @@ function renderEmergency() {
     renderSeverityCell(row, getValue(alert, ["severity", "priority"], "Critical"));
     renderStatusCell(row, getValue(alert, ["status"], "Unknown"));
     makeCell(row, formatDate(getValue(alert, ["triggered_at", "created_at", "createdAt", "timestamp"])));
+
+    const milestones = document.createElement("td");
+    milestones.dataset.label = "Response milestones";
+    milestones.textContent = [
+      alert.acknowledged_at ? `Acknowledged ${formatDate(alert.acknowledged_at)}` : "Not acknowledged",
+      alert.arrived_at ? `Arrived ${formatDate(alert.arrived_at)}` : "",
+      alert.resolved_at ? `Resolved ${formatDate(alert.resolved_at)}` : ""
+    ].filter(Boolean).join(" · ");
+    row.appendChild(milestones);
 
     const actions = document.createElement("td");
     if (canManageLostFoundAndEmergencies() && alert.id) {
@@ -2278,8 +2305,8 @@ function renderPatrols() {
 }
 
 async function loadAuditLogs() {
-  if (!isAdmin()) {
-    showMessage("Only administrators can view audit logs.", "error");
+  if (!canReadAuditLogs()) {
+    showMessage("You are not authorized to view audit logs.", "error");
     return;
   }
 
@@ -2288,7 +2315,10 @@ async function loadAuditLogs() {
     return;
   }
 
-  const result = await api(PAGE_ENDPOINTS.auditLogs);
+  const params = new URLSearchParams({ limit: "200" });
+  if ($("auditFrom")?.value) params.set("from", new Date(`${$("auditFrom").value}T00:00:00`).toISOString());
+  if ($("auditTo")?.value) params.set("to", new Date(`${$("auditTo").value}T23:59:59.999`).toISOString());
+  const result = await api(`${PAGE_ENDPOINTS.auditLogs}?${params}`);
   state.auditLogs = unwrap(result, ["logs", "audit_logs", "records"]);
   renderAuditLogs();
 }
@@ -2321,11 +2351,39 @@ function renderAuditLogs() {
     makeCell(row, getValue(log, ["actor_name", "actor", "username"]));
     makeCell(row, getValue(log, ["action", "event_type"]));
     makeCell(row, getValue(log, ["resource", "entity_type"]));
-    makeCell(row, getValue(log, ["details", "description", "message"]));
+    const details = getValue(log, ["details", "description", "message"]);
+    makeCell(row, typeof details === "object" ? JSON.stringify(details) : details);
     makeCell(row, formatDate(getValue(log, ["created_at", "timestamp"])));
 
     tbody.appendChild(row);
   });
+}
+
+async function loadNotificationDeliveryStatus() {
+  const tbody = $("deliveryStatusTable");
+  if (!tbody || !canManageIncidents()) return;
+  const params = new URLSearchParams({ limit: "50" });
+  if ($("deliveryStatusFilter")?.value) params.set("status", $("deliveryStatusFilter").value);
+  try {
+    const rows = await api(`/api/notifications/delivery-status?${params}`);
+    tbody.replaceChildren();
+    if (!Array.isArray(rows) || !rows.length) {
+      renderEmpty("deliveryStatusTable", 6, "No notification deliveries match this filter.");
+      return;
+    }
+    rows.forEach((delivery) => {
+      const row = document.createElement("tr");
+      makeCell(row, delivery.channel);
+      renderStatusCell(row, delivery.status, "State");
+      makeCell(row, delivery.attempts);
+      makeCell(row, formatDate(delivery.created_at));
+      makeCell(row, formatDate(delivery.sent_at));
+      makeCell(row, delivery.last_error || "—");
+      tbody.appendChild(row);
+    });
+  } catch (error) {
+    renderEmpty("deliveryStatusTable", 6, `Unable to load delivery status: ${error.message}`);
+  }
 }
 
 /* =========================================================
@@ -2334,7 +2392,9 @@ function renderAuditLogs() {
 
 async function loadIncidentReport() {
   try {
-    await loadIncidents();
+    const params = reportDateParams();
+    params.set("format", "json");
+    const rows = unwrap(await api(`/api/reports/incidents?${params}`), ["incidents", "records"]);
 
     const output = $("incidentReportOutput");
     if (!output) return;
@@ -2342,7 +2402,7 @@ async function loadIncidentReport() {
     output.replaceChildren();
 
     const counts = {};
-    state.incidents.forEach((item) => {
+    rows.forEach((item) => {
       const key = getValue(item, ["status"], "Unknown");
       counts[key] = (counts[key] || 0) + 1;
     });
@@ -2358,7 +2418,9 @@ async function loadIncidentReport() {
 
 async function loadAccessReport() {
   try {
-    await loadVisitors();
+    const params = reportDateParams();
+    params.set("format", "json");
+    const rows = unwrap(await api(`/api/reports/gate?${params}`), ["records", "visitors"]);
 
     const output = $("accessReportOutput");
     if (!output) return;
@@ -2366,8 +2428,8 @@ async function loadAccessReport() {
     output.replaceChildren();
 
     const counts = {};
-    state.visitors.forEach((visitor) => {
-      const key = getValue(visitor, ["status"], "Unknown");
+    rows.forEach((visitor) => {
+      const key = visitor.exit_at ? "Checked out" : "On campus";
       counts[key] = (counts[key] || 0) + 1;
     });
 
@@ -2380,6 +2442,16 @@ async function loadAccessReport() {
   }
 }
 
+function reportDateParams() {
+  const params = new URLSearchParams();
+  const from = $("reportFrom")?.value || "";
+  const to = $("reportTo")?.value || "";
+  if (from && to && from > to) throw new Error("The report start date must be on or before the end date.");
+  if (from) params.set("from", new Date(`${from}T00:00:00`).toISOString());
+  if (to) params.set("to", new Date(`${to}T23:59:59.999`).toISOString());
+  return params;
+}
+
 async function downloadReport(type, format) {
   try {
     const query = new URLSearchParams({ format });
@@ -2389,6 +2461,7 @@ async function downloadReport(type, format) {
       query.set("reference_no", reference);
     }
     if (type === "incident-summary") query.set("period", $("reportPeriod")?.value || "month");
+    reportDateParams().forEach((value, key) => query.set(key, value));
     const token = getToken();
     const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(type)}?${query}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
@@ -2716,14 +2789,26 @@ function setupIncidentForm() {
   });
 
   on("incidentForm", "submit", submitIncident);
+  on("assignIncidentButton", "click", assignCurrentIncident);
+  on("incidentCategoryForm", "submit", saveIncidentCategory);
+  on("securityLocationForm", "submit", saveSecurityLocation);
+  on("editLocationSelect", "change", () => {
+    const location = state.locations.find((item) => String(item.id) === $("editLocationSelect").value);
+    $("securityLocationName").value = location?.name || "";
+    $("securityLocationLat").value = location?.lat ?? "";
+    $("securityLocationLng").value = location?.lng ?? "";
+  });
   on("assignedIncidentUpdateForm", "submit", saveAssignedIncidentUpdate);
   on("assignedIncidentStatus", "change", () => {
-    $("resolutionSummaryField").hidden = $("assignedIncidentStatus").value !== "Resolved";
+    $("resolutionSummaryField").hidden = !["Resolved", "Closed"].includes($("assignedIncidentStatus").value);
   });
   on("closeAssignedIncident", "click", () => { $("assignedIncidentDetail").hidden = true; });
 
   on("incidentSearch", "input", renderIncidentsTable);
-  on("incidentStatusFilter", "change", renderIncidentsTable);
+  on("incidentStatusFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentSeverityFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentFrom", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentTo", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
 
   on("refreshButton", "click", () =>
     safeLoad("Unable to refresh incidents", loadIncidents)
@@ -2890,6 +2975,12 @@ function setupLostFound() {
 }
 
 function setupOtherPages() {
+  on("overviewPeriod", "change", () => {
+    state.overviewDays = Number($("overviewPeriod").value) || 30;
+    safeLoad("Unable to refresh the dashboard overview", loadOverview);
+  });
+  on("refreshDeliveryStatus", "click", loadNotificationDeliveryStatus);
+  on("deliveryStatusFilter", "change", loadNotificationDeliveryStatus);
   on("announcementForm", "submit", sendSafetyAnnouncement);
   on("dashboardEmergencyForm", "submit", submitDashboardEmergency);
   on("refreshEmergency", "click", () =>
@@ -2921,6 +3012,7 @@ function setupOtherPages() {
   on("refreshAuditLogs", "click", () =>
     safeLoad("Unable to refresh audit logs", loadAuditLogs)
   );
+  on("filterAuditLogs", "click", () => safeLoad("Unable to filter audit logs", loadAuditLogs));
   on("auditSearch", "input", renderAuditLogs);
 
   on("loadIncidentReport", "click", loadIncidentReport);
