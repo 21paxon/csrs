@@ -3098,6 +3098,20 @@ function initDashboard() {
     if (!document.hidden) void loadNotifications();
   }, 30000);
   window.setInterval(() => {
+    if (
+      state.page === "incidents" &&
+      roleOf() === "security_officer" &&
+      !document.hidden
+    ) {
+      void safeLoad("Unable to refresh assigned incidents", loadIncidents);
+    }
+  }, 15000);
+  window.addEventListener("focus", () => {
+    if (state.page === "incidents" && roleOf() === "security_officer") {
+      void safeLoad("Unable to refresh assigned incidents", loadIncidents);
+    }
+  });
+  window.setInterval(() => {
     if (state.page === "emergency" && !document.hidden) void loadEmergency();
   }, 10000);
 }
