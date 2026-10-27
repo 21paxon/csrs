@@ -33,6 +33,7 @@ const state = {
   auditLogs: [],
   notifications: [],
   unreadNotifications: 0,
+  selectedAssignedIncident: null,
   busy: false
 };
 
@@ -466,6 +467,13 @@ function applyRoleVisibility() {
   document.querySelectorAll("[data-security-only]").forEach((element) => {
     element.hidden = !canUseSecurityOperations();
   });
+  const isOfficer = roleOf() === "security_officer";
+  document.querySelectorAll("[data-officer-only]").forEach((element) => { element.hidden = !isOfficer; });
+  if (isOfficer) {
+    if ($("incidentListHeading")) $("incidentListHeading").textContent = "My assigned incidents";
+    if ($("incidentListDescription")) $("incidentListDescription").textContent = "Incidents assigned to you, with status and progress tracking.";
+    if ($("incidentFormPanel")) $("incidentFormPanel").hidden = true;
+  }
   document.querySelectorAll("[data-patrol-manager]").forEach((element) => {
     element.hidden = !canManagePatrols();
   });
@@ -786,7 +794,9 @@ function populateSelect(id, items, idFields, nameFields, placeholder) {
 }
 
 async function loadIncidents() {
-  const result = await api(PAGE_ENDPOINTS.incidents);
+  const isOfficer = roleOf() === "security_officer";
+  const query = isOfficer ? `?assigned_to=${encodeURIComponent(state.user?.id || state.user?.user_id || "")}` : "";
+  const result = await api(`${PAGE_ENDPOINTS.incidents}${query}`);
   state.incidents = unwrap(result, ["incidents"]);
 
   renderIncidentsTable();
@@ -811,7 +821,8 @@ function renderIncidentsTable() {
   tbody.replaceChildren();
 
   if (!items.length) {
-    renderEmpty("incidentsTable", 6, "No matching incidents found.");
+    renderEmpty("incidentsTable", roleOf() === "security_officer" ? 7 : 6,
+      roleOf() === "security_officer" ? "No incidents are currently assigned to you." : "No matching incidents found.");
     return;
   }
 
@@ -824,9 +835,114 @@ function renderIncidentsTable() {
     renderSeverityCell(row, getValue(incident, ["severity"], "Medium"));
     renderStatusCell(row, getValue(incident, ["status"], "Submitted"));
     makeCell(row, formatDate(getValue(incident, ["incident_datetime", "created_at"])));
+    if (roleOf() === "security_officer") {
+      const action = document.createElement("td");
+      action.dataset.label = "Tracking";
+      action.appendChild(makeButton("Track / update", "secondary", () => openAssignedIncident(incident)));
+      row.appendChild(action);
+    }
 
     tbody.appendChild(row);
   });
+}
+
+const INCIDENT_NEXT_STATUSES = {
+  Submitted: ["Verified", "Rejected", "Duplicate", "Escalated"],
+  Verified: ["In Progress", "Rejected", "Duplicate", "Escalated"],
+  "In Progress": ["Resolved", "Escalated"],
+  Resolved: ["In Progress"],
+  Escalated: ["Verified", "In Progress", "Resolved", "Rejected", "Duplicate"]
+};
+
+async function openAssignedIncident(incident) {
+  state.selectedAssignedIncident = incident;
+  const detail = $("assignedIncidentDetail");
+  const message = $("assignedIncidentMessage");
+  if (message) message.textContent = "Loading incident history...";
+  if (detail) detail.hidden = false;
+  detail?.scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    const current = await api(`${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incident.id)}`);
+    state.selectedAssignedIncident = current;
+    $("assignedIncidentTitle").textContent = `${current.reference_no} · ${current.category || "Incident"}`;
+    $("assignedIncidentSummary").textContent = `${current.location || "Location not recorded"} · ${current.severity} priority · ${current.status}`;
+    renderAssignedIncidentHistory(current.updates || []);
+    const statusSelect = $("assignedIncidentStatus");
+    statusSelect.replaceChildren();
+    const options = INCIDENT_NEXT_STATUSES[current.status] || [];
+    const currentOption = document.createElement("option");
+    currentOption.value = "";
+    currentOption.textContent = `Keep current status (${current.status})`;
+    statusSelect.appendChild(currentOption);
+    options.forEach((status) => {
+      const option = document.createElement("option");
+      option.value = status;
+      option.textContent = status;
+      statusSelect.appendChild(option);
+    });
+    statusSelect.disabled = options.length === 0;
+    $("assignedIncidentNote").value = "";
+    $("assignedIncidentResolution").value = current.resolution_summary || "";
+    $("resolutionSummaryField").hidden = true;
+    $("assignedIncidentMessage").textContent = options.length ? "Add a progress note or change status." : "This incident is in a final status and cannot be updated.";
+  } catch (error) {
+    if (message) message.textContent = `Unable to load incident history: ${error.message}`;
+  }
+}
+
+function renderAssignedIncidentHistory(updates) {
+  const list = $("assignedIncidentHistory");
+  if (!list) return;
+  list.replaceChildren();
+  if (!updates.length) {
+    const item = document.createElement("li");
+    item.textContent = "No progress updates have been recorded.";
+    list.appendChild(item);
+    return;
+  }
+  updates.forEach((update) => {
+    const item = document.createElement("li");
+    const heading = document.createElement("strong");
+    heading.textContent = `${update.new_status || "Update"} · ${formatDate(update.created_at)}`;
+    const note = document.createElement("p");
+    note.textContent = update.note || "No note added.";
+    item.append(heading, note);
+    list.appendChild(item);
+  });
+}
+
+async function saveAssignedIncidentUpdate(event) {
+  event.preventDefault();
+  const incident = state.selectedAssignedIncident;
+  if (!incident) return;
+  const status = $("assignedIncidentStatus").value;
+  const notes = $("assignedIncidentNote").value.trim();
+  const resolution_summary = $("assignedIncidentResolution").value.trim();
+  if (!status && !notes) {
+    $("assignedIncidentMessage").textContent = "Add a progress update or choose a new status.";
+    return;
+  }
+  if (status === "Resolved" && !resolution_summary) {
+    $("assignedIncidentMessage").textContent = "Add a resolution summary before resolving this incident.";
+    $("resolutionSummaryField").hidden = false;
+    return;
+  }
+  const submit = $("saveAssignedIncidentUpdate");
+  submit.disabled = true;
+  $("assignedIncidentMessage").textContent = "Saving progress...";
+  try {
+    const body = { notes, ...(status ? { status } : {}) };
+    if (status === "Resolved" || resolution_summary) body.resolution_summary = resolution_summary;
+    await api(`${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incident.id)}`, { method: "PATCH", body: JSON.stringify(body) });
+    $("assignedIncidentMessage").textContent = "Progress saved.";
+    await loadIncidents();
+    const refreshed = state.incidents.find((item) => String(item.id) === String(incident.id)) || incident;
+    await openAssignedIncident(refreshed);
+  } catch (error) {
+    $("assignedIncidentMessage").textContent = `Unable to save progress: ${error.message}`;
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 async function submitIncident(event) {
@@ -2433,6 +2549,11 @@ function setupIncidentForm() {
   });
 
   on("incidentForm", "submit", submitIncident);
+  on("assignedIncidentUpdateForm", "submit", saveAssignedIncidentUpdate);
+  on("assignedIncidentStatus", "change", () => {
+    $("resolutionSummaryField").hidden = $("assignedIncidentStatus").value !== "Resolved";
+  });
+  on("closeAssignedIncident", "click", () => { $("assignedIncidentDetail").hidden = true; });
 
   on("incidentSearch", "input", renderIncidentsTable);
   on("incidentStatusFilter", "change", renderIncidentsTable);

@@ -281,6 +281,12 @@
           </article>
 
           <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <h3 id="incidentListHeading">Incidents</h3>
+                <p id="incidentListDescription">Review incidents visible to your account.</p>
+              </div>
+            </div>
             <div class="table-toolbar">
               <input id="userSearch" type="search" placeholder="Search by name, email or registration number" aria-label="Search users">
               <select id="userStatusFilter" aria-label="Filter users by status">
@@ -388,13 +394,41 @@
                     <th>Severity</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th data-officer-only hidden>Tracking</th>
                   </tr>
                 </thead>
                 <tbody id="incidentsTable">
-                  <tr><td colspan="6" class="empty-cell">Incident records will appear here.</td></tr>
+                  <tr><td colspan="7" class="empty-cell">Incident records will appear here.</td></tr>
                 </tbody>
               </table>
             </div>
+          </article>
+
+          <article class="panel" id="assignedIncidentDetail" hidden>
+            <div class="panel-heading">
+              <div>
+                <h3 id="assignedIncidentTitle">Incident tracking</h3>
+                <p id="assignedIncidentSummary" class="page-description"></p>
+              </div>
+              <button type="button" class="button secondary" id="closeAssignedIncident">Close</button>
+            </div>
+            <h4>Progress history</h4>
+            <ol id="assignedIncidentHistory" class="incident-history"></ol>
+            <form id="assignedIncidentUpdateForm" class="form-grid">
+              <label>Status
+                <select id="assignedIncidentStatus" required></select>
+              </label>
+              <label id="resolutionSummaryField" class="full-width" hidden>Resolution summary
+                <textarea id="assignedIncidentResolution" rows="3" maxlength="5000"></textarea>
+              </label>
+              <label class="full-width">Progress update
+                <textarea id="assignedIncidentNote" rows="3" maxlength="2000" placeholder="Record the work completed or next steps."></textarea>
+              </label>
+              <div class="form-actions full-width">
+                <button type="submit" class="button primary" id="saveAssignedIncidentUpdate">Save progress</button>
+                <p id="assignedIncidentMessage" role="status" aria-live="polite"></p>
+              </div>
+            </form>
           </article>
         </section>
 

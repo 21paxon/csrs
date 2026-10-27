@@ -382,6 +382,9 @@ svg {
 .notification-item small, .notification-empty { color: var(--muted); font-size: 12px; }
 .notification-empty { margin: 8px 4px; }
 .text-button { padding: 4px; color: var(--blue); background: none; border: 0; cursor: pointer; font: inherit; font-size: 12px; }
+.incident-history { display: grid; gap: 12px; padding-left: 24px; }
+.incident-history li { padding-left: 4px; }
+.incident-history p { margin: 5px 0 0; color: var(--muted); white-space: pre-wrap; }
 
 .topbar-logout {
   white-space: nowrap;
