@@ -357,6 +357,32 @@ svg {
   gap: 12px;
 }
 
+.notification-control { position: relative; }
+.notification-button { white-space: nowrap; }
+.notification-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(16, 35, 63, .18);
+}
+.notification-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 4px 10px; }
+.notification-list { display: grid; gap: 6px; }
+.notification-item { display: grid; gap: 5px; width: 100%; padding: 10px; text-align: left; color: inherit; background: #fff; border: 0; border-radius: 8px; cursor: pointer; }
+.notification-item:hover, .notification-item.unread { background: #eef5ff; }
+.notification-item.unread { box-shadow: inset 3px 0 #285be7; }
+.notification-item span { font-size: 13px; line-height: 1.4; }
+.notification-item small, .notification-empty { color: var(--muted); font-size: 12px; }
+.notification-empty { margin: 8px 4px; }
+.text-button { padding: 4px; color: var(--blue); background: none; border: 0; cursor: pointer; font: inherit; font-size: 12px; }
+
 .topbar-logout {
   white-space: nowrap;
 }

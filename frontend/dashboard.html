@@ -111,6 +111,20 @@
         </div>
 
         <div class="topbar-right">
+          <div class="notification-control">
+            <button type="button" class="button secondary notification-button" id="notificationButton" aria-expanded="false" aria-controls="notificationPanel">
+              Notifications <span class="nav-count" id="notificationBadge" hidden>0</span>
+            </button>
+            <section class="notification-panel" id="notificationPanel" aria-label="Notifications" hidden>
+              <div class="notification-panel-heading">
+                <strong>Notifications</strong>
+                <button type="button" class="text-button" id="markAllNotificationsRead">Mark all read</button>
+              </div>
+              <div id="notificationList" class="notification-list" aria-live="polite">
+                <p class="notification-empty">Loading notifications...</p>
+              </div>
+            </section>
+          </div>
           <span class="connection-indicator">
             <span class="connection-dot"></span> CSRS Portal
           </span>

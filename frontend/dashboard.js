@@ -31,6 +31,8 @@ const state = {
   patrols: [],
   patrolRoutes: [],
   auditLogs: [],
+  notifications: [],
+  unreadNotifications: 0,
   busy: false
 };
 
@@ -2328,6 +2330,15 @@ function setupNavigation() {
 
   on("sidebarBackdrop", "click", closeMobileSidebar);
 
+  on("notificationButton", "click", () => {
+    const panel = $("notificationPanel");
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    $("notificationButton")?.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden) void loadNotifications();
+  });
+  on("markAllNotificationsRead", "click", markAllNotificationsRead);
+
   window.addEventListener("hashchange", () => {
     const page = location.hash.replace(/^#/, "");
     if (PAGE_INFO[page] && page !== state.page) showPage(page, false);
@@ -2339,6 +2350,76 @@ function setupNavigation() {
     window.location.replace("/home.html");
   };
   on("topLogoutButton", "click", signOut);
+}
+
+async function loadNotifications() {
+  const list = $("notificationList");
+  if (!list) return;
+  try {
+    const result = await api("/api/notifications?limit=8");
+    state.notifications = result.notifications || [];
+    state.unreadNotifications = Number(result.unread) || 0;
+    const badge = $("notificationBadge");
+    if (badge) {
+      badge.textContent = state.unreadNotifications > 99 ? "99+" : String(state.unreadNotifications);
+      badge.hidden = state.unreadNotifications === 0;
+    }
+    list.replaceChildren();
+    if (!state.notifications.length) {
+      const empty = document.createElement("p");
+      empty.className = "notification-empty";
+      empty.textContent = "You have no notifications.";
+      list.appendChild(empty);
+      return;
+    }
+    state.notifications.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `notification-item${item.is_read ? "" : " unread"}`;
+      const title = document.createElement("strong");
+      title.textContent = item.title;
+      const body = document.createElement("span");
+      body.textContent = item.body;
+      const date = document.createElement("small");
+      date.textContent = new Date(item.created_at).toLocaleString();
+      button.append(title, body, date);
+      button.addEventListener("click", () => openNotification(item));
+      list.appendChild(button);
+    });
+  } catch (_) {
+    list.replaceChildren();
+    const empty = document.createElement("p");
+    empty.className = "notification-empty";
+    empty.textContent = "Notifications could not be loaded.";
+    list.appendChild(empty);
+  }
+}
+
+async function openNotification(item) {
+  if (!item.is_read) {
+    try { await api(`/api/notifications/${encodeURIComponent(item.id)}/read`, { method: "PATCH" }); }
+    catch (_) { /* Keep navigation available if marking as read fails. */ }
+  }
+  $("notificationPanel").hidden = true;
+  $("notificationButton")?.setAttribute("aria-expanded", "false");
+  if (item.link) {
+    const url = new URL(item.link, window.location.origin);
+    if (url.origin === window.location.origin && url.pathname.endsWith("dashboard.html")) {
+      const page = url.hash.slice(1);
+      if (PAGE_INFO[page]) showPage(page);
+    }
+  }
+  void loadNotifications();
+}
+
+async function markAllNotificationsRead() {
+  try {
+    await api("/api/notifications/read-all", { method: "POST" });
+    await loadNotifications();
+  } catch (_) {
+    const list = $("notificationList");
+    if (list) list.textContent = "Unable to mark notifications as read.";
+  }
 }
 
 function setupIncidentForm() {
@@ -2590,6 +2671,10 @@ function initDashboard() {
   setupOtherPages();
 
   openInitialPage();
+  void loadNotifications();
+  window.setInterval(() => {
+    if (!document.hidden) void loadNotifications();
+  }, 30000);
   window.setInterval(() => {
     if (state.page === "emergency" && !document.hidden) void loadEmergency();
   }, 10000);

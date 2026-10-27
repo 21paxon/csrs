@@ -533,7 +533,13 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
     [id, req.user.id, inc.status, 'In Progress', `Assigned to officer #${officerId}`]
   );
 
-  await notify([officerId], 'New case assigned', `${inc.reference_no} (${inc.severity}) has been assigned to you.`);
+  await notify(
+    [officerId],
+    'New case assigned',
+    `${inc.reference_no} (${inc.severity}) has been assigned to you.`,
+    'incident_assignment',
+    '/dashboard.html#incidents'
+  );
   await audit(req, {
     userId: req.user.id,
     action: 'ASSIGN INCIDENT',
