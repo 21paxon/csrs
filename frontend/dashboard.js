@@ -555,9 +555,13 @@ function renderProfile() {
    ========================================================= */
 
 async function loadOverview() {
+  const incidentParams = new URLSearchParams({ limit: "200" });
+  if (roleOf() === "security_officer") {
+    incidentParams.set("assigned_to", state.user?.id || state.user?.user_id || "");
+  }
   const tasks = [
     api(`${PAGE_ENDPOINTS.dashboard}?days=${encodeURIComponent(state.overviewDays)}`).catch(() => null),
-    api(PAGE_ENDPOINTS.incidents).catch(() => null)
+    api(`${PAGE_ENDPOINTS.incidents}?${incidentParams}`).catch(() => null)
   ];
 
   const [dashboardResult, incidentsResult] = await Promise.all(tasks);
