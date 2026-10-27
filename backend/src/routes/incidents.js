@@ -329,7 +329,8 @@ router.get('/', authenticate, wrap(async (req, res) => {
     w.add(`(
       i.reference_no ILIKE ? OR
       i.description ILIKE ? OR
-      COALESCE(i.location_text, '') ILIKE ?
+      c.name ILIKE ? OR
+      COALESCE(l.name, i.location_text, '') ILIKE ?
     )`, `%${q.q}%`);
   }
   if (toBool(q.overdue)) {
@@ -377,13 +378,15 @@ router.get('/:id', authenticate, wrap(async (req, res) => {
     )
   ]);
 
-  const { rows: assignedOfficers } = await db.query(
-    `SELECT ia.officer_id AS id, COALESCE(u.full_name, u.username) AS name, ia.assigned_at
-       FROM incident_assignments ia JOIN users u ON u.id = ia.officer_id
-      WHERE ia.incident_id = $1 AND ia.unassigned_at IS NULL
-      ORDER BY ia.assigned_at DESC`,
-    [inc.id]
-  );
+  const assignedOfficers = SEE_ALL.includes(req.user.role) || req.user.role === ROLES.SECURITY_OFFICER
+    ? (await db.query(
+      `SELECT ia.officer_id AS id, COALESCE(u.full_name, u.username) AS name, ia.assigned_at
+         FROM incident_assignments ia JOIN users u ON u.id = ia.officer_id
+        WHERE ia.incident_id = $1 AND ia.unassigned_at IS NULL
+        ORDER BY ia.assigned_at DESC`,
+      [inc.id]
+    )).rows
+    : [];
   res.json({ ...inc, assigned_officers: assignedOfficers, evidence: evidence.rows, updates: updates.rows });
 }));
 
@@ -548,6 +551,10 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
   }
 
   const replaceCurrent = toBool(req.body?.replace_current);
+  const officerAlreadyAssigned = await isCurrentlyAssigned(id, officerId);
+  if (officerAlreadyAssigned && (!replaceCurrent || Number(inc.assigned_to) === officerId)) {
+    throw new HttpError(409, 'This officer is already assigned to the incident');
+  }
   const previousOfficerId = replaceCurrent && inc.assigned_to && Number(inc.assigned_to) !== officerId
     ? Number(inc.assigned_to)
     : null;

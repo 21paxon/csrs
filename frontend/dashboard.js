@@ -867,7 +867,7 @@ function renderIncidentsTable() {
   const items = filtered(
     state.incidents,
     query,
-    ["reference_no", "reference", "category_name", "category", "description", "location_name"],
+    ["reference_no", "reference", "category_name", "category", "description", "location_name", "location"],
     status,
     ["status"]
   );
@@ -935,6 +935,11 @@ async function openAssignedIncident(incident) {
       if (!state.officers.length) state.officers = unwrap(await api("/api/users/officers"), ["officers"]);
       populateSelect("incidentAssignedOfficer", state.officers, ["id"], ["full_name", "username"], "Choose officer");
       $("incidentAssignedOfficer").value = current.assigned_to ? String(current.assigned_to) : "";
+      const assignedOfficers = current.assigned_officers || [];
+      $("assignedOfficersList").textContent = assignedOfficers.length
+        ? `Currently assigned: ${assignedOfficers.map((officer) => `${Number(officer.id) === Number(current.assigned_to) ? "Lead: " : ""}${officer.name}`).join(", ")}`
+        : "No officers are currently assigned.";
+      $("reassignIncidentButton").hidden = !current.assigned_to;
     }
     renderIncidentEvidence(current);
     renderAssignedIncidentHistory(current.updates || []);
@@ -1066,29 +1071,40 @@ async function saveAssignedIncidentUpdate(event) {
   }
 }
 
-async function assignCurrentIncident() {
+async function assignCurrentIncident(replaceCurrent = false) {
   const incident = state.selectedAssignedIncident;
   const officerId = Number($("incidentAssignedOfficer")?.value);
-  const button = $("assignIncidentButton");
+  const button = replaceCurrent ? $("reassignIncidentButton") : $("assignIncidentButton");
   const message = $("incidentAssignmentMessage");
   if (!incident || !canManageIncidents()) return;
   if (!Number.isInteger(officerId) || officerId < 1) {
     message.textContent = "Choose an active Security Officer.";
     return;
   }
-  if (incident.assigned_to && Number(incident.assigned_to) !== officerId &&
-      !window.confirm("Reassign this incident? The current officer will lose access to it.")) return;
+  const alreadyAssigned = (incident.assigned_officers || []).some((officer) => Number(officer.id) === officerId);
+  if (!replaceCurrent && alreadyAssigned) {
+    message.textContent = "That officer is already assigned to this incident.";
+    return;
+  }
+  if (replaceCurrent && Number(incident.assigned_to) === officerId) {
+    message.textContent = "That officer is already the lead officer.";
+    return;
+  }
+  if (replaceCurrent && incident.assigned_to &&
+      !window.confirm("Reassign the lead officer? Other assigned officers will keep access.")) return;
   button.disabled = true;
   message.textContent = "Saving assignment...";
   try {
     await api(`${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incident.id)}/assign`, {
-      method: "POST", body: JSON.stringify({ officer_id: officerId })
+      method: "POST", body: JSON.stringify({ officer_id: officerId, replace_current: replaceCurrent })
     });
-    message.textContent = "Incident assigned. The officer has been notified.";
+    message.textContent = replaceCurrent ? "Lead officer reassigned." : "Officer added to the case.";
     await loadIncidents();
     const refreshed = state.incidents.find((item) => String(item.id) === String(incident.id)) || incident;
     await openAssignedIncident(refreshed);
-    $("incidentAssignmentMessage").textContent = "Incident assigned. The officer has been notified.";
+    $("incidentAssignmentMessage").textContent = replaceCurrent
+      ? "Lead officer reassigned. The new lead has been notified."
+      : "Officer added to the case and notified.";
   } catch (error) {
     message.textContent = `Unable to assign incident: ${error.message}`;
   } finally {
@@ -2807,7 +2823,8 @@ function setupIncidentForm() {
   });
 
   on("incidentForm", "submit", submitIncident);
-  on("assignIncidentButton", "click", assignCurrentIncident);
+  on("assignIncidentButton", "click", () => assignCurrentIncident(false));
+  on("reassignIncidentButton", "click", () => assignCurrentIncident(true));
   on("incidentCategoryForm", "submit", saveIncidentCategory);
   on("securityLocationForm", "submit", saveSecurityLocation);
   on("editLocationSelect", "change", () => {

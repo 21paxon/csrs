@@ -493,10 +493,14 @@
             </div>
             <p id="incidentPrivacyScope" class="profile-note"></p>
             <div class="form-grid" data-incident-manager hidden>
+              <p id="assignedOfficersList" class="profile-note full-width"></p>
               <label>Assigned Security Officer
                 <select id="incidentAssignedOfficer"><option value="">Choose officer</option></select>
               </label>
-              <div class="form-actions"><button type="button" class="button primary" id="assignIncidentButton">Assign / reassign</button></div>
+              <div class="form-actions">
+                <button type="button" class="button secondary" id="assignIncidentButton">Add officer</button>
+                <button type="button" class="button primary" id="reassignIncidentButton">Reassign lead</button>
+              </div>
               <p id="incidentAssignmentMessage" class="profile-note full-width" role="status" aria-live="polite"></p>
             </div>
             <h4>Evidence</h4>
