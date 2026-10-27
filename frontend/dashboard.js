@@ -44,6 +44,7 @@ let patrolRouteLayer;
 let patrolCameraStream;
 let patrolQrDetector;
 let patrolQrTimer;
+let incidentSearchTimer;
 
 const PAGE_INFO = {
   overview: ["Overview", "Campus security overview"],
@@ -800,8 +801,11 @@ async function loadIncidentLookups() {
     ["location_name", "name"],
     "Select location"
   );
+  populateSelect("incidentCategoryFilter", state.categories, ["id"], ["name"], "All categories");
+  populateSelect("incidentLocationFilter", state.locations, ["id"], ["name"], "All locations");
   populateSelect("editLocationSelect", state.locations, ["id"], ["name"], "Create new location");
   populateSelect("incidentAssignedOfficer", state.officers, ["id"], ["full_name", "username"], "Choose officer");
+  populateSelect("incidentOfficerFilter", state.officers, ["id"], ["full_name", "username"], "All officers");
 }
 
 function populateSelect(id, items, idFields, nameFields, placeholder) {
@@ -836,6 +840,10 @@ async function loadIncidents() {
   params.set("limit", "200");
   if ($("incidentStatusFilter")?.value) params.set("status", $("incidentStatusFilter").value);
   if ($("incidentSeverityFilter")?.value) params.set("severity", $("incidentSeverityFilter").value);
+  if ($("incidentSearch")?.value.trim()) params.set("q", $("incidentSearch").value.trim());
+  if ($("incidentCategoryFilter")?.value) params.set("category_id", $("incidentCategoryFilter").value);
+  if ($("incidentLocationFilter")?.value) params.set("location_id", $("incidentLocationFilter").value);
+  if (canManageIncidents() && $("incidentOfficerFilter")?.value) params.set("assigned_to", $("incidentOfficerFilter").value);
   const from = $("incidentFrom")?.value || "";
   const to = $("incidentTo")?.value || "";
   if (from && to && from > to) throw new Error("The incident start date must be on or before the end date.");
@@ -2463,8 +2471,14 @@ async function downloadReport(type, format) {
     if (type === "incident-summary") query.set("period", $("reportPeriod")?.value || "month");
     reportDateParams().forEach((value, key) => query.set(key, value));
     const token = getToken();
+    const accept = {
+      pdf: "application/pdf",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      csv: "text/csv",
+      json: "application/json"
+    }[format] || "application/octet-stream";
     const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(type)}?${query}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      headers: { Authorization: `Bearer ${token}`, Accept: accept }
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -2804,9 +2818,16 @@ function setupIncidentForm() {
   });
   on("closeAssignedIncident", "click", () => { $("assignedIncidentDetail").hidden = true; });
 
-  on("incidentSearch", "input", renderIncidentsTable);
+  on("incidentSearch", "input", () => {
+    renderIncidentsTable();
+    window.clearTimeout(incidentSearchTimer);
+    incidentSearchTimer = window.setTimeout(() => safeLoad("Unable to search incidents", loadIncidents), 300);
+  });
   on("incidentStatusFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
   on("incidentSeverityFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentCategoryFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentLocationFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
+  on("incidentOfficerFilter", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
   on("incidentFrom", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
   on("incidentTo", "change", () => safeLoad("Unable to filter incidents", loadIncidents));
 

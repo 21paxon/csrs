@@ -133,6 +133,8 @@ During an active assigned shift, the officer sees the route and completion progr
 
 The migration `011-patrol-scan-coordinates.sql` adds optional GPS fields for checkpoint scans. The normal `npm start` command applies pending migrations before the API starts.
 
+The Head of Security workspace includes incident assignment and reassignment, evidence and activity review, internal notes, closure approval, operational reports, audit logs, reference-data management, and notification delivery status. Migration `012-incident-reassignment-history.sql` preserves prior assignments while removing the previous officer's active access after a reassignment. Security Officers can open and update only incidents currently assigned to them; submitting an incident report does not grant investigator access.
+
 Generate a VAPID pair once with `cd backend && npm run push:keys`, then set both printed keys and `VAPID_SUBJECT` in the backend host's environment settings. Keep the private key secret and use the same pair in production; changing keys later requires users to renew their browser subscriptions.
 
 For local offline-shell development, the service worker registers on the home and signed-in dashboard pages. It caches app files only; incident and account data are never stored for offline use. Production service-worker installation requires HTTPS.
@@ -151,7 +153,7 @@ RESTORE_CONFIRM=I_UNDERSTAND_THIS_REPLACES_DATABASE npm run db:restore -- /secur
 
 On PowerShell, set `$env:RESTORE_CONFIRM` to the same value before running the command. A restore drill against a disposable database has not yet been run; verify the recovered database and evidence before relying on a backup.
 
-**Who sees which incidents:** Admin, HoS, CM and Dean see all; a Security Officer sees cases assigned to them; everyone else sees only their own reports. Anonymous reports store no reporter, and the access code is stored only as a hash.
+**Who sees which incidents:** Admin, HoS and CM see all; Dean sees student reports; a Security Officer sees only incidents currently assigned to them; other users see their own reports. Reassigned officers lose active case access. Anonymous reports store no reporter, and the access code is stored only as a hash.
 
 ## Checking that everything works
 

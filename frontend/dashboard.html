@@ -445,6 +445,11 @@
               <select id="incidentSeverityFilter" aria-label="Filter incidents by severity">
                 <option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
               </select>
+              <select id="incidentCategoryFilter" aria-label="Filter incidents by category"><option value="">All categories</option></select>
+              <select id="incidentLocationFilter" aria-label="Filter incidents by location"><option value="">All locations</option></select>
+              <label data-incident-manager hidden>Assigned officer
+                <select id="incidentOfficerFilter"><option value="">All officers</option></select>
+              </label>
               <select id="incidentStatusFilter" aria-label="Filter incidents by status">
                 <option value="">All statuses</option>
                 <option value="Submitted">Submitted</option>
@@ -897,7 +902,7 @@
                 <input id="reportReference" maxlength="32" placeholder="INC-2026-0001">
               </label>
               <label>Format
-                <select id="reportFormat"><option value="pdf">PDF</option><option value="xlsx">Excel</option></select>
+                <select id="reportFormat"><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="csv">CSV</option><option value="json">JSON</option></select>
               </label>
               <button type="button" class="button secondary" id="downloadSelectedReport">Download report</button>
             </div>

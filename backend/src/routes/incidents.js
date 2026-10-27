@@ -81,7 +81,7 @@ const SELECT_INCIDENT = `
 function canView(user, inc) {
   if (user.role === ROLES.DEAN) return inc.reporter_role === ROLES.STUDENT;
   if (SEE_ALL.includes(user.role)) return true;
-  if (inc.assigned_to === user.id) return true;
+  if (user.role === ROLES.SECURITY_OFFICER) return inc.assigned_to === user.id;
   return inc.reporter_id === user.id;
 }
 
@@ -287,12 +287,10 @@ router.get('/', authenticate, wrap(async (req, res) => {
 
   if (!SEE_ALL.includes(req.user.role)) {
     if (req.user.role === ROLES.SECURITY_OFFICER) {
-      w.add(`(
-        EXISTS (
-          SELECT 1 FROM incident_assignments ia
-           WHERE ia.incident_id = i.id AND ia.officer_id = ?
-             AND ia.unassigned_at IS NULL
-        ) OR i.reporter_id = ?
+      w.add(`EXISTS (
+        SELECT 1 FROM incident_assignments ia
+         WHERE ia.incident_id = i.id AND ia.officer_id = ?
+           AND ia.unassigned_at IS NULL
       )`, req.user.id);
     } else {
       w.add('i.reporter_id = ?', req.user.id);
