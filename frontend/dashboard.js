@@ -31,6 +31,8 @@ const state = {
   patrols: [],
   patrolRoutes: [],
   auditLogs: [],
+  officers: [],
+  overviewDays: 30,
   notifications: [],
   unreadNotifications: 0,
   selectedAssignedIncident: null,
@@ -89,7 +91,7 @@ const PAGE_ENDPOINTS = {
   users: ROUTES.users || "",
   lostFound: ROUTES.lostFound || "",
   patrols: ROUTES.patrols || "",
-  auditLogs: ROUTES.auditLogs || ""
+  auditLogs: ROUTES.auditLogs || "/api/audit-logs"
 };
 
 /* =========================================================
@@ -141,6 +143,14 @@ function canManagePatrols() {
 function canManageAnnouncements() {
   return ["admin", "administrator", "super_admin", "superadmin", "head_security"]
     .includes(roleOf());
+}
+
+function canManageIncidents() {
+  return ["admin", "administrator", "super_admin", "superadmin", "head_security"].includes(roleOf());
+}
+
+function canReadAuditLogs() {
+  return canManageIncidents();
 }
 
 function userName() {
@@ -387,6 +397,7 @@ function filtered(items, query, fields, status = "", statusFields = []) {
 
 function canOpenPage(page) {
   if (page === "announcements" && !canManageAnnouncements()) return false;
+  if (page === "audit-logs" && !["admin", "administrator", "super_admin", "superadmin", "head_security"].includes(roleOf())) return false;
   if (["users", "audit-logs", "settings"].includes(page) && !isAdmin()) {
     return false;
   }
@@ -464,6 +475,12 @@ function applyRoleVisibility() {
   document.querySelectorAll("[data-admin-only]").forEach((element) => {
     element.hidden = !isAdmin();
   });
+  document.querySelectorAll("[data-audit-access]").forEach((element) => {
+    element.hidden = !canReadAuditLogs();
+  });
+  document.querySelectorAll("[data-hos-operations], [data-incident-manager]").forEach((element) => {
+    element.hidden = !canManageIncidents();
+  });
   document.querySelectorAll("[data-security-only]").forEach((element) => {
     element.hidden = !canUseSecurityOperations();
   });
@@ -531,7 +548,7 @@ function renderProfile() {
 
 async function loadOverview() {
   const tasks = [
-    api(PAGE_ENDPOINTS.dashboard).catch(() => null),
+    api(`${PAGE_ENDPOINTS.dashboard}?days=${encodeURIComponent(state.overviewDays)}`).catch(() => null),
     api(PAGE_ENDPOINTS.incidents).catch(() => null)
   ];
 
@@ -550,6 +567,9 @@ async function loadOverview() {
   if ($("totalIncidents")) {
     $("totalIncidents").textContent = incidentCount;
   }
+  if ($("openIncidents")) $("openIncidents").textContent = dashboard.incidents?.open ?? "—";
+  if ($("openCriticalIncidents")) $("openCriticalIncidents").textContent = dashboard.incidents?.open_critical ?? "—";
+  if ($("visitorsOnCampus")) $("visitorsOnCampus").textContent = dashboard.visitors_on_campus ?? "—";
 
   const activeAlerts =
     dashboard.pending_alerts ??
@@ -570,9 +590,9 @@ async function loadOverview() {
     dashboard.stats?.registered_users;
 
   if ($("registeredUsers")) {
-    $("registeredUsers").textContent =
-      totalUsers === undefined ? "—" : totalUsers;
+    $("registeredUsers").textContent = "—";
   }
+  if ($("registeredUsersAdmin")) $("registeredUsersAdmin").textContent = totalUsers === undefined ? "—" : totalUsers;
 
   const pendingUsers =
     dashboard.pending_registrations ??
@@ -592,6 +612,9 @@ async function loadOverview() {
 
   renderRecentIncidents();
   renderOverviewCharts(dashboard);
+  renderChart("incidentTrendChart", (dashboard.daily_trend || []).map((item) => ({
+    label: new Date(item.day).toLocaleDateString(), value: Number(item.count) || 0
+  })));
   renderHotspotMap(dashboard.hotspots || []);
 }
 
@@ -743,13 +766,16 @@ function renderOverviewCharts(dashboard) {
    ========================================================= */
 
 async function loadIncidentLookups() {
-  const [categoriesResult, locationsResult] = await Promise.all([
+  const lookupTasks = [
     api(PAGE_ENDPOINTS.categories).catch(() => null),
     api(PAGE_ENDPOINTS.locations).catch(() => null)
-  ]);
+  ];
+  if (canManageIncidents()) lookupTasks.push(api("/api/users/officers").catch(() => []));
+  const [categoriesResult, locationsResult, officersResult] = await Promise.all(lookupTasks);
 
   state.categories = unwrap(categoriesResult, ["categories"]);
   state.locations = unwrap(locationsResult, ["locations"]);
+  state.officers = unwrap(officersResult || [], ["officers"]);
 
   populateSelect(
     "incidentCategory",
@@ -766,6 +792,8 @@ async function loadIncidentLookups() {
     ["location_name", "name"],
     "Select location"
   );
+  populateSelect("editLocationSelect", state.locations, ["id"], ["name"], "Create new location");
+  populateSelect("incidentAssignedOfficer", state.officers, ["id"], ["full_name", "username"], "Choose officer");
 }
 
 function populateSelect(id, items, idFields, nameFields, placeholder) {
@@ -795,8 +823,14 @@ function populateSelect(id, items, idFields, nameFields, placeholder) {
 
 async function loadIncidents() {
   const isOfficer = roleOf() === "security_officer";
-  const query = isOfficer ? `?assigned_to=${encodeURIComponent(state.user?.id || state.user?.user_id || "")}&limit=200` : "";
-  const result = await api(`${PAGE_ENDPOINTS.incidents}${query}`);
+  const params = new URLSearchParams();
+  if (isOfficer) params.set("assigned_to", state.user?.id || state.user?.user_id || "");
+  params.set("limit", "200");
+  if ($("incidentStatusFilter")?.value) params.set("status", $("incidentStatusFilter").value);
+  if ($("incidentSeverityFilter")?.value) params.set("severity", $("incidentSeverityFilter").value);
+  if ($("incidentFrom")?.value) params.set("from", new Date(`${$("incidentFrom").value}T00:00:00`).toISOString());
+  if ($("incidentTo")?.value) params.set("to", new Date(`${$("incidentTo").value}T23:59:59.999`).toISOString());
+  const result = await api(`${PAGE_ENDPOINTS.incidents}?${params}`);
   state.incidents = unwrap(result, ["incidents"]);
 
   renderIncidentsTable();
@@ -821,7 +855,7 @@ function renderIncidentsTable() {
   tbody.replaceChildren();
 
   if (!items.length) {
-    renderEmpty("incidentsTable", roleOf() === "security_officer" ? 7 : 6,
+    renderEmpty("incidentsTable", roleOf() === "security_officer" || canManageIncidents() ? 7 : 6,
       roleOf() === "security_officer" ? "No incidents are currently assigned to you." : "No matching incidents found.");
     return;
   }
@@ -839,6 +873,11 @@ function renderIncidentsTable() {
       const action = document.createElement("td");
       action.dataset.label = "Tracking";
       action.appendChild(makeButton("Track / update", "secondary", () => openAssignedIncident(incident)));
+      row.appendChild(action);
+    } else if (canManageIncidents()) {
+      const action = document.createElement("td");
+      action.dataset.label = "Actions";
+      action.appendChild(makeButton("Review", "secondary", () => openAssignedIncident(incident)));
       row.appendChild(action);
     }
 
@@ -866,10 +905,20 @@ async function openAssignedIncident(incident) {
     state.selectedAssignedIncident = current;
     $("assignedIncidentTitle").textContent = `${current.reference_no} · ${current.category || "Incident"}`;
     $("assignedIncidentSummary").textContent = `${current.location || "Location not recorded"} · ${current.severity} priority · ${current.status}`;
+    $("incidentPrivacyScope").textContent = current.is_anonymous
+      ? "Reporter privacy: anonymous. Reporter identity is not available."
+      : `Reporter privacy: named report${current.reporter_role ? ` · ${current.reporter_role} account` : ""}.`;
+    if (canManageIncidents()) {
+      if (!state.officers.length) state.officers = unwrap(await api("/api/users/officers"), ["officers"]);
+      populateSelect("incidentAssignedOfficer", state.officers, ["id"], ["full_name", "username"], "Choose officer");
+      $("incidentAssignedOfficer").value = current.assigned_to ? String(current.assigned_to) : "";
+    }
+    renderIncidentEvidence(current);
     renderAssignedIncidentHistory(current.updates || []);
     const statusSelect = $("assignedIncidentStatus");
     statusSelect.replaceChildren();
-    const options = INCIDENT_NEXT_STATUSES[current.status] || [];
+    const options = [...(INCIDENT_NEXT_STATUSES[current.status] || [])];
+    if (canManageIncidents() && current.status === "Resolved") options.push("Closed");
     const currentOption = document.createElement("option");
     currentOption.value = "";
     currentOption.textContent = `Keep current status (${current.status})`;
@@ -886,9 +935,48 @@ async function openAssignedIncident(incident) {
     $("assignedIncidentNote").value = "";
     $("assignedIncidentResolution").value = current.resolution_summary || "";
     $("resolutionSummaryField").hidden = true;
+    $("assignedIncidentInternal").checked = false;
     $("assignedIncidentMessage").textContent = options.length ? "Add a progress note or change status." : "This incident is in a final status and cannot be updated.";
   } catch (error) {
     if (message) message.textContent = `Unable to load incident history: ${error.message}`;
+  }
+}
+
+function renderIncidentEvidence(incident) {
+  const list = $("assignedIncidentEvidence");
+  if (!list) return;
+  list.replaceChildren();
+  const evidence = incident.evidence || [];
+  if (!evidence.length) {
+    const item = document.createElement("li");
+    item.textContent = "No evidence attached.";
+    list.appendChild(item);
+    return;
+  }
+  evidence.forEach((file) => {
+    const item = document.createElement("li");
+    item.appendChild(makeButton(file.original_name || "Download evidence", "secondary", () => downloadIncidentEvidence(incident.id, file)));
+    item.append(` · ${file.mime_type || "file"} · ${formatDate(file.uploaded_at)}`);
+    list.appendChild(item);
+  });
+}
+
+async function downloadIncidentEvidence(incidentId, file) {
+  try {
+    const response = await fetch(`${API_BASE}${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incidentId)}/evidence/${encodeURIComponent(file.id)}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    });
+    if (!response.ok) throw new Error(`Download failed (${response.status})`);
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = file.original_name || "incident-evidence";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    showMessage(`Unable to download evidence: ${error.message}`, "error");
   }
 }
 
@@ -905,7 +993,9 @@ function renderAssignedIncidentHistory(updates) {
   updates.forEach((update) => {
     const item = document.createElement("li");
     const heading = document.createElement("strong");
-    heading.textContent = `${update.new_status || "Update"} · ${formatDate(update.created_at)}`;
+    const transition = update.old_status && update.new_status && update.old_status !== update.new_status
+      ? `${update.old_status} → ${update.new_status}` : update.new_status || "Progress note";
+    heading.textContent = `${transition} · ${formatDate(update.created_at)} · ${update.is_public ? "Reporter visible" : "Internal"}`;
     const note = document.createElement("p");
     note.textContent = update.note || "No note added.";
     item.append(heading, note);
@@ -924,8 +1014,8 @@ async function saveAssignedIncidentUpdate(event) {
     $("assignedIncidentMessage").textContent = "Add a progress update or choose a new status.";
     return;
   }
-  if (status === "Resolved" && !resolution_summary) {
-    $("assignedIncidentMessage").textContent = "Add a resolution summary before resolving this incident.";
+  if (["Resolved", "Closed"].includes(status) && !resolution_summary) {
+    $("assignedIncidentMessage").textContent = "Add a resolution summary before resolving or closing this incident.";
     $("resolutionSummaryField").hidden = false;
     return;
   }
@@ -934,7 +1024,8 @@ async function saveAssignedIncidentUpdate(event) {
   $("assignedIncidentMessage").textContent = "Saving progress...";
   try {
     const body = { notes, ...(status ? { status } : {}) };
-    if (status === "Resolved" || resolution_summary) body.resolution_summary = resolution_summary;
+    if (["Resolved", "Closed"].includes(status) || resolution_summary) body.resolution_summary = resolution_summary;
+    if (canManageIncidents()) body.internal = $("assignedIncidentInternal").checked;
     await api(`${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incident.id)}`, { method: "PATCH", body: JSON.stringify(body) });
     $("assignedIncidentMessage").textContent = "Progress saved.";
     await loadIncidents();
@@ -945,6 +1036,80 @@ async function saveAssignedIncidentUpdate(event) {
   } finally {
     submit.disabled = false;
   }
+}
+
+async function assignCurrentIncident() {
+  const incident = state.selectedAssignedIncident;
+  const officerId = Number($("incidentAssignedOfficer")?.value);
+  const button = $("assignIncidentButton");
+  const message = $("incidentAssignmentMessage");
+  if (!incident || !canManageIncidents()) return;
+  if (!Number.isInteger(officerId) || officerId < 1) {
+    message.textContent = "Choose an active Security Officer.";
+    return;
+  }
+  button.disabled = true;
+  message.textContent = "Saving assignment...";
+  try {
+    await api(`${PAGE_ENDPOINTS.incidents}/${encodeURIComponent(incident.id)}/assign`, {
+      method: "POST", body: JSON.stringify({ officer_id: officerId })
+    });
+    message.textContent = "Incident assigned. The officer has been notified.";
+    await loadIncidents();
+    const refreshed = state.incidents.find((item) => String(item.id) === String(incident.id)) || incident;
+    await openAssignedIncident(refreshed);
+    $("incidentAssignmentMessage").textContent = "Incident assigned. The officer has been notified.";
+  } catch (error) {
+    message.textContent = `Unable to assign incident: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function saveIncidentCategory(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const message = $("categoryMessage");
+  const button = form.querySelector('[type="submit"]');
+  if (!canManageIncidents() || !form.reportValidity()) return;
+  button.disabled = true;
+  message.textContent = "Saving category...";
+  try {
+    await api("/api/categories", { method: "POST", body: JSON.stringify({
+      name: $("newCategoryName").value.trim(), description: $("newCategoryDescription").value.trim()
+    }) });
+    form.reset();
+    await loadIncidentLookups();
+    message.textContent = "Incident category added.";
+  } catch (error) {
+    message.textContent = `Unable to add category: ${error.message}`;
+  } finally { button.disabled = false; }
+}
+
+async function saveSecurityLocation(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const message = $("locationMessage");
+  const button = form.querySelector('[type="submit"]');
+  if (!canManageIncidents() || !form.reportValidity()) return;
+  button.disabled = true;
+  message.textContent = "Saving location...";
+  const id = $("editLocationSelect").value;
+  const payload = {
+    name: $("securityLocationName").value.trim(),
+    lat: $("securityLocationLat").value,
+    lng: $("securityLocationLng").value
+  };
+  try {
+    await api(id ? `/api/locations/${encodeURIComponent(id)}` : "/api/locations", {
+      method: id ? "PUT" : "POST", body: JSON.stringify(payload)
+    });
+    form.reset();
+    await loadIncidentLookups();
+    message.textContent = id ? "Security location updated." : "Security location added.";
+  } catch (error) {
+    message.textContent = `Unable to save location: ${error.message}`;
+  } finally { button.disabled = false; }
 }
 
 async function submitIncident(event) {

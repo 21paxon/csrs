@@ -69,7 +69,7 @@
           <span>▤</span> Reports
         </a>
         <a href="/help.html" class="nav-link"><span aria-hidden="true">?</span> Help guide</a>
-        <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-admin-only="true" data-i18n="dashboard_audit_logs">
+        <a href="#audit-logs" class="nav-link" data-page="audit-logs" data-audit-access data-i18n="dashboard_audit_logs">
           <span>◷</span> Audit Logs
         </a>
         <a href="#settings" class="nav-link" data-page="settings" data-admin-only="true" data-i18n="system_settings">
@@ -144,6 +144,15 @@
 
         <!-- OVERVIEW -->
         <section class="page-section" id="page-overview">
+          <div class="page-heading">
+            <div><h2>Security operations overview</h2><p class="page-description">Organization-wide incident and response activity.</p></div>
+            <label class="overview-period-label">Period
+              <select id="overviewPeriod" aria-label="Overview date range">
+                <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option><option value="365">Last 12 months</option>
+              </select>
+            </label>
+          </div>
           <div class="welcome-panel">
             <div>
               <p class="welcome-kicker">CAMPUS SECURITY AND REPORTING SYSTEM</p>
@@ -160,6 +169,16 @@
               <p>Recorded incident reports</p>
             </article>
             <article class="stat-card">
+              <div class="stat-top">Open Incidents</div>
+              <div class="stat-value" id="openIncidents">—</div>
+              <p>Cases needing follow-up</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Critical Open</div>
+              <div class="stat-value" id="openCriticalIncidents">—</div>
+              <p>Critical cases requiring attention</p>
+            </article>
+            <article class="stat-card" data-admin-only hidden>
               <div class="stat-top">Pending Registrations</div>
               <div class="stat-value" id="pendingRegistrations">—</div>
               <p>Accounts awaiting approval</p>
@@ -169,10 +188,15 @@
               <div class="stat-value" id="pendingAlerts">—</div>
               <p>Alerts requiring attention</p>
             </article>
-            <article class="stat-card">
+            <article class="stat-card" data-admin-only hidden>
               <div class="stat-top">Registered Users</div>
-              <div class="stat-value" id="registeredUsers">—</div>
+              <div class="stat-value" id="registeredUsersAdmin">—</div>
               <p>Accounts in the system</p>
+            </article>
+            <article class="stat-card">
+              <div class="stat-top">Visitors on Campus</div>
+              <div class="stat-value" id="visitorsOnCampus">—</div>
+              <p>Current check-ins without a recorded exit</p>
             </article>
           </div>
 
@@ -201,6 +225,28 @@
               </div>
             </article>
           </div>
+
+          <article class="panel">
+            <div class="panel-heading"><div><h3>Incident trend</h3><p>Reports received during the selected period.</p></div></div>
+            <div class="chart-list" id="incidentTrendChart" aria-live="polite"><p class="empty-cell">Loading trend...</p></div>
+          </article>
+
+          <article class="panel" data-hos-operations hidden>
+            <div class="panel-heading">
+              <div><h3>Notification delivery</h3><p>Recent message delivery status for configured channels.</p></div>
+              <div class="button-row">
+                <select id="deliveryStatusFilter" aria-label="Filter notification delivery status">
+                  <option value="">All delivery states</option><option value="pending">Pending</option>
+                  <option value="processing">Processing</option><option value="sent">Sent</option><option value="failed">Failed</option>
+                </select>
+                <button type="button" class="button secondary" id="refreshDeliveryStatus">Refresh</button>
+              </div>
+            </div>
+            <div class="table-scroll"><table>
+              <thead><tr><th>Channel</th><th>State</th><th>Attempts</th><th>Created</th><th>Sent</th><th>Last error</th></tr></thead>
+              <tbody id="deliveryStatusTable"><tr><td colspan="6" class="empty-cell">Delivery records will appear here.</td></tr></tbody>
+            </table></div>
+          </article>
 
           <article class="panel">
             <div class="panel-heading"><div><h3>Incident hotspots</h3><p>Reported incidents with configured or map-selected coordinates.</p></div></div>
@@ -329,6 +375,28 @@
             <button class="button primary" type="button" id="toggleIncidentForm">Report Incident</button>
           </div>
 
+          <article class="panel" data-hos-operations hidden>
+            <h3>Security reference data</h3>
+            <div class="dashboard-grid">
+              <form id="incidentCategoryForm" class="form-grid">
+                <strong class="full-width">Add incident category</strong>
+                <label>Category name<input id="newCategoryName" required maxlength="100"></label>
+                <label>Description<input id="newCategoryDescription" maxlength="500"></label>
+                <button type="submit" class="button secondary">Add category</button>
+                <p id="categoryMessage" class="profile-note full-width" role="status" aria-live="polite"></p>
+              </form>
+              <form id="securityLocationForm" class="form-grid">
+                <strong class="full-width">Create or update location</strong>
+                <label>Existing location (optional)<select id="editLocationSelect"><option value="">Create new location</option></select></label>
+                <label>Location name<input id="securityLocationName" required maxlength="150"></label>
+                <label>Latitude<input id="securityLocationLat" type="number" min="-90" max="90" step="any"></label>
+                <label>Longitude<input id="securityLocationLng" type="number" min="-180" max="180" step="any"></label>
+                <button type="submit" class="button secondary">Save location</button>
+                <p id="locationMessage" class="profile-note full-width" role="status" aria-live="polite"></p>
+              </form>
+            </div>
+          </article>
+
           <article class="panel form-panel" id="incidentFormPanel" hidden>
             <h3>New Incident Report</h3>
             <form id="incidentForm">
@@ -372,6 +440,11 @@
           <article class="panel">
             <div class="table-toolbar">
               <input id="incidentSearch" type="search" placeholder="Search incidents..." aria-label="Search incidents">
+              <label>From <input id="incidentFrom" type="date" aria-label="Incidents from date"></label>
+              <label>To <input id="incidentTo" type="date" aria-label="Incidents to date"></label>
+              <select id="incidentSeverityFilter" aria-label="Filter incidents by severity">
+                <option value="">All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+              </select>
               <select id="incidentStatusFilter" aria-label="Filter incidents by status">
                 <option value="">All statuses</option>
                 <option value="Submitted">Submitted</option>
@@ -395,6 +468,7 @@
                     <th>Status</th>
                     <th>Date</th>
                     <th data-officer-only hidden>Tracking</th>
+                    <th data-incident-manager hidden>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="incidentsTable">
@@ -412,6 +486,16 @@
               </div>
               <button type="button" class="button secondary" id="closeAssignedIncident">Close</button>
             </div>
+            <p id="incidentPrivacyScope" class="profile-note"></p>
+            <div class="form-grid" data-incident-manager hidden>
+              <label>Assigned Security Officer
+                <select id="incidentAssignedOfficer"><option value="">Choose officer</option></select>
+              </label>
+              <div class="form-actions"><button type="button" class="button primary" id="assignIncidentButton">Assign / reassign</button></div>
+              <p id="incidentAssignmentMessage" class="profile-note full-width" role="status" aria-live="polite"></p>
+            </div>
+            <h4>Evidence</h4>
+            <ul id="assignedIncidentEvidence" class="incident-evidence"></ul>
             <h4>Progress history</h4>
             <ol id="assignedIncidentHistory" class="incident-history"></ol>
             <form id="assignedIncidentUpdateForm" class="form-grid">
@@ -423,6 +507,9 @@
               </label>
               <label class="full-width">Progress update
                 <textarea id="assignedIncidentNote" rows="3" maxlength="2000" placeholder="Record the work completed or next steps."></textarea>
+              </label>
+              <label class="checkbox-label full-width" data-incident-manager hidden>
+                <input type="checkbox" id="assignedIncidentInternal"> Save as internal note (not shown to reporter)
               </label>
               <div class="form-actions full-width">
                 <button type="submit" class="button primary" id="saveAssignedIncidentUpdate">Save progress</button>
@@ -803,6 +890,8 @@
                   <option value="month" selected>Monthly</option><option value="year">Annual</option>
                 </select>
               </label>
+              <label>From date<input type="date" id="reportFrom"></label>
+              <label>To date<input type="date" id="reportTo"></label>
               <label>Individual incident reference
                 <input id="reportReference" maxlength="32" placeholder="INC-2026-0001">
               </label>
@@ -854,6 +943,9 @@
           <article class="panel">
             <div class="table-toolbar">
               <input id="auditSearch" type="search" placeholder="Search audit logs..." aria-label="Search audit logs">
+              <label>From <input type="date" id="auditFrom"></label>
+              <label>To <input type="date" id="auditTo"></label>
+              <button type="button" class="button secondary" id="filterAuditLogs">Filter</button>
             </div>
             <div class="table-scroll">
               <table>

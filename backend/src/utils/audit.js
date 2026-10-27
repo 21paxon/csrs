@@ -9,13 +9,14 @@ async function audit(req, {
   targetTable = null,
   recordId = null,
   status = 'Successful',
+  details = null,
   anonymous = false
 }) {
   try {
     await db.query(
       `INSERT INTO audit_log
-        (user_id, actor, action, entity, entity_id, ip, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        (user_id, actor, action, entity, entity_id, ip, status, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         userId,
         anonymous ? null : (req.user?.username || null),
@@ -23,7 +24,8 @@ async function audit(req, {
         targetTable,
         recordId == null ? null : String(recordId),
         anonymous ? null : (req.ip || null),
-        status
+        status,
+        details == null ? null : JSON.stringify(details)
       ]
     );
   } catch (err) {

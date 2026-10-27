@@ -87,8 +87,13 @@ CREATE TABLE incident_assignments (
   officer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  unassigned_at TIMESTAMPTZ,
   PRIMARY KEY (incident_id, officer_id)
 );
+
+CREATE INDEX idx_incident_assignments_current
+  ON incident_assignments(incident_id, assigned_at DESC)
+  WHERE unassigned_at IS NULL;
 
 CREATE TABLE emergency_alerts (
   id SERIAL PRIMARY KEY,

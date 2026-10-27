@@ -65,13 +65,13 @@ const SELECT_INCIDENT = `
          END AS overdue,
          (SELECT ia.officer_id
             FROM incident_assignments ia
-           WHERE ia.incident_id = i.id
+           WHERE ia.incident_id = i.id AND ia.unassigned_at IS NULL
            ORDER BY ia.assigned_at DESC
            LIMIT 1) AS assigned_to,
          (SELECT COALESCE(u.full_name, u.username)
             FROM incident_assignments ia
             JOIN users u ON u.id = ia.officer_id
-           WHERE ia.incident_id = i.id
+           WHERE ia.incident_id = i.id AND ia.unassigned_at IS NULL
            ORDER BY ia.assigned_at DESC
            LIMIT 1) AS assigned_officer
     FROM incidents i
@@ -291,6 +291,7 @@ router.get('/', authenticate, wrap(async (req, res) => {
         EXISTS (
           SELECT 1 FROM incident_assignments ia
            WHERE ia.incident_id = i.id AND ia.officer_id = ?
+             AND ia.unassigned_at IS NULL
         ) OR i.reporter_id = ?
       )`, req.user.id);
     } else {
@@ -308,6 +309,7 @@ router.get('/', authenticate, wrap(async (req, res) => {
   if (q.assigned_to) w.add(`EXISTS (
     SELECT 1 FROM incident_assignments ia
      WHERE ia.incident_id = i.id AND ia.officer_id = ?
+       AND ia.unassigned_at IS NULL
   )`, toInt(q.assigned_to));
   if (q.q) {
     w.add(`(
@@ -498,7 +500,7 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
   const inc = await getIncident(id);
 
   const off = await db.query(
-    `SELECT id FROM users
+    `SELECT id, COALESCE(full_name, username) AS name FROM users
       WHERE id = $1 AND role = $2 AND is_active = TRUE`,
     [officerId, ROLES.SECURITY_OFFICER]
   );
@@ -507,12 +509,25 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
     throw new HttpError(400, 'officer_id must be an active Security Officer');
   }
 
+  const previousOfficerId = inc.assigned_to && Number(inc.assigned_to) !== officerId
+    ? Number(inc.assigned_to)
+    : null;
+  if (previousOfficerId) {
+    await db.query(
+      `UPDATE incident_assignments
+          SET unassigned_at = CURRENT_TIMESTAMP
+        WHERE incident_id = $1 AND unassigned_at IS NULL`,
+      [id]
+    );
+  }
+
   await db.query(
     `INSERT INTO incident_assignments (incident_id, officer_id, assigned_by)
      VALUES ($1, $2, $3)
      ON CONFLICT (incident_id, officer_id)
      DO UPDATE SET assigned_by = EXCLUDED.assigned_by,
-                   assigned_at = CURRENT_TIMESTAMP`,
+                   assigned_at = CURRENT_TIMESTAMP,
+                   unassigned_at = NULL`,
     [id, officerId, req.user.id]
   );
 
@@ -540,11 +555,15 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
     'incident_assignment',
     '/dashboard.html#incidents'
   );
+  if (previousOfficerId) {
+    await notify([previousOfficerId], 'Incident reassigned', `${inc.reference_no} has been reassigned to another officer.`);
+  }
   await audit(req, {
     userId: req.user.id,
     action: 'ASSIGN INCIDENT',
     targetTable: 'incidents',
-    recordId: id
+    recordId: id,
+    details: { officer_id: officerId, officer_name: off.rows[0].name, previous_officer_id: previousOfficerId }
   });
 
   res.status(201).json({ id, assigned_to: officerId });
