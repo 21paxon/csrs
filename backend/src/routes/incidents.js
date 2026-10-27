@@ -78,11 +78,27 @@ const SELECT_INCIDENT = `
     LEFT JOIN incident_categories c ON c.id = i.category_id
     LEFT JOIN locations l ON l.id = i.location_id`;
 
-function canView(user, inc) {
+async function canView(user, inc) {
   if (user.role === ROLES.DEAN) return inc.reporter_role === ROLES.STUDENT;
   if (SEE_ALL.includes(user.role)) return true;
-  if (user.role === ROLES.SECURITY_OFFICER) return inc.assigned_to === user.id;
+  if (user.role === ROLES.SECURITY_OFFICER) {
+    const assignment = await db.query(
+      `SELECT 1 FROM incident_assignments
+        WHERE incident_id = $1 AND officer_id = $2 AND unassigned_at IS NULL`,
+      [inc.id, user.id]
+    );
+    return assignment.rowCount > 0;
+  }
   return inc.reporter_id === user.id;
+}
+
+async function isCurrentlyAssigned(incidentId, officerId) {
+  const result = await db.query(
+    `SELECT 1 FROM incident_assignments
+      WHERE incident_id = $1 AND officer_id = $2 AND unassigned_at IS NULL`,
+    [incidentId, officerId]
+  );
+  return result.rowCount > 0;
 }
 
 async function getIncident(id) {
@@ -338,11 +354,12 @@ router.get('/', authenticate, wrap(async (req, res) => {
 // Get incident details.
 router.get('/:id', authenticate, wrap(async (req, res) => {
   const inc = await getIncident(toInt(req.params.id));
-  if (!canView(req.user, inc)) {
+  if (!await canView(req.user, inc)) {
     throw new HttpError(403, 'You do not have access to this incident');
   }
 
-  const internalOk = SEE_ALL.includes(req.user.role) || inc.assigned_to === req.user.id;
+  const internalOk = SEE_ALL.includes(req.user.role) ||
+    (req.user.role === ROLES.SECURITY_OFFICER && await isCurrentlyAssigned(inc.id, req.user.id));
 
   const [evidence, updates] = await Promise.all([
     db.query(
@@ -360,7 +377,14 @@ router.get('/:id', authenticate, wrap(async (req, res) => {
     )
   ]);
 
-  res.json({ ...inc, evidence: evidence.rows, updates: updates.rows });
+  const { rows: assignedOfficers } = await db.query(
+    `SELECT ia.officer_id AS id, COALESCE(u.full_name, u.username) AS name, ia.assigned_at
+       FROM incident_assignments ia JOIN users u ON u.id = ia.officer_id
+      WHERE ia.incident_id = $1 AND ia.unassigned_at IS NULL
+      ORDER BY ia.assigned_at DESC`,
+    [inc.id]
+  );
+  res.json({ ...inc, assigned_officers: assignedOfficers, evidence: evidence.rows, updates: updates.rows });
 }));
 
 // Allow a signed-in reporter to follow up on their own non-anonymous report.
@@ -412,7 +436,7 @@ router.patch('/:id', authenticate, requireRole(...MANAGE, ROLES.SECURITY_OFFICER
   const id = toInt(req.params.id);
   const inc = await getIncident(id);
 
-  if (req.user.role === ROLES.SECURITY_OFFICER && inc.assigned_to !== req.user.id) {
+  if (req.user.role === ROLES.SECURITY_OFFICER && !await isCurrentlyAssigned(id, req.user.id)) {
     throw new HttpError(403, 'Only the assigned officer can update this incident');
   }
 
@@ -523,15 +547,16 @@ router.post('/:id/assign', authenticate, requireRole(...MANAGE), wrap(async (req
     throw new HttpError(400, 'officer_id must be an active Security Officer');
   }
 
-  const previousOfficerId = inc.assigned_to && Number(inc.assigned_to) !== officerId
+  const replaceCurrent = toBool(req.body?.replace_current);
+  const previousOfficerId = replaceCurrent && inc.assigned_to && Number(inc.assigned_to) !== officerId
     ? Number(inc.assigned_to)
     : null;
   if (previousOfficerId) {
     await db.query(
       `UPDATE incident_assignments
           SET unassigned_at = CURRENT_TIMESTAMP
-        WHERE incident_id = $1 AND unassigned_at IS NULL`,
-      [id]
+        WHERE incident_id = $1 AND officer_id = $2 AND unassigned_at IS NULL`,
+      [id, previousOfficerId]
     );
   }
 
@@ -593,7 +618,7 @@ router.post('/:id/evidence', authenticate, upload.array('evidence', 5), wrap(asy
     }
 
     const inc = await getIncident(toInt(req.params.id));
-    if (!canView(req.user, inc)) {
+    if (!await canView(req.user, inc)) {
       throw new HttpError(403, 'You do not have access to this incident');
     }
 
@@ -627,7 +652,7 @@ router.post('/:id/evidence', authenticate, upload.array('evidence', 5), wrap(asy
 router.get('/:id/evidence/:evidenceId', authenticate, wrap(async (req, res) => {
   const inc = await getIncident(toInt(req.params.id));
 
-  if (!canView(req.user, inc)) {
+  if (!await canView(req.user, inc)) {
     throw new HttpError(403, 'You do not have access to this incident');
   }
 

@@ -94,9 +94,6 @@ CREATE TABLE incident_assignments (
 CREATE INDEX idx_incident_assignments_current
   ON incident_assignments(incident_id, assigned_at DESC)
   WHERE unassigned_at IS NULL;
-CREATE UNIQUE INDEX idx_incident_assignments_one_current
-  ON incident_assignments(incident_id)
-  WHERE unassigned_at IS NULL;
 
 CREATE TABLE emergency_alerts (
   id SERIAL PRIMARY KEY,
